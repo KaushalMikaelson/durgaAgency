@@ -163,3 +163,23 @@ export const DEFAULT_EXPENSES = [];
 export const DEFAULT_CASH_TRANSACTIONS = [];
 export const DEFAULT_DEMOS = [];
 export const DEFAULT_QUOTES = [];
+
+export const DEFAULT_BILLS = [
+  {
+    id: "BILL-086",
+    billNumber: "86",
+    date: "2026-09-12",
+    customerName: "किसान एग्रो सर्विस",
+    address: "बाईपास, करमलीचक, पटना",
+    phone: "9931227178",
+    items: [
+      { qty: "40 L", desc: "डीजल (हाई स्पीड डीजल - ट्रैक्टर व पम्पसेट)", rupees: 3760, paise: 0 },
+      { qty: "1 Can", desc: "इंजन ऑयल (Mobil Delvac 15W-40 7.5L)", rupees: 2450, paise: 0 },
+      { qty: "2 Pc", desc: "डीजल फिल्टर किट (माइक्रो बॉश)", rupees: 680, paise: 0 },
+      { qty: "1 Set", desc: "फिल्टर व सर्विस लेबर चार्ज", rupees: 350, paise: 0 }
+    ],
+    totalRupees: 7240,
+    totalPaise: 0,
+    amountWords: "Seven Thousand Two Hundred Forty Rupees Only"
+  }
+];

@@ -3,7 +3,7 @@ import { store } from './store.js';
 import { icons, renderIcon } from './icons.js';
 import { matchTractor } from './recommendation.js';
 import { calculateBuyingScore, getTodayCallsQueue } from './buyingScore.js';
-import { calculateTractorLoan } from './emiCalculator.js';
+
 import { evaluateUsedTractor } from './exchangeEvaluator.js';
 import { generateFollowUpSequences, createWhatsAppUrl } from './whatsapp.js';
 import { queryBusinessAdvisor } from './aiAdvisor.js';
@@ -69,7 +69,305 @@ if (typeof window !== 'undefined') {
   window.alert = function(msg) {
     showToast(String(msg), 'info', 'Showroom Notice');
   };
-  window.showToast = showToast;
+// --- AUTHENTIC BILL BOOK TEMPLATE HELPERS (data/New Doc template) ---
+export function numberToIndianWords(n) {
+  const num = Math.floor(Math.abs(Number(n) || 0));
+  if (num === 0) return 'Zero Rupees Only';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  function convertTwo(val) {
+    if (val < 20) return a[val];
+    return b[Math.floor(val / 10)] + (val % 10 !== 0 ? ' ' + a[val % 10] : '');
+  }
+  function convertThree(val) {
+    const h = Math.floor(val / 100);
+    const rem = val % 100;
+    let s = '';
+    if (h > 0) s += a[h] + ' Hundred';
+    if (rem > 0) s += (s ? ' ' : '') + convertTwo(rem);
+    return s;
+  }
+  const cr = Math.floor(num / 10000000);
+  let r = num % 10000000;
+  const lk = Math.floor(r / 100000);
+  r = r % 100000;
+  const th = Math.floor(r / 1000);
+  r = r % 1000;
+  const hu = r;
+  const parts = [];
+  if (cr > 0) parts.push(convertThree(cr) + ' Crore');
+  if (lk > 0) parts.push(convertThree(lk) + ' Lakh');
+  if (th > 0) parts.push(convertThree(th) + ' Thousand');
+  if (hu > 0) parts.push(convertThree(hu));
+  return parts.join(' ') + ' Rupees Only';
+}
+
+export function getMaaDurgaSvg() {
+  return `<svg viewBox="0 0 120 120" width="76" height="76" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="60" cy="60" r="56" fill="#ffffff" stroke="#000000" stroke-width="2.5"/>
+    <circle cx="60" cy="60" r="51" fill="none" stroke="#000000" stroke-width="1" stroke-dasharray="2.5,2.5"/>
+    <path d="M60 12 L60 22 M40 18 L46 26 M80 18 L74 26 M25 32 L33 37 M95 32 L87 37 M18 50 L27 52 M102 50 L93 52" stroke="#000000" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M36 50 C36 34, 48 24, 60 20 C72 24, 84 34, 84 50 Z" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+    <path d="M42 46 C48 36, 54 30, 60 28 C66 30, 72 36, 78 46" fill="none" stroke="#000000" stroke-width="1.5"/>
+    <path d="M60 14 L60 24 M56 18 C58 16, 62 16, 64 18" stroke="#000000" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="60" cy="34" r="3.5" fill="#000000"/>
+    <circle cx="50" cy="40" r="2.5" fill="#000000"/>
+    <circle cx="70" cy="40" r="2.5" fill="#000000"/>
+    <path d="M34 50 L86 50" stroke="#000000" stroke-width="2.5"/>
+    <path d="M38 52 C38 76, 48 88, 60 92 C72 88, 82 76, 82 52" fill="#ffffff" stroke="#000000" stroke-width="2"/>
+    <path d="M60 52 C58 55, 58 58, 60 61 C62 58, 62 55, 60 52 Z" fill="#b91c1c" stroke="#b91c1c" stroke-width="0.5"/>
+    <circle cx="60" cy="67" r="2.2" fill="#b91c1c"/>
+    <path d="M44 64 C48 61, 53 61, 56 63" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M76 64 C72 61, 67 61, 64 63" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M43 68 C47 64, 52 64, 56 68 C52 72, 47 72, 43 68 Z" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <circle cx="49.5" cy="68" r="2.2" fill="#000000"/>
+    <path d="M77 68 C73 64, 68 64, 64 68 C68 72, 73 72, 77 68 Z" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
+    <circle cx="70.5" cy="68" r="2.2" fill="#000000"/>
+    <path d="M60 65 L60 76 L62 76" fill="none" stroke="#000000" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="56.5" cy="77" r="3.2" fill="none" stroke="#000000" stroke-width="1.2"/>
+    <path d="M53.5 77 C48 78, 43 75, 40 70" fill="none" stroke="#000000" stroke-width="0.8" stroke-dasharray="1,1"/>
+    <path d="M53 82 C56 81, 64 81, 67 82 C64 86, 56 86, 53 82 Z" fill="#b91c1c" stroke="#000000" stroke-width="1"/>
+    <line x1="53" y1="82" x2="67" y2="82" stroke="#000000" stroke-width="0.8"/>
+    <circle cx="34" cy="64" r="3" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+    <circle cx="86" cy="64" r="3" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
+  </svg>`;
+}
+
+export function getChakraSvg() {
+  return `<svg viewBox="0 0 100 100" width="76" height="76" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#000000" stroke-width="3"/>
+    <circle cx="50" cy="50" r="42" fill="none" stroke="#000000" stroke-width="1"/>
+    <circle cx="50" cy="50" r="7" fill="#000000"/>
+    <line x1="50" y1="4" x2="50" y2="96" stroke="#000000" stroke-width="2.5"/>
+    <line x1="10.2" y1="27" x2="89.8" y2="73" stroke="#000000" stroke-width="2.5"/>
+    <line x1="10.2" y1="73" x2="89.8" y2="27" stroke="#000000" stroke-width="2.5"/>
+  </svg>`;
+}
+
+export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false) {
+  const nextAutoNo = (typeof store !== 'undefined' && store.getNextBillNumber) ? store.getNextBillNumber() : '87';
+  const b = bill || {};
+  const billNumber = b.billNumber || nextAutoNo;
+  const dateStr = b.date || new Date().toISOString().split('T')[0];
+
+  const items = b.items || [];
+  const minRows = 10;
+  const filledCount = items.length;
+  const emptyRowsCount = Math.max(0, minRows - filledCount);
+
+  let rowsHtml = '';
+  if (isLive) {
+    items.forEach((item, idx) => {
+      const p = item.paise !== undefined && item.paise !== null && item.paise !== '' ? String(item.paise).padStart(2, '0') : '00';
+      rowsHtml += `
+        <tr class="mdd-live-row">
+          <td style="width:70px; text-align:center; padding:2px;">
+            <input type="text" class="mdd-sheet-table-input mdd-live-qty" value="${item.qty || (idx + 1)}" placeholder="${idx + 1}" style="text-align:center; font-weight:700;" />
+          </td>
+          <td style="padding:2px;">
+            <input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${item.desc || ''}" placeholder="विवरण (Item / Service / Diesel)" style="font-weight:600;" />
+          </td>
+          <td style="width:90px; text-align:right; padding:2px;">
+            <input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${item.rupees !== undefined ? item.rupees : ''}" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" />
+          </td>
+          <td style="width:45px; text-align:center; padding:2px;">
+            <input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${p}" placeholder="00" min="0" max="99" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" />
+          </td>
+        </tr>
+      `;
+    });
+
+    for (let i = 0; i < emptyRowsCount; i++) {
+      const rowNum = filledCount + i + 1;
+      rowsHtml += `
+        <tr class="mdd-live-row">
+          <td style="width:70px; text-align:center; padding:2px;">
+            <input type="text" class="mdd-sheet-table-input mdd-live-qty" placeholder="${rowNum}" style="text-align:center; font-weight:700;" />
+          </td>
+          <td style="padding:2px;">
+            <input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण..." style="font-weight:600;" />
+          </td>
+          <td style="width:90px; text-align:right; padding:2px;">
+            <input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" />
+          </td>
+          <td style="width:45px; text-align:center; padding:2px;">
+            <input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" min="0" max="99" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" />
+          </td>
+        </tr>
+      `;
+    }
+  } else if (isPureBlank) {
+    for (let i = 0; i < minRows; i++) {
+      rowsHtml += `
+        <tr class="empty-row">
+          <td style="width:70px;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td style="width:90px;">&nbsp;</td>
+          <td style="width:45px;">&nbsp;</td>
+        </tr>
+      `;
+    }
+  } else {
+    items.forEach((item, idx) => {
+      const p = item.paise !== undefined && item.paise !== null && item.paise !== '' ? String(item.paise).padStart(2, '0') : '00';
+      rowsHtml += `
+        <tr>
+          <td style="width:70px; text-align:center; font-weight:700;">${item.qty || (idx + 1)}</td>
+          <td style="font-weight:600;">${item.desc || ''}</td>
+          <td style="width:90px; text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;">${item.rupees ? Number(item.rupees).toLocaleString('en-IN') : ''}</td>
+          <td style="width:45px; text-align:center; font-family:monospace, sans-serif; font-size:14px;">${p}</td>
+        </tr>
+      `;
+    });
+
+    for (let i = 0; i < emptyRowsCount; i++) {
+      rowsHtml += `
+        <tr class="empty-row">
+          <td style="width:70px;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td style="width:90px;">&nbsp;</td>
+          <td style="width:45px;">&nbsp;</td>
+        </tr>
+      `;
+    }
+  }
+
+  const totalR = isPureBlank ? '' : (b.totalRupees !== undefined ? Number(b.totalRupees).toLocaleString('en-IN') : '0');
+  const totalP = isPureBlank ? '' : (b.totalPaise ? String(b.totalPaise).padStart(2, '0') : '00');
+  const words = isPureBlank ? '' : (b.amountWords || (b.totalRupees ? numberToIndianWords(b.totalRupees) : ''));
+
+  return `
+    <div class="mdd-bill-sheet" id="printableMddBill">
+      <!-- Top Bar with ESTIMATE and Phone -->
+      <div class="mdd-top-bar">
+        <div class="mdd-estimate-pill">ESTIMATE</div>
+        <div class="mdd-top-phone">Mob.: ${b.phone || '9931227178'}</div>
+      </div>
+
+      <!-- Header: Durga Logo | Center Shop Name & Address | Chakra Logo -->
+      <div class="mdd-header-main">
+        <div class="mdd-emblem-left">
+          ${getMaaDurgaSvg()}
+        </div>
+        <div class="mdd-title-center">
+          <div class="mdd-shop-name">माँ दुर्गा डीजल</div>
+          <div class="mdd-address-lines">
+            पता: महावीर मार्केट, महादेव स्थान, करमलीचक<br>
+            बाईपास, एन. एच. - 30, पटना सिटी
+          </div>
+        </div>
+        <div class="mdd-emblem-right">
+          ${getChakraSvg()}
+        </div>
+      </div>
+
+      <!-- Sub-Header: No. and Date -->
+      <div class="mdd-meta-grid">
+        <div class="mdd-bill-no-label">
+          <span>नं० :</span>
+          <span class="mdd-bill-no-val" id="mddLiveBillNoVal">${billNumber}</span>
+          <span class="badge badge-success no-print" style="font-size:10px; margin-left:6px; padding:2px 6px;">⚡ Auto</span>
+        </div>
+        <div class="mdd-date-field">
+          <span>दिनांक :</span>
+          ${isLive ? `
+            <input type="date" class="mdd-sheet-input" id="mddLiveDate" value="${dateStr}" style="width:130px; text-align:center; font-size:13px; font-weight:700;" />
+          ` : `
+            <span class="mdd-dots-line" style="min-width:130px; text-align:center;">${dateStr}</span>
+          `}
+        </div>
+      </div>
+
+      <!-- Customer Row: M/s -->
+      <div class="mdd-customer-section">
+        <div class="mdd-cust-row">
+          <span>मेसर्स</span>
+          ${isLive ? `
+            <input type="text" class="mdd-sheet-input" id="mddLiveCustomer" placeholder="ग्राहक का नाम / फर्म का नाम (e.g. Ramesh Chandra)..." value="${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}" style="font-size:15px; font-weight:800; color:#1e3a8a;" />
+          ` : (isPureBlank ? `
+            <span class="mdd-dots-line"></span>
+          ` : `
+            <span class="mdd-dots-line">${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}</span>
+          `)}
+        </div>
+        <div class="mdd-cust-row">
+          ${isLive ? `
+            <input type="text" class="mdd-sheet-input" id="mddLiveAddress" placeholder="पता / गांव व जिला / गाड़ी विवरण (e.g. Kalyanpur, Gorakhpur)..." value="${b.address || ''}" style="font-size:13px;" />
+          ` : (isPureBlank ? `
+            <span class="mdd-dots-line" style="width:100%;"></span>
+          ` : `
+            <span class="mdd-dots-line" style="width:100%;">${b.address || ''}</span>
+          `)}
+        </div>
+      </div>
+
+      <!-- Items Table Grid -->
+      <div class="mdd-table-wrapper">
+        <table class="mdd-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width:70px; vertical-align:middle;">संख्या</th>
+              <th rowspan="2" style="vertical-align:middle;">विवरण</th>
+              <th colspan="2" class="dam-header" style="width:135px;">दाम</th>
+            </tr>
+            <tr>
+              <th class="mdd-sub-th" style="width:90px;">रू०</th>
+              <th class="mdd-sub-th" style="width:45px;">पै०</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2" style="text-align:right;">
+                <span class="mdd-total-badge">Total</span>
+              </td>
+              <td style="width:90px; text-align:right; font-size:16px; font-weight:900; font-family:monospace, sans-serif;">
+                <span id="mddLiveTotalRupees">${totalR}</span>
+              </td>
+              <td style="width:45px; text-align:center; font-size:14px; font-weight:800; font-family:monospace, sans-serif;">
+                <span id="mddLiveTotalPaise">${totalP}</span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      ${isLive ? `
+        <div class="no-print" style="margin-top:10px; padding:8px 12px; background:#f1f5f9; border-radius:6px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <span style="font-size:11px; font-weight:800; color:#475569;">+ QUICK PRESETS:</span>
+            <button type="button" class="preset-pill" onclick="window.app.addLiveSheetItem('डीजल (Diesel 40L)', '40 L', 3760, 0)">+ 40L Diesel</button>
+            <button type="button" class="preset-pill" onclick="window.app.addLiveSheetItem('इंजन ऑयल Mobil 15W40', '1 Can', 2450, 0)">+ Mobil 15W40</button>
+            <button type="button" class="preset-pill" onclick="window.app.addLiveSheetItem('डीजल फिल्टर किट (Bosch)', '2 Pc', 680, 0)">+ Filter Kit</button>
+            <button type="button" class="preset-pill" onclick="window.app.addLiveSheetItem('रोटावेटर ब्लेड सेट', '1 Set', 4200, 0)">+ Rotavator Blades</button>
+            <button type="button" class="preset-pill" onclick="window.app.addLiveSheetItem('सर्विस व लेबर चार्ज', '1 Job', 350, 0)">+ Service</button>
+          </div>
+          <button type="button" class="quick-action-btn btn-sm btn-outline" onclick="window.app.addLiveSheetBlankRow()" style="background:#ffffff;">
+            + Add Extra Line
+          </button>
+        </div>
+      ` : ''}
+
+      <!-- Words and Signature Footer -->
+      <div class="mdd-footer">
+        <div class="mdd-words-row">
+          <span style="white-space:nowrap;">Rs. in words</span>
+          <span class="mdd-dots-line" id="mddLiveWordsVal" style="font-weight:700; font-size:13.5px; padding-left:8px;">${words}</span>
+        </div>
+        <div class="mdd-words-row" style="height:14px;">
+          <span class="mdd-dots-line" style="width:100%;"></span>
+        </div>
+        <div class="mdd-sign-row">
+          <div class="mdd-sign-box">
+            हस्ताक्षर
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 class TractorOSApp {
@@ -137,9 +435,9 @@ class TractorOSApp {
       leads: { title: "Customer & Lead CRM", sub: "Farmer profiles, village mapping & algorithmic buying score" },
       recommend: { title: "Tractor Recommendation Engine", sub: "Deterministic implement & acreage matching without guesswork" },
       inventory: { title: "Tractor Inventory & Landed Margins", sub: "Live showroom stock, specifications & unit profitability" },
-      quotations: { title: "Quotations & Invoice Generator", sub: "Official GST dealer quotation with exchange & finance schedules" },
+      quotations: { title: "Billing & Bills Command Center (माँ दुर्गा डीजल)", sub: "Official Maa Durga Diesel bills, estimates & customer receipts" },
       exchange: { title: "Used Tractor Exchange Valuation", sub: "Inspection checklist, market depreciation & upgrade calculation" },
-      emi: { title: "Farmer EMI & Harvest Calculator", sub: "Monthly and bi-annual harvest-cycle payment schedules" },
+
       demos: { title: "Field Demos & Track Testing", sub: "Rotavator/Plough demonstration logs, diesel consumption & feedback" },
       expenses: { title: "Showroom Expenses & Unit Cost Tagging", sub: "Fast entry, approval workflow & per-tractor landed cost" },
       cashflow: { title: "Cash & Bank Ledger", sub: "Cash-in vs Cash-out tracking distinct from accounting profit" },
@@ -215,10 +513,7 @@ class TractorOSApp {
         content.innerHTML = this.renderExchangeHTML();
         this.bindExchangeEvents();
         break;
-      case 'emi':
-        content.innerHTML = this.renderEmiHTML();
-        this.bindEmiEvents();
-        break;
+
       case 'demos':
         content.innerHTML = this.renderDemosHTML();
         this.bindDemosEvents();
@@ -928,11 +1223,19 @@ class TractorOSApp {
               </div>
 
               <div class="tractor-card-footer">
-                <button class="quick-action-btn btn-sm btn-outline view-unit-margin-btn" data-tractor-id="${t.id}">
-                  ${renderIcon('calculator')} Unit Economics
-                </button>
-                <button class="quick-action-btn btn-sm btn-primary quote-this-tractor-btn" data-tractor-id="${t.id}">
-                  ${renderIcon('quote')} Quote Model
+                <div class="tractor-card-secondary-actions">
+                  <button class="quick-action-btn btn-sm btn-outline edit-tractor-btn" data-tractor-id="${t.id}" title="Edit Tractor Specs & Pricing">
+                    ${renderIcon('edit')} Edit
+                  </button>
+                  <button class="quick-action-btn btn-sm btn-outline add-stock-btn" data-tractor-id="${t.id}" title="Add physical stock unit">
+                    ${renderIcon('plus')} Stock
+                  </button>
+                  <button class="quick-action-btn btn-sm btn-outline view-unit-margin-btn" data-tractor-id="${t.id}" title="Unit Profitability & Margin Leakage">
+                    ${renderIcon('calculator')} Margin
+                  </button>
+                </div>
+                <button class="quick-action-btn btn-sm btn-primary quote-this-tractor-btn" data-tractor-id="${t.id}" title="Create Formal Dealer Quotation">
+                  ${renderIcon('quote')} Generate Quotation
                 </button>
               </div>
             </div>
@@ -943,6 +1246,19 @@ class TractorOSApp {
   }
 
   bindInventoryEvents() {
+    document.querySelectorAll('.edit-tractor-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (this.openEditTractorModal) this.openEditTractorModal(btn.dataset.tractorId);
+      });
+    });
+
+    document.querySelectorAll('.add-stock-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const chassis = prompt("Enter Chassis Serial Number for new incoming unit (optional):", "");
+        store.updateTractorStock(btn.dataset.tractorId, 1, chassis ? chassis.trim() : null);
+      });
+    });
+
     document.querySelectorAll('.view-unit-margin-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.openUnitMarginModal(btn.dataset.tractorId);
@@ -963,60 +1279,143 @@ class TractorOSApp {
   }
 
   // =========================================================================
-  // 5. QUOTATIONS & PRINTABLE BILL SHEET
+  // 5. BILLING & QUOTATIONS (MAA DURGA DIESEL TEMPLATE)
   // =========================================================================
   renderQuotationsHTML() {
     const quotes = store.getQuotes();
+    const bills = store.getBills ? store.getBills() : [];
+    const filter = this.billingTabFilter || 'all';
+
+    const totalBillVolume = bills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0);
+    const nextAutoNo = store.getNextBillNumber ? store.getNextBillNumber() : '87';
 
     return `
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <div style="font-size:13px; color:var(--text-secondary);">
-          Official Quotations issued for <strong>Maa Durga Engineering</strong>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+        <div>
+          <h3 style="margin:0; font-size:18px; font-weight:800; color:var(--text-primary);">Billing Command Center (माँ दुर्गा डीजल)</h3>
+          <div style="font-size:12.5px; color:var(--text-secondary); margin-top:3px;">
+            Issue and print authentic <strong>माँ दुर्गा डीजल</strong> estimates, customer bills, and receipts
+          </div>
         </div>
-        <button class="quick-action-btn btn-primary" id="createNewQuoteBtn">
-          ${renderIcon('plus')} New Quotation Bill
-        </button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="quick-action-btn btn-primary" id="openNewBillBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); border:none; box-shadow:0 4px 12px rgba(37,99,235,0.25);">
+            🧾 + New Bill (माँ दुर्गा डीजल पर्ची)
+          </button>
+          <button class="quick-action-btn btn-outline" id="printBlankBillBtn" title="Print blank bill book stationery for manual writing">
+            🖨️ Blank Bill Sheet (सादा पर्ची)
+          </button>
+        </div>
+      </div>
+
+      <!-- Metric KPI Cards -->
+      <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom:20px;">
+        <div class="metric-card">
+          <div class="metric-card-header">
+            <span class="label">Total Bills Issued</span>
+            <div class="metric-icon">🧾</div>
+          </div>
+          <div class="metric-value">${bills.length}</div>
+          <div class="metric-change positive">माँ दुर्गा डीजल Estimates</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-card-header">
+            <span class="label">Total Invoiced Volume</span>
+            <div class="metric-icon">₹</div>
+          </div>
+          <div class="metric-value">₹${totalBillVolume.toLocaleString('en-IN')}</div>
+          <div class="metric-change positive">Diesel, Spares & Services</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-card-header">
+            <span class="label">Next Auto Bill No.</span>
+            <div class="metric-icon">⚡</div>
+          </div>
+          <div class="metric-value">No. ${nextAutoNo}</div>
+          <div class="metric-change positive">Auto-Generated Sequence</div>
+        </div>
       </div>
 
       <div class="panel-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px; flex-wrap:wrap; gap:10px;">
+          <div style="font-size:14px; font-weight:800; color:var(--text-primary);">
+            All Issued Bills & Estimates (${bills.length})
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="quick-action-btn btn-sm btn-primary" onclick="window.app.openNewBillModal()">
+              + Create Bill
+            </button>
+            <button class="quick-action-btn btn-sm btn-outline" onclick="window.app.openBillPreviewModal(null, true)">
+              🖨️ Blank Sheet
+            </button>
+          </div>
+        </div>
+
         <div class="table-responsive">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Quote #</th>
-                <th>Date</th>
-                <th>Farmer Name</th>
-                <th>Village</th>
-                <th>Tractor Model</th>
-                <th>Ex-Showroom</th>
-                <th>Exchange Value</th>
-                <th>Net Total</th>
-                <th>Monthly / Harvest EMI</th>
-                <th>Actions</th>
+                <th style="width:110px;">Bill # (नं०)</th>
+                <th style="width:110px;">Date (दिनांक)</th>
+                <th>Customer / M/s (मेसर्स)</th>
+                <th>Village / Address (पता)</th>
+                <th>Particulars / Summary (विवरण)</th>
+                <th style="text-align:right;">Total Amount (कुल दाम)</th>
+                <th style="text-align:right; width:170px;">Actions</th>
               </tr>
             </thead>
             <tbody>
-              ${quotes.map(q => `
+              ${bills.length === 0 ? `
                 <tr>
-                  <td><strong>${q.quoteNumber}</strong></td>
-                  <td>${q.date}</td>
-                  <td><strong>${q.customerName}</strong><br><span style="font-size:11px; color:var(--text-muted);">${q.phone}</span></td>
-                  <td>${q.village}</td>
-                  <td><strong style="color:var(--primary);">${q.tractorName}</strong></td>
-                  <td>₹${(q.exShowroomPrice || 0).toLocaleString('en-IN')}</td>
-                  <td style="color:var(--danger);">-₹${(q.exchangeDeduction || 0).toLocaleString('en-IN')}</td>
-                  <td><strong style="font-size:13.5px; color:var(--primary-dark);">₹${(q.grandTotal || 0).toLocaleString('en-IN')}</strong></td>
-                  <td style="font-size:12px;">
-                    Monthly: ₹${(q.monthlyEmi || 0).toLocaleString('en-IN')}<br>
-                    <span style="color:var(--accent-dark); font-weight:700;">Harvest: ₹${(q.harvestEmi || 0).toLocaleString('en-IN')}</span>
-                  </td>
-                  <td>
-                    <button class="quick-action-btn btn-sm btn-outline print-quote-btn" data-quote-no="${q.quoteNumber}">
-                      ${renderIcon('print')} Print / View
-                    </button>
+                  <td colspan="7" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+                    <div style="font-size:36px; margin-bottom:10px;">🧾</div>
+                    <div style="font-weight:700; font-size:16px; color:var(--text-secondary);">No bills issued yet</div>
+                    <div style="font-size:12.5px; margin-top:4px;">Click "+ Create Bill" to generate a bill in the authentic माँ दुर्गा डीजल template.</div>
+                    <div style="margin-top:16px; display:flex; justify-content:center; gap:10px;">
+                      <button class="quick-action-btn btn-sm btn-primary" onclick="window.app.openNewBillModal()">
+                        🧾 Create First Bill
+                      </button>
+                      <button class="quick-action-btn btn-sm btn-outline" onclick="window.app.openBillPreviewModal(null, true)">
+                        🖨️ View Blank Bill Template
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              `).join('')}
+              ` : bills.map(item => {
+                const itemCount = (item.items || []).length;
+                const summary = (item.items || []).map(i => i.desc).filter(Boolean).slice(0, 2).join(', ');
+                return `
+                  <tr>
+                    <td><strong style="color:var(--primary); font-size:14px;">No. ${item.billNumber}</strong></td>
+                    <td>${item.date}</td>
+                    <td>
+                      <strong>${item.customerName || 'मेसर्स ग्राहक'}</strong><br>
+                      <span style="font-size:11px; color:var(--text-muted);">${item.phone || ''}</span>
+                    </td>
+                    <td>
+                      <span style="font-size:12.5px;">${item.address || 'पटना'}</span>
+                    </td>
+                    <td>
+                      <span style="font-size:12.5px;">${summary || 'Diesel & Spares'}</span>
+                      ${itemCount > 2 ? `<span style="font-size:11px; color:var(--text-muted);"> (+${itemCount - 2} more)</span>` : ''}
+                    </td>
+                    <td style="text-align:right;">
+                      <strong style="font-size:14px; color:#1e3a8a; font-family:monospace, sans-serif;">₹${(Number(item.totalRupees) || 0).toLocaleString('en-IN')}${item.totalPaise ? '.' + String(item.totalPaise).padStart(2, '0') : ''}</strong>
+                    </td>
+                    <td style="text-align:right;">
+                      <div style="display:inline-flex; gap:6px;">
+                        <button class="quick-action-btn btn-xs btn-primary print-bill-btn" data-bill-id="${item.id}" title="Print / View in authentic bill book format">
+                          ${renderIcon('print')} Print
+                        </button>
+                        <button class="quick-action-btn btn-xs btn-outline delete-bill-btn" data-bill-id="${item.id}" title="Delete this bill" style="color:var(--danger);">
+                          &times;
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
         </div>
@@ -1025,18 +1424,26 @@ class TractorOSApp {
   }
 
   bindQuotationsEvents() {
-    const newBtn = document.getElementById('createNewQuoteBtn');
-    if (newBtn) {
-      newBtn.addEventListener('click', () => this.openQuotationModal());
-    }
+    const newBillBtn = document.getElementById('openNewBillBtn');
+    if (newBillBtn) newBillBtn.addEventListener('click', () => this.openNewBillModal());
 
-    document.querySelectorAll('.print-quote-btn').forEach(btn => {
+    const printBlankBtn = document.getElementById('printBlankBillBtn');
+    if (printBlankBtn) printBlankBtn.addEventListener('click', () => this.openBillPreviewModal(null, true));
+
+    document.querySelectorAll('.print-bill-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const quote = store.getQuotes().find(q => q.quoteNumber === btn.dataset.quoteNo);
-        if (quote) this.openPrintQuotationPreview(quote);
+        const bill = store.getBills().find(b => b.id === btn.dataset.billId);
+        if (bill) this.openBillPreviewModal(bill, false);
       });
     });
-  }
+
+    document.querySelectorAll('.delete-bill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (confirm('Delete this bill?')) {
+          store.deleteBill(btn.dataset.billId);
+        }
+      });
+    });
 
   // =========================================================================
   // 6. USED TRACTOR EXCHANGE MODULE
@@ -2124,6 +2531,385 @@ class TractorOSApp {
     }
 
     this.openModal('unitMarginModal');
+  }
+
+  openNewBillModal(prefill = null) {
+    this.openModal('newBillModal');
+    const nextNo = store.getNextBillNumber();
+    const bills = store.getBills();
+    const highestPrev = bills.length > 0 ? Math.max(...bills.map(b => parseInt(b.billNumber, 10)).filter(n => !isNaN(n))) : 86;
+
+    const billNoInput = document.getElementById('nbBillNo');
+    if (billNoInput) billNoInput.value = prefill?.billNumber || nextNo;
+
+    const hint = document.getElementById('nbBillNoHint');
+    if (hint) hint.textContent = `Auto-incremented based on previous bills (Prev: #${highestPrev})`;
+
+    const dateInput = document.getElementById('nbDate');
+    if (dateInput) dateInput.value = prefill?.date || new Date().toISOString().split('T')[0];
+
+    const custInput = document.getElementById('nbCustomer');
+    if (custInput) custInput.value = prefill?.customerName || '';
+
+    const addrInput = document.getElementById('nbAddress');
+    if (addrInput) addrInput.value = prefill?.address || '';
+
+    const vehicleInput = document.getElementById('nbVehicle');
+    if (vehicleInput) vehicleInput.value = prefill?.vehicle || '';
+
+    const phoneInput = document.getElementById('nbPhone');
+    if (phoneInput) phoneInput.value = prefill?.phone || '9931227178';
+
+    const tbody = document.getElementById('nbItemsBody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      if (prefill?.items && prefill.items.length > 0) {
+        prefill.items.forEach(it => this.addBillItemRow(it.desc, it.qty, it.rupees, it.paise));
+      } else {
+        this.addBillItemRow('डीजल (हाई स्पीड डीजल - 40 Ltr)', '40 L', 3760, 0);
+        this.addBillItemRow('इंजन ऑयल Mobil Delvac 15W-40', '1 Can', 2450, 0);
+        this.addBillItemRow('डीजल फिल्टर किट (Bosch)', '2 Pc', 680, 0);
+      }
+    }
+
+    this.recalcBillForm();
+
+    const previewBtn = document.getElementById('nbPreviewOnlyBtn');
+    if (previewBtn) {
+      previewBtn.onclick = () => {
+        const tempBill = this.gatherBillFormData();
+        this.closeModal('newBillModal');
+        this.openBillPreviewModal(tempBill, false, 'live');
+      };
+    }
+
+    const form = document.getElementById('newBillForm');
+    if (form) {
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const billData = this.gatherBillFormData();
+        const newBill = store.addBill(billData);
+
+        this.closeAllModals();
+        showToast(`Bill #${newBill.billNumber} for ${newBill.customerName} created!`, 'success', 'Bill Saved');
+        this.openBillPreviewModal(newBill, false, 'filled');
+      };
+    }
+  }
+
+  gatherBillFormData() {
+    const nextNo = store.getNextBillNumber();
+    const billNumber = document.getElementById('nbBillNo')?.value.trim() || nextNo;
+    const date = document.getElementById('nbDate')?.value || new Date().toISOString().split('T')[0];
+    const customerName = document.getElementById('nbCustomer')?.value.trim() || 'मेसर्स ग्राहक';
+    const address = document.getElementById('nbAddress')?.value.trim() || '';
+    const phone = document.getElementById('nbPhone')?.value.trim() || '9931227178';
+    const vehicle = document.getElementById('nbVehicle')?.value.trim() || '';
+
+    const rows = document.querySelectorAll('#nbItemsBody tr');
+    const items = [];
+    rows.forEach(tr => {
+      const qty = tr.querySelector('.nb-qty')?.value.trim() || '';
+      const desc = tr.querySelector('.nb-desc')?.value.trim() || '';
+      const rupees = Number(tr.querySelector('.nb-rupees')?.value) || 0;
+      const paise = Number(tr.querySelector('.nb-paise')?.value) || 0;
+      if (desc || rupees > 0) {
+        items.push({ qty, desc, rupees, paise });
+      }
+    });
+
+    const totalRupees = items.reduce((s, it) => s + (Number(it.rupees) || 0), 0);
+    const totalPaise = items.reduce((s, it) => s + (Number(it.paise) || 0), 0);
+    const amountWords = numberToIndianWords(totalRupees);
+
+    return {
+      billNumber,
+      date,
+      customerName,
+      address,
+      phone,
+      vehicle,
+      items,
+      totalRupees,
+      totalPaise,
+      amountWords
+    };
+  }
+
+  addBillItemRow(desc = '', qty = '', rupees = '', paise = '00') {
+    const tbody = document.getElementById('nbItemsBody');
+    if (!tbody) return;
+    const tr = document.createElement('tr');
+    const rowIdx = tbody.children.length + 1;
+    tr.innerHTML = `
+      <td><input type="text" class="form-input nb-qty" style="padding:4px 6px; font-size:12.5px;" placeholder="e.g. 1" value="${qty || rowIdx}" /></td>
+      <td><input type="text" class="form-input nb-desc" style="padding:4px 6px; font-size:12.5px;" placeholder="विवरण (Item / Service / Diesel)" value="${desc}" required /></td>
+      <td><input type="number" class="form-input nb-rupees" style="padding:4px 6px; font-size:12.5px; text-align:right;" placeholder="0" min="0" value="${rupees}" /></td>
+      <td><input type="number" class="form-input nb-paise" style="padding:4px 6px; font-size:12.5px; text-align:center;" placeholder="00" min="0" max="99" value="${paise || '00'}" /></td>
+      <td style="text-align:center;">
+        <button type="button" class="modal-close-btn" style="color:var(--danger); font-size:16px;" onclick="this.closest('tr').remove(); window.app.recalcBillForm();">&times;</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+
+    tr.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', () => this.recalcBillForm());
+    });
+
+    this.recalcBillForm();
+  }
+
+  addBillPresetItem(desc, qty, rupees, paise = 0) {
+    this.addBillItemRow(desc, qty, rupees, paise);
+  }
+
+  recalcBillForm() {
+    const rows = document.querySelectorAll('#nbItemsBody tr');
+    let totalR = 0;
+    let totalP = 0;
+    rows.forEach(tr => {
+      totalR += Number(tr.querySelector('.nb-rupees')?.value) || 0;
+      totalP += Number(tr.querySelector('.nb-paise')?.value) || 0;
+    });
+
+    if (totalP >= 100) {
+      totalR += Math.floor(totalP / 100);
+      totalP = totalP % 100;
+    }
+
+    const totalDisplay = document.getElementById('nbTotalRupeesDisplay');
+    if (totalDisplay) totalDisplay.textContent = `₹${totalR.toLocaleString('en-IN')}`;
+
+    const paiseDisplay = document.getElementById('nbTotalPaiseDisplay');
+    if (paiseDisplay) paiseDisplay.textContent = `.${String(totalP).padStart(2, '0')}`;
+
+    const wordsPreview = document.getElementById('nbWordsPreview');
+    if (wordsPreview) wordsPreview.textContent = numberToIndianWords(totalR);
+  }
+
+  openBillPreviewModal(bill, isBlank = false, startMode = null) {
+    const previewBox = document.getElementById('quotePrintPreviewBody');
+    if (!previewBox) return;
+
+    const nextAutoNo = store.getNextBillNumber();
+    const currentBill = bill ? { ...bill } : {
+      billNumber: nextAutoNo,
+      date: new Date().toISOString().split('T')[0],
+      customerName: '',
+      address: '',
+      phone: '9931227178',
+      items: [
+        { qty: '40 L', desc: 'डीजल (हाई स्पीड डीजल - 40 Ltr)', rupees: 3760, paise: 0 },
+        { qty: '1 Can', desc: 'इंजन ऑयल Mobil Delvac 15W-40', rupees: 2450, paise: 0 },
+        { qty: '2 Pc', desc: 'डीजल फिल्टर किट (Bosch)', rupees: 680, paise: 0 }
+      ],
+      totalRupees: 6890,
+      totalPaise: 0,
+      amountWords: numberToIndianWords(6890)
+    };
+
+    let activeMode = startMode || (isBlank ? 'live' : 'filled');
+
+    const renderView = (mode) => {
+      activeMode = mode;
+      const isLive = mode === 'live';
+      const isPureBlank = mode === 'pure_blank';
+      const isFilled = mode === 'filled';
+
+      previewBox.innerHTML = `
+        <div class="template-switch-bar no-print" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button class="template-switch-btn ${isLive ? 'active' : ''}" id="tsbLiveBtn" title="Direct interactive editing on sheet">
+              ✍️ Live Interactive Sheet (पर्ची में सीधे लिखें)
+            </button>
+            <button class="template-switch-btn" id="tsbOpenFormModalBtn" title="Enter data via clean modal form">
+              📝 Fast Form Entry (जैसे फॉर्म से भरें)
+            </button>
+            <button class="template-switch-btn ${isPureBlank ? 'active' : ''}" id="tsbBlankBtn" title="Blank stationery sheet with dotted lines">
+              📄 Pure Blank Stationery (सादा पर्ची)
+            </button>
+            <button class="template-switch-btn ${isFilled ? 'active' : ''}" id="tsbFilledBtn" title="Official final print view">
+              🧾 Official Bill View (No. ${currentBill.billNumber || nextAutoNo})
+            </button>
+          </div>
+
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <span class="badge badge-success" style="font-size:11px; padding:4px 9px;">
+              ⚡ Auto Bill No: ${currentBill.billNumber || nextAutoNo}
+            </span>
+            <button class="quick-action-btn btn-sm btn-primary" id="tsbSaveBillBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
+              💾 Save Bill to System
+            </button>
+            <button class="quick-action-btn btn-sm btn-outline" onclick="window.print()" style="background:#ffffff; color:#1e3a8a; border-color:#2563eb; font-weight:700;">
+              🖨️ Print Official Bill
+            </button>
+          </div>
+        </div>
+
+        ${renderMaaDurgaBillHTML(currentBill, isPureBlank, isLive)}
+      `;
+
+      const liveBtn = document.getElementById('tsbLiveBtn');
+      const openFormBtn = document.getElementById('tsbOpenFormModalBtn');
+      const blankBtn = document.getElementById('tsbBlankBtn');
+      const filledBtn = document.getElementById('tsbFilledBtn');
+      const saveBillBtn = document.getElementById('tsbSaveBillBtn');
+
+      if (liveBtn) liveBtn.onclick = () => renderView('live');
+      if (blankBtn) blankBtn.onclick = () => renderView('pure_blank');
+      if (filledBtn) filledBtn.onclick = () => renderView('filled');
+      if (openFormBtn) {
+        openFormBtn.onclick = () => {
+          if (isLive) this.syncLiveSheetDataToCurrent(currentBill);
+          this.closeModal('quotePrintPreviewModal');
+          this.openNewBillModal(currentBill);
+        };
+      }
+
+      if (saveBillBtn) {
+        saveBillBtn.onclick = () => {
+          if (isLive) this.syncLiveSheetDataToCurrent(currentBill);
+          const saved = store.addBill(currentBill);
+          showToast(`Bill #${saved.billNumber} for ${saved.customerName} successfully saved!`, 'success', 'Saved');
+          renderView('filled');
+        };
+      }
+
+      if (isLive) {
+        this.bindLiveSheetEvents(currentBill);
+      }
+    };
+
+    renderView(activeMode);
+    this.openModal('quotePrintPreviewModal');
+  }
+
+  syncLiveSheetDataToCurrent(bill) {
+    const custInput = document.getElementById('mddLiveCustomer');
+    const addrInput = document.getElementById('mddLiveAddress');
+    const dateInput = document.getElementById('mddLiveDate');
+    if (custInput) bill.customerName = custInput.value.trim() || 'मेसर्स ग्राहक';
+    if (addrInput) bill.address = addrInput.value.trim() || '';
+    if (dateInput) bill.date = dateInput.value || new Date().toISOString().split('T')[0];
+
+    const rows = document.querySelectorAll('#printableMddBill .mdd-live-row');
+    const items = [];
+    rows.forEach(tr => {
+      const qty = tr.querySelector('.mdd-live-qty')?.value.trim() || '';
+      const desc = tr.querySelector('.mdd-live-desc')?.value.trim() || '';
+      const rupees = Number(tr.querySelector('.mdd-live-rupees')?.value) || 0;
+      const paise = Number(tr.querySelector('.mdd-live-paise')?.value) || 0;
+      if (desc || rupees > 0) {
+        items.push({ qty, desc, rupees, paise });
+      }
+    });
+    bill.items = items;
+    bill.totalRupees = items.reduce((s, it) => s + (Number(it.rupees) || 0), 0);
+    bill.totalPaise = items.reduce((s, it) => s + (Number(it.paise) || 0), 0);
+    bill.amountWords = numberToIndianWords(bill.totalRupees);
+  }
+
+  bindLiveSheetEvents(bill) {
+    const table = document.getElementById('printableMddBill');
+    if (!table) return;
+
+    const recalc = () => {
+      const rows = table.querySelectorAll('.mdd-live-row');
+      let totalR = 0;
+      let totalP = 0;
+      rows.forEach(tr => {
+        totalR += Number(tr.querySelector('.mdd-live-rupees')?.value) || 0;
+        totalP += Number(tr.querySelector('.mdd-live-paise')?.value) || 0;
+      });
+
+      if (totalP >= 100) {
+        totalR += Math.floor(totalP / 100);
+        totalP = totalP % 100;
+      }
+
+      const totalRCell = document.getElementById('mddLiveTotalRupees');
+      if (totalRCell) totalRCell.textContent = totalR.toLocaleString('en-IN');
+
+      const totalPCell = document.getElementById('mddLiveTotalPaise');
+      if (totalPCell) totalPCell.textContent = String(totalP).padStart(2, '0');
+
+      const wordsCell = document.getElementById('mddLiveWordsVal');
+      if (wordsCell) wordsCell.textContent = numberToIndianWords(totalR);
+
+      if (bill) {
+        const custInput = document.getElementById('mddLiveCustomer');
+        const addrInput = document.getElementById('mddLiveAddress');
+        const dateInput = document.getElementById('mddLiveDate');
+        if (custInput) bill.customerName = custInput.value.trim() || 'मेसर्स ग्राहक';
+        if (addrInput) bill.address = addrInput.value.trim() || '';
+        if (dateInput) bill.date = dateInput.value || new Date().toISOString().split('T')[0];
+        bill.totalRupees = totalR;
+        bill.totalPaise = totalP;
+        bill.amountWords = numberToIndianWords(totalR);
+      }
+    };
+
+    table.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', recalc);
+    });
+  }
+
+  addLiveSheetItem(desc, qty, rupees, paise = 0) {
+    const table = document.getElementById('printableMddBill');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    const rows = tbody.querySelectorAll('.mdd-live-row');
+    let targetRow = null;
+    for (const row of rows) {
+      const descInput = row.querySelector('.mdd-live-desc');
+      const rupeeInput = row.querySelector('.mdd-live-rupees');
+      if (descInput && !descInput.value.trim() && (!rupeeInput || !rupeeInput.value)) {
+        targetRow = row;
+        break;
+      }
+    }
+
+    if (!targetRow) {
+      targetRow = document.createElement('tr');
+      targetRow.className = 'mdd-live-row';
+      const idx = rows.length + 1;
+      targetRow.innerHTML = `
+        <td style="width:70px; text-align:center; padding:2px;"><input type="text" class="mdd-sheet-table-input mdd-live-qty" value="${qty || idx}" style="text-align:center; font-weight:700;" /></td>
+        <td style="padding:2px;"><input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${desc}" style="font-weight:600;" /></td>
+        <td style="width:90px; text-align:right; padding:2px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${rupees}" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
+        <td style="width:45px; text-align:center; padding:2px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${paise || '00'}" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
+      `;
+      tbody.appendChild(targetRow);
+    } else {
+      targetRow.querySelector('.mdd-live-qty').value = qty || (Array.from(rows).indexOf(targetRow) + 1);
+      targetRow.querySelector('.mdd-live-desc').value = desc;
+      targetRow.querySelector('.mdd-live-rupees').value = rupees;
+      targetRow.querySelector('.mdd-live-paise').value = paise !== undefined ? paise : '00';
+    }
+
+    this.bindLiveSheetEvents();
+    const ev = new Event('input', { bubbles: true });
+    targetRow.querySelector('.mdd-live-rupees').dispatchEvent(ev);
+  }
+
+  addLiveSheetBlankRow() {
+    const table = document.getElementById('printableMddBill');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    const idx = tbody.querySelectorAll('.mdd-live-row').length + 1;
+    const tr = document.createElement('tr');
+    tr.className = 'mdd-live-row';
+    tr.innerHTML = `
+      <td style="width:70px; text-align:center; padding:2px;"><input type="text" class="mdd-sheet-table-input mdd-live-qty" placeholder="${idx}" style="text-align:center; font-weight:700;" /></td>
+      <td style="padding:2px;"><input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)" style="font-weight:600;" /></td>
+      <td style="width:90px; text-align:right; padding:2px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
+      <td style="width:45px; text-align:center; padding:2px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
+    `;
+    tbody.appendChild(tr);
+    this.bindLiveSheetEvents();
   }
 
   openQuotationModal(prefillLead = null, prefillTractor = null, prefillExchangeVal = 0) {

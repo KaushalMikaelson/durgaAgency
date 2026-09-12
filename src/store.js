@@ -6,7 +6,8 @@ import {
   DEFAULT_EXPENSES,
   DEFAULT_CASH_TRANSACTIONS,
   DEFAULT_DEMOS,
-  DEFAULT_QUOTES
+  DEFAULT_QUOTES,
+  DEFAULT_BILLS
 } from './data.js';
 
 const STORAGE_KEYS = {
@@ -16,6 +17,7 @@ const STORAGE_KEYS = {
   CASH_TXNS: 'mde_cash_txns_prod_v2',
   DEMOS: 'mde_demos_prod_v2',
   QUOTES: 'mde_quotes_prod_v2',
+  BILLS: 'mde_bills_prod_v2',
   SETTINGS: 'mde_settings_prod_v3'
 };
 
@@ -162,6 +164,16 @@ class DealershipStore {
       return JSON.parse(localStorage.getItem(STORAGE_KEYS.QUOTES)) || [];
     } catch {
       return DEFAULT_QUOTES;
+    }
+  }
+
+  getBills() {
+    try {
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.BILLS));
+      if (stored && Array.isArray(stored) && stored.length > 0) return stored;
+      return DEFAULT_BILLS;
+    } catch {
+      return DEFAULT_BILLS;
     }
   }
 
@@ -326,6 +338,57 @@ class DealershipStore {
     localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify(quotes));
     this.notify();
     return newQuote;
+  }
+
+  getNextBillNumber() {
+    const bills = this.getBills();
+    let maxNo = 86;
+    if (bills && Array.isArray(bills) && bills.length > 0) {
+      const nums = bills.map(b => parseInt(b.billNumber, 10)).filter(n => !isNaN(n));
+      if (nums.length > 0) {
+        maxNo = Math.max(...nums);
+      }
+    }
+    return String(maxNo + 1);
+  }
+
+  // --- Bill Operations (Maa Durga Diesel Template) ---
+  addBill(billData) {
+    const bills = this.getBills();
+    const nextNo = this.getNextBillNumber();
+    const billNumber = (billData.billNumber && String(billData.billNumber).trim() !== '')
+      ? String(billData.billNumber).trim()
+      : nextNo;
+    const newBill = {
+      id: billData.id || `BILL-${Date.now()}`,
+      billNumber: String(billNumber),
+      date: billData.date || new Date().toISOString().split('T')[0],
+      customerName: billData.customerName || 'मेसर्स ग्राहक',
+      address: billData.address || '',
+      phone: billData.phone || '',
+      vehicle: billData.vehicle || '',
+      items: billData.items || [],
+      totalRupees: Number(billData.totalRupees || 0),
+      totalPaise: Number(billData.totalPaise || 0),
+      amountWords: billData.amountWords || '',
+      ...billData
+    };
+    const existingIndex = bills.findIndex(b => String(b.billNumber) === String(billNumber) || (b.id && b.id === newBill.id));
+    if (existingIndex >= 0) {
+      bills[existingIndex] = { ...bills[existingIndex], ...newBill };
+    } else {
+      bills.unshift(newBill);
+    }
+    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
+    this.notify();
+    return newBill;
+  }
+
+  deleteBill(billId) {
+    let bills = this.getBills();
+    bills = bills.filter(b => b.id !== billId && b.billNumber !== billId);
+    localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
+    this.notify();
   }
 
   // --- Unit Economics & Tractor Profitability ---
