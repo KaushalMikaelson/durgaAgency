@@ -1,0 +1,3157 @@
+// Maa Durga Engineering - Unified Self-Contained Bundle
+// Works seamlessly in both HTTP and local file:// browser modes without CORS limitations
+
+(function() {
+  'use strict';
+
+  // --- 1. SHOWROOM DATA & DEFAULTS ---
+  const SHOWROOM_INFO = {
+    name: "Maa Durga Engineering",
+    tagline: "Authorized VST Zetor Agricultural Machinery & Tractor Sales, Service & Spares Dealership",
+    address: "NH-28 Bypass Road, Near Kisan Mandi, Industrial Area, Gorakhpur - 273001, UP",
+    phone: "+91 98380 12345",
+    whatsapp: "919838012345",
+    email: "sales@maadurgaengineering.in",
+    gstin: "09AAACM4521K1ZF",
+    bankName: "State Bank of India",
+    accountNo: "3892010482910",
+    ifsc: "SBIN0001248",
+    authorizedBrands: ["VST Zetor", "VST Tillers Tractors", "Zetor"]
+  };
+
+  const DEFAULT_TRACTORS = [
+    {
+      id: "TRAC-001",
+      brand: "VST Zetor",
+      model: "4211 2WD",
+      hp: 42,
+      ptoHp: 38,
+      engineCc: 2500,
+      cylinders: 3,
+      liftCapacityKg: 1800,
+      transmission: "Fully Constant Mesh Helical (8 F + 2 R)",
+      drive: "2WD",
+      price: 745000,
+      dealerPurchaseCost: 670000,
+      stockCount: 0,
+      bestSoil: ["All Types", "Sandy Loam", "Medium", "Loam"],
+      recommendedAcresMin: 5,
+      recommendedAcresMax: 18,
+      compatibleImplements: ["Rotavator (5 ft)", "Cultivator (9 Tyne)", "Trolley (6-8 Ton)", "Thresher", "Sprayer"],
+      popularCrops: ["Wheat", "Mustard", "Vegetables", "Paddy", "Pulses"],
+      chassisList: [],
+      warranty: "6 Years / 6000 Hours Warranty",
+      status: "Available to Order"
+    },
+    {
+      id: "TRAC-002",
+      brand: "VST Zetor",
+      model: "4211 4WD",
+      hp: 42,
+      ptoHp: 38,
+      engineCc: 2500,
+      cylinders: 3,
+      liftCapacityKg: 1800,
+      transmission: "Fully Constant Mesh Helical (8 F + 2 R)",
+      drive: "4WD",
+      price: 795000,
+      dealerPurchaseCost: 715000,
+      stockCount: 0,
+      bestSoil: ["Wetland / Puddle", "Clay", "Black Soil", "Loam"],
+      recommendedAcresMin: 6,
+      recommendedAcresMax: 22,
+      compatibleImplements: ["Rotavator (5-6 ft)", "Puddler", "Cultivator (9 Tyne)", "Trolley (8 Ton)"],
+      popularCrops: ["Paddy / Rice", "Wheat", "Potato", "Sugarcane"],
+      chassisList: [],
+      warranty: "6 Years / 6000 Hours Warranty",
+      status: "Available to Order"
+    },
+    {
+      id: "TRAC-003",
+      brand: "VST Zetor",
+      model: "4511 2WD",
+      hp: 47,
+      ptoHp: 40.5,
+      engineCc: 2979,
+      cylinders: 3,
+      liftCapacityKg: 1800,
+      transmission: "Fully Constant Mesh Helical (8 F + 2 R) Side Shift",
+      drive: "2WD",
+      price: 770000,
+      dealerPurchaseCost: 695000,
+      stockCount: 0,
+      bestSoil: ["Medium", "Loam", "Clay Loam", "All Types"],
+      recommendedAcresMin: 8,
+      recommendedAcresMax: 28,
+      compatibleImplements: ["Rotavator (6 ft)", "Cultivator (11 Tyne)", "Trolley (8-10 Ton)", "MB Plough (2 Bottom)", "Thresher"],
+      popularCrops: ["Wheat", "Paddy", "Sugarcane", "Potato", "Maize"],
+      chassisList: [],
+      warranty: "6 Years / 6000 Hours Warranty",
+      status: "Available to Order"
+    },
+    {
+      id: "TRAC-004",
+      brand: "VST Zetor",
+      model: "4511 4WD",
+      hp: 47,
+      ptoHp: 40.5,
+      engineCc: 2979,
+      cylinders: 3,
+      liftCapacityKg: 1800,
+      transmission: "Fully Constant Mesh Helical (8 F + 2 R)",
+      drive: "4WD",
+      price: 835000,
+      dealerPurchaseCost: 750000,
+      stockCount: 0,
+      bestSoil: ["Heavy Black", "Clay", "Wet Puddling", "Loam"],
+      recommendedAcresMin: 10,
+      recommendedAcresMax: 35,
+      compatibleImplements: ["Heavy Rotavator (6 ft)", "Laser Leveller", "Puddler", "MB Plough", "Heavy Trolley (10 Ton)"],
+      popularCrops: ["Sugarcane", "Paddy", "Wheat", "Cotton", "Potato"],
+      chassisList: [],
+      warranty: "6 Years / 6000 Hours Warranty",
+      status: "Available to Order"
+    },
+    {
+      id: "TRAC-005",
+      brand: "VST Zetor",
+      model: "5011 2WD",
+      hp: 50,
+      ptoHp: 43.5,
+      engineCc: 3220,
+      cylinders: 3,
+      liftCapacityKg: 2000,
+      transmission: "Helical Constant Mesh (8 F + 2 R / Dual Clutch)",
+      drive: "2WD",
+      price: 820000,
+      dealerPurchaseCost: 740000,
+      stockCount: 0,
+      bestSoil: ["Heavy Black", "Hard Soil", "Loam", "Medium"],
+      recommendedAcresMin: 12,
+      recommendedAcresMax: 45,
+      compatibleImplements: ["Rotavator (6-7 ft)", "Cultivator (11-13 Tyne)", "MB Plough (2 Bottom Heavy)", "Trolley (10-12 Ton)", "Laser Leveller"],
+      popularCrops: ["Sugarcane", "Wheat", "Paddy", "Cotton", "Potato"],
+      chassisList: [],
+      warranty: "6 Years / 6000 Hours Warranty",
+      status: "Available to Order"
+    },
+    {
+      id: "TRAC-006",
+      brand: "VST Zetor",
+      model: "5011 4WD",
+      hp: 50,
+      ptoHp: 43.8,
+      engineCc: 3220,
+      cylinders: 3,
+      liftCapacityKg: 2000,
+      transmission: "Helical Constant Mesh (8 F + 2 R / 16 F + 4 R Option)",
+      drive: "4WD",
+      price: 885000,
+      dealerPurchaseCost: 798000,
+      stockCount: 0,
+      bestSoil: ["Heavy Black Soil", "Deep Clay", "Challenging Terrains", "Wet Puddling"],
+      recommendedAcresMin: 15,
+      recommendedAcresMax: 55,
+      compatibleImplements: ["Heavy Rotavator (7 ft)", "Square Baler", "Heavy MB Plough (3 Bottom)", "Laser Leveller", "Heavy Haulage Trolley (12-14 Ton)"],
+      popularCrops: ["Sugarcane", "Wheat", "Paddy", "Cotton", "Commercial Haulage"],
+      chassisList: [],
+      warranty: "6 Years / 6000 Hours Warranty",
+      status: "Available to Order"
+    }
+  ];
+
+  // Clean Slate - Zero Seed Data (100% Dynamic)
+  const DEFAULT_LEADS = [];
+  const DEFAULT_EXPENSES = [];
+  const DEFAULT_CASH_TRANSACTIONS = [];
+  const DEFAULT_DEMOS = [];
+  const DEFAULT_QUOTES = [];
+
+  // --- 2. VECTOR ICONS ---
+  const icons = {
+    tractor: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 11 11 .9a1 1 0 0 1 .8 1.1l-.66 5a1 1 0 0 1-1 .9H16"/><path d="M16 18h-5"/><path d="M7 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M19 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/><path d="M7 11V4h7v7"/></svg>`,
+    users: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+    rupee: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3a4 4 0 0 0 0-8"/></svg>`,
+    quote: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>`,
+    exchange: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>`,
+    expense: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+    bank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`,
+    calculator: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/></svg>`,
+    map: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>`,
+    bot: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>`,
+    flame: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
+    phone: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
+    whatsapp: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>`,
+    calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>`,
+    plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>`,
+    check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`,
+    print: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>`,
+    sparkles: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>`,
+    trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`
+  };
+
+  function renderIcon(name, extraClass = '') {
+    const svg = icons[name] || icons.sparkles;
+    const cls = extraClass ? ` class="${extraClass}"` : '';
+    return svg.replace('<svg', `<svg width="18" height="18"${cls}`);
+  }
+
+  // --- ON-SCREEN TOAST NOTIFICATION SYSTEM ---
+  function showToast(message, type = 'success', title = '') {
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.className = 'toast-container';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast-item toast-${type}`;
+
+    let iconSvg = '';
+    let defaultTitle = '';
+    if (type === 'success') {
+      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+      defaultTitle = 'Success';
+    } else if (type === 'warning') {
+      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+      defaultTitle = 'Attention';
+    } else if (type === 'error') {
+      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+      defaultTitle = 'Error';
+    } else {
+      iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+      defaultTitle = 'Showroom Notice';
+    }
+
+    const finalTitle = title || defaultTitle;
+
+    toast.innerHTML = `
+      <div class="toast-icon">${iconSvg}</div>
+      <div class="toast-content">
+        <div class="toast-title">${finalTitle}</div>
+        <div class="toast-msg">${message}</div>
+      </div>
+      <button class="toast-close-btn" title="Dismiss">&times;</button>
+      <div class="toast-progress"></div>
+    `;
+
+    const closeBtn = toast.querySelector('.toast-close-btn');
+    const dismiss = () => {
+      if (toast.classList.contains('toast-dismissing')) return;
+      toast.classList.add('toast-dismissing');
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 280);
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', dismiss);
+    const timer = setTimeout(dismiss, 4000);
+    toast.addEventListener('mouseenter', () => clearTimeout(timer));
+
+    container.appendChild(toast);
+  }
+
+  // Intercept window.alert to automatically route through on-screen toast
+  window.alert = function(msg) {
+    showToast(String(msg), 'info', 'Showroom Notice');
+  };
+  window.showToast = showToast;
+
+  // --- 3. STORAGE & STATE MANAGEMENT ---
+  const STORAGE_KEYS = {
+    TRACTORS: 'mde_tractors_prod_v3',
+    LEADS: 'mde_leads_prod_v2',
+    EXPENSES: 'mde_expenses_prod_v2',
+    CASH_TXNS: 'mde_cash_txns_prod_v2',
+    DEMOS: 'mde_demos_prod_v2',
+    QUOTES: 'mde_quotes_prod_v2',
+    SETTINGS: 'mde_settings_prod_v3'
+  };
+
+  class DealershipStore {
+    constructor() {
+      this.subscribers = new Set();
+      this.init();
+    }
+
+    init() {
+      try {
+        // Purge old pre-production keys so user browser gets 100% clean slate
+        const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('mde_') && !k.includes('_prod_v2') && !k.includes('_prod_v3'));
+        for (const k of oldKeys) {
+          localStorage.removeItem(k);
+        }
+        // Purge previous v2 tractors to ensure instant upgrade to VST Zetor catalog
+        if (localStorage.getItem('mde_tractors_prod_v2')) {
+          localStorage.removeItem('mde_tractors_prod_v2');
+        }
+      } catch (e) {
+        console.warn("Storage cleanup notice", e);
+      }
+
+      try {
+        const storedTractors = localStorage.getItem(STORAGE_KEYS.TRACTORS);
+        // Auto-upgrade if empty or storing non-VST models
+        if (!storedTractors || !storedTractors.includes('VST Zetor')) {
+          localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(DEFAULT_TRACTORS));
+        }
+        if (!localStorage.getItem(STORAGE_KEYS.LEADS)) {
+          localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(DEFAULT_LEADS));
+        }
+        if (!localStorage.getItem(STORAGE_KEYS.EXPENSES)) {
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(DEFAULT_EXPENSES));
+        }
+        if (!localStorage.getItem(STORAGE_KEYS.CASH_TXNS)) {
+          localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(DEFAULT_CASH_TRANSACTIONS));
+        }
+        if (!localStorage.getItem(STORAGE_KEYS.DEMOS)) {
+          localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(DEFAULT_DEMOS));
+        }
+        if (!localStorage.getItem(STORAGE_KEYS.QUOTES)) {
+          localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify(DEFAULT_QUOTES));
+        }
+        const storedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+        if (!storedSettings || !storedSettings.includes('VST Zetor')) {
+          localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(SHOWROOM_INFO));
+        }
+      } catch (e) {
+        console.warn("Storage fallback to memory mode", e);
+      }
+    }
+
+    subscribe(cb) {
+      this.subscribers.add(cb);
+      return () => this.subscribers.delete(cb);
+    }
+
+    notify() {
+      for (const cb of this.subscribers) {
+        try { cb(); } catch (e) { console.error(e); }
+      }
+    }
+
+    getTractors() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.TRACTORS)) || DEFAULT_TRACTORS; } catch { return DEFAULT_TRACTORS; }
+    }
+    getLeads() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADS)) || DEFAULT_LEADS; } catch { return DEFAULT_LEADS; }
+    }
+    getExpenses() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES)) || DEFAULT_EXPENSES; } catch { return DEFAULT_EXPENSES; }
+    }
+    getCashTransactions() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TXNS)) || DEFAULT_CASH_TRANSACTIONS; } catch { return DEFAULT_CASH_TRANSACTIONS; }
+    }
+    getDemos() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.DEMOS)) || DEFAULT_DEMOS; } catch { return DEFAULT_DEMOS; }
+    }
+    getQuotes() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.QUOTES)) || DEFAULT_QUOTES; } catch { return DEFAULT_QUOTES; }
+    }
+    getSettings() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS)) || SHOWROOM_INFO; } catch { return SHOWROOM_INFO; }
+    }
+
+    addLead(leadData) {
+      const leads = this.getLeads();
+      const newLead = {
+        id: `LEAD-${100 + leads.length + 1}`,
+        lastContactDate: new Date().toISOString().split('T')[0],
+        ...leadData
+      };
+      leads.unshift(newLead);
+      localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+      this.notify();
+      return newLead;
+    }
+
+    deleteLead(id) {
+      const leads = this.getLeads().filter(l => l.id !== id);
+      localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+      this.notify();
+    }
+
+    addExpense(expenseData) {
+      const expenses = this.getExpenses();
+      const isAutoApproved = expenseData.amount < 5000;
+      const newExpense = {
+        id: `EXP-${800 + expenses.length + 1}`,
+        date: expenseData.date || new Date().toISOString().split('T')[0],
+        status: isAutoApproved ? 'Approved' : 'Pending Approval',
+        approvedBy: isAutoApproved ? 'System (< ₹5,000)' : null,
+        ...expenseData
+      };
+      expenses.unshift(newExpense);
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+
+      if (isAutoApproved) {
+        this.addCashTransaction({
+          date: newExpense.date,
+          type: 'OUT',
+          category: newExpense.category,
+          amount: newExpense.amount,
+          party: newExpense.paidTo || 'Vendor',
+          mode: newExpense.paymentMode || 'Cash',
+          ref: newExpense.id
+        });
+      }
+      this.notify();
+      return newExpense;
+    }
+
+    approveExpense(expenseId, approverName = 'Showroom Director') {
+      const expenses = this.getExpenses();
+      const item = expenses.find(e => e.id === expenseId);
+      if (item && item.status !== 'Approved') {
+        item.status = 'Approved';
+        item.approvedBy = approverName;
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+        this.addCashTransaction({
+          date: new Date().toISOString().split('T')[0],
+          type: 'OUT',
+          category: item.category,
+          amount: item.amount,
+          party: item.paidTo || 'Vendor',
+          mode: item.paymentMode || 'Bank Transfer',
+          ref: item.id
+        });
+        this.notify();
+      }
+    }
+
+    deleteExpense(id) {
+      const expenses = this.getExpenses().filter(e => e.id !== id);
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+      this.notify();
+    }
+
+    addCashTransaction(txnData) {
+      const txns = this.getCashTransactions();
+      const newTxn = {
+        id: `TXN-${300 + txns.length + 1}`,
+        date: txnData.date || new Date().toISOString().split('T')[0],
+        ...txnData
+      };
+      txns.unshift(newTxn);
+      localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(txns));
+      this.notify();
+      return newTxn;
+    }
+
+    addDemo(demoData) {
+      const demos = this.getDemos();
+      const newDemo = {
+        id: `DEMO-${String(demos.length + 1).padStart(2, '0')}`,
+        status: 'Scheduled',
+        ...demoData
+      };
+      demos.unshift(newDemo);
+      localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
+      this.notify();
+      return newDemo;
+    }
+
+    updateDemo(id, fields) {
+      const demos = this.getDemos();
+      const idx = demos.findIndex(d => d.id === id);
+      if (idx !== -1) {
+        demos[idx] = { ...demos[idx], ...fields };
+        localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
+        this.notify();
+      }
+    }
+
+    addQuote(quoteData) {
+      const quotes = this.getQuotes();
+      const quoteNumber = `MDE/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/Q-${100 + quotes.length + 1}`;
+      const newQuote = {
+        quoteNumber,
+        date: new Date().toISOString().split('T')[0],
+        ...quoteData
+      };
+      quotes.unshift(newQuote);
+      localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify(quotes));
+      this.notify();
+      return newQuote;
+    }
+
+    addTractor(tractorData) {
+      const tractors = this.getTractors();
+      const newId = `TRAC-${String(tractors.length + 1).padStart(3, '0')}`;
+      const newTractor = {
+        id: newId,
+        status: Number(tractorData.stockCount) > 0 ? 'In Stock' : 'Available to Order',
+        chassisList: tractorData.chassisList || [],
+        ...tractorData
+      };
+      tractors.push(newTractor);
+      localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
+      this.notify();
+      return newTractor;
+    }
+
+    updateTractorStock(tractorId, deltaCount, newChassis = null) {
+      const tractors = this.getTractors();
+      const t = tractors.find(tr => tr.id === tractorId);
+      if (t) {
+        t.stockCount = Math.max(0, (Number(t.stockCount) || 0) + deltaCount);
+        t.status = t.stockCount > 0 ? 'In Stock' : 'Available to Order';
+        if (newChassis) {
+          t.chassisList = t.chassisList || [];
+          t.chassisList.push(newChassis);
+        }
+        localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
+        this.notify();
+      }
+    }
+
+    getTractorUnitEconomics(tractorId, chassisNo = null) {
+      const tractor = this.getTractors().find(t => t.id === tractorId);
+      if (!tractor) return null;
+      const expenses = this.getExpenses().filter(e => e.status === 'Approved');
+      const matched = expenses.filter(e => {
+        if (!e.chassisTag) return false;
+        if (chassisNo && e.chassisTag === chassisNo) return true;
+        return tractor.chassisList && tractor.chassisList.includes(e.chassisTag);
+      });
+      const directTotal = matched.reduce((s, e) => s + Number(e.amount || 0), 0);
+      const purchaseCost = Number(tractor.dealerPurchaseCost || 0);
+      const sellingPrice = Number(tractor.price || 0);
+      const totalTrueCost = purchaseCost + directTotal;
+      const actualMargin = sellingPrice - totalTrueCost;
+      const marginPercent = totalTrueCost > 0 ? ((actualMargin / sellingPrice) * 100).toFixed(1) : 0;
+      return {
+        tractor,
+        chassisNo,
+        purchaseCost,
+        directExpenses: matched,
+        directExpensesTotal: directTotal,
+        totalTrueCost,
+        sellingPrice,
+        actualMargin,
+        marginPercent
+      };
+    }
+
+    getFinancialSnapshot() {
+      const expenses = this.getExpenses().filter(e => e.status === 'Approved');
+      const cashTxns = this.getCashTransactions();
+      const quotes = this.getQuotes();
+      const tractors = this.getTractors();
+
+      // Dynamic Sales Revenue: sum of quotes grand totals or cash "IN" from tractor sales/advance
+      const quoteRevenue = quotes.reduce((sum, q) => sum + Number(q.grandTotal || 0), 0);
+      const cashSalesRevenue = cashTxns
+        .filter(t => t.type === 'IN' && (t.category === 'Tractor Sale' || t.category === 'Customer Advance'))
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+      const salesRevenue = Math.max(quoteRevenue, cashSalesRevenue);
+
+      // Cost of goods sold: tractor purchase costs for quoted units
+      let costOfGoodsSold = 0;
+      for (const q of quotes) {
+        const tr = tractors.find(t => t.id === q.tractorId || t.model === q.tractorModel || (q.tractorName && q.tractorName.includes(t.model)));
+        if (tr && tr.dealerPurchaseCost) {
+          costOfGoodsSold += Number(tr.dealerPurchaseCost);
+        }
+      }
+
+      const grossProfit = Math.max(0, salesRevenue - costOfGoodsSold);
+
+      const categoryTotals = {};
+      let totalExpenses = 0;
+      for (const exp of expenses) {
+        const cat = exp.category || 'Other';
+        const amt = Number(exp.amount || 0);
+        categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
+        totalExpenses += amt;
+      }
+
+      const netProfit = grossProfit - totalExpenses;
+      let cashIn = 0, cashOut = 0;
+      for (const txn of cashTxns) {
+        const amt = Number(txn.amount || 0);
+        if (txn.type === 'IN') cashIn += amt;
+        else if (txn.type === 'OUT') cashOut += amt;
+      }
+      return {
+        salesRevenue,
+        costOfGoodsSold,
+        grossProfit,
+        totalExpenses,
+        netProfit,
+        categoryTotals,
+        cashIn,
+        cashOut,
+        netCashFlow: cashIn - cashOut
+      };
+    }
+  }
+
+  const store = new DealershipStore();
+
+  // --- 4. DETERMINISTIC ALGORITHMS ---
+  function calculateBuyingScore(lead) {
+    let score = 25;
+    const reasons = [];
+    const stage = lead.stage || 'New Enquiry';
+    if (stage === 'Negotiation') { score += 35; reasons.push('Customer in active price negotiation'); }
+    else if (stage === 'Quotation Sent') { score += 25; reasons.push('Customer formally received quotation'); }
+    else if (stage === 'Demo Scheduled' || stage === 'Demo Completed') { score += 22; reasons.push('Field demonstration interest'); }
+    else if (stage === 'Needs Analyzed') { score += 15; reasons.push('Implement needs matched'); }
+
+    const days = Number(lead.expectedPurchaseDays) || 30;
+    if (days <= 7) { score += 25; reasons.push('Immediate purchase intended within 7 days'); }
+    else if (days <= 15) { score += 18; reasons.push('Purchase planned within 2 weeks'); }
+    else if (days <= 30) { score += 10; reasons.push('Planning purchase this harvest season'); }
+    else { score -= 10; reasons.push('Long-term horizon (> 30 days)'); }
+
+    if (lead.financeRequired) { score += 8; reasons.push('Finance / KCC ready for processing'); }
+    if (lead.exchangeWanted) { score += 10; reasons.push('Old tractor exchange evaluation in progress'); }
+
+    const finalScore = Math.max(10, Math.min(98, Math.round(score)));
+    let category = 'COLD';
+    if (finalScore >= 75) category = 'HOT';
+    else if (finalScore >= 50) category = 'WARM';
+
+    let nextAction = '';
+    if (category === 'HOT') {
+      if (stage === 'Negotiation') nextAction = 'Call today: Close booking with festive canopy waiver.';
+      else if (stage === 'Quotation Sent') nextAction = 'Call today: Confirm loan documentation & collect token advance.';
+      else if (stage === 'Demo Scheduled') nextAction = 'Call today: Confirm demo tractor driver for village field test.';
+      else nextAction = 'Call today: High purchase intent; schedule showroom visit or demo.';
+    } else if (category === 'WARM') {
+      nextAction = lead.exchangeWanted ? 'Dispatch showroom mechanic for used tractor appraisal.' : 'Send WhatsApp implement video & personalized EMI calculation.';
+    } else {
+      nextAction = 'Add to seasonal WhatsApp broadcast list & follow up next month.';
+    }
+
+    return { score: finalScore, category, probability: `${finalScore}%`, reasons, nextAction };
+  }
+
+  function getTodayCallsQueue(leadsList) {
+    const scored = leadsList.map(lead => ({
+      ...lead,
+      computedScore: calculateBuyingScore(lead)
+    }));
+    return scored
+      .filter(l => l.computedScore.category === 'HOT' || l.stage === 'Negotiation' || l.stage === 'Quotation Sent')
+      .sort((a, b) => b.computedScore.score - a.computedScore.score);
+  }
+
+  function matchTractor({ landAcres, soilType = 'Medium', implementsNeeded = [], budgetMax, requiresHeavyTrolley = false, drivePreference = 'Any', tractorsList = [] }) {
+    const acres = Number(landAcres) || 10;
+    const budget = Number(budgetMax) || 1000000;
+    let minHp = 35, maxHp = 65;
+    if (acres <= 7) { minHp = 35; maxHp = 45; }
+    else if (acres <= 15) { minHp = 42; maxHp = 52; }
+    else if (acres <= 30) { minHp = 48; maxHp = 58; }
+    else { minHp = 50; maxHp = 70; }
+
+    const isHeavySoil = soilType.toLowerCase().includes('black') || soilType.toLowerCase().includes('clay');
+    if (isHeavySoil) minHp += 3;
+
+    const hasRotavator = implementsNeeded.some(i => i.toLowerCase().includes('rotavator'));
+    const hasHeavyImplement = implementsNeeded.some(i => i.toLowerCase().includes('plough') || i.toLowerCase().includes('leveller'));
+    if (hasRotavator) minHp = Math.max(minHp, 45);
+    if (hasHeavyImplement) minHp = Math.max(minHp, 48);
+    if (requiresHeavyTrolley) minHp = Math.max(minHp, 45);
+
+    const scored = tractorsList.map(t => {
+      let score = 0;
+      const reasons = [];
+      if (t.hp >= minHp && t.hp <= maxHp + 5) {
+        score += 35;
+        reasons.push(`Optimal ${t.hp} HP engine perfectly matches ${acres} acres workload`);
+      } else if (t.hp >= minHp - 3) {
+        score += 20;
+        reasons.push(`Viable ${t.hp} HP for entry-level work`);
+      }
+      if (t.price <= budget) {
+        score += 25;
+        reasons.push(`Well within budget at ₹${(t.price / 100000).toFixed(2)} Lakh`);
+      } else if (t.price <= budget * 1.1) {
+        score += 15;
+        reasons.push(`Slightly above budget but higher resale value`);
+      }
+      if (hasRotavator) {
+        if (t.ptoHp >= 42) {
+          score += 20;
+          reasons.push(`High PTO power (${t.ptoHp} HP) handles 6-7 ft Rotavator without RPM drop`);
+        } else {
+          score += 10;
+          reasons.push(`Suitable for 5 ft rotavator`);
+        }
+      }
+      if (requiresHeavyTrolley || hasHeavyImplement) {
+        if (t.liftCapacityKg >= 1800) {
+          score += 15;
+          reasons.push(`Heavy hydraulic lift capacity (${t.liftCapacityKg} kg) excellent for 10-12 ton trolley`);
+        }
+      }
+      if (isHeavySoil && (t.drive.includes('4WD') || t.hp >= 50)) {
+        score += 10;
+        reasons.push(`Engine torque & grip well suited for heavy ${soilType} terrain`);
+      }
+      return { tractor: t, score, reasons };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    const bestMatch = scored[0] || null;
+    const alternative = scored.slice(1).find(item => item.tractor.hp > (bestMatch?.tractor.hp || 0)) || scored[1] || null;
+    return { recommendedHpRange: `${minHp} - ${maxHp} HP`, bestMatch, alternative, allRanked: scored };
+  }
+
+  function calculateTractorLoan({ tractorPrice, subsidyAmount = 0, downPayment = 0, tenureYears = 5, annualInterestRate = 10.5 }) {
+    const price = Number(tractorPrice) || 0;
+    const subsidy = Number(subsidyAmount) || 0;
+    const down = Number(downPayment) || 0;
+    const years = Number(tenureYears) || 5;
+    const annualRate = Number(annualInterestRate) || 10.5;
+
+    const netCost = Math.max(0, price - subsidy);
+    const loanPrincipal = Math.max(0, netCost - down);
+    const months = years * 12;
+    const monthlyRate = annualRate / (12 * 100);
+
+    let monthlyEmi = 0;
+    if (loanPrincipal > 0 && monthlyRate > 0) {
+      monthlyEmi = (loanPrincipal * monthlyRate * Math.pow(1 + monthlyRate, months)) / (Math.pow(1 + monthlyRate, months) - 1);
+    }
+
+    const totalPayment = down + (monthlyEmi * months);
+    const totalInterest = Math.max(0, totalPayment - down - loanPrincipal);
+
+    const biAnnualInstallments = years * 2;
+    const biAnnualRate = annualRate / (2 * 100);
+    let biAnnualEmi = 0;
+    if (loanPrincipal > 0 && biAnnualRate > 0) {
+      biAnnualEmi = (loanPrincipal * biAnnualRate * Math.pow(1 + biAnnualRate, biAnnualInstallments)) / (Math.pow(1 + biAnnualRate, biAnnualInstallments) - 1);
+    }
+
+    return {
+      netTractorCost: Math.round(netCost),
+      loanPrincipal: Math.round(loanPrincipal),
+      downPayment: Math.round(down),
+      subsidyAmount: Math.round(subsidy),
+      tenureYears: years,
+      annualInterestRate: annualRate,
+      monthlyEmi: Math.round(monthlyEmi),
+      biAnnualHarvestEmi: Math.round(biAnnualEmi),
+      totalInterest: Math.round(totalInterest),
+      totalRepayment: Math.round(totalPayment),
+      principalPercent: totalPayment > 0 ? Math.round((loanPrincipal / totalPayment) * 100) : 100,
+      interestPercent: totalPayment > 0 ? Math.round((totalInterest / totalPayment) * 100) : 0
+    };
+  }
+
+  function evaluateUsedTractor({ brand, model, manufactureYear = 2018, meterHours = 3500, tyreConditionPercent = 65, engineCondition = 'Good', hydraulicsCondition = 'Good', ptoCondition = 'Good', transmissionCondition = 'Good', newTractorPrice = 840000 }) {
+    const currentYear = new Date().getFullYear();
+    const age = Math.max(1, currentYear - Number(manufactureYear));
+    const hours = Number(meterHours) || 3000;
+    const tyres = Number(tyreConditionPercent) || 50;
+
+    let baseValue = 520000 - (age * 22000);
+    if (hours > 5000) baseValue -= 35000;
+    else if (hours > 3000) baseValue -= 18000;
+    else if (hours < 1500) baseValue += 25000;
+
+    if (tyres < 35) baseValue -= 28000;
+    else if (tyres > 80) baseValue += 18000;
+
+    if (engineCondition === 'Excellent') baseValue += 20000;
+    else if (engineCondition === 'Average') baseValue -= 25000;
+    else if (engineCondition === 'Poor') baseValue -= 50000;
+
+    if (hydraulicsCondition === 'Poor') baseValue -= 20000;
+    if (ptoCondition === 'Poor') baseValue -= 15000;
+    if (transmissionCondition === 'Poor') baseValue -= 25000;
+
+    baseValue = Math.max(120000, Math.round(baseValue / 5000) * 5000);
+    const minVal = Math.round(baseValue * 0.94);
+    const maxVal = Math.round(baseValue * 1.06);
+    const effectivePrice = Math.max(0, newTractorPrice - baseValue);
+
+    const checklist = [
+      { item: "Engine Compression & Blow-by Smoke", status: engineCondition, critical: true },
+      { item: "Hydraulic Lift Reaction & Oil Leakage", status: hydraulicsCondition, critical: true },
+      { item: "Dual-Clutch & PTO Spline Play", status: ptoCondition, critical: true },
+      { item: "Transmission Gearbox Grinding & Reverse Lock", status: transmissionCondition, critical: true },
+      { item: "Tyre Lug Remaining Depth & Side Cracks", status: `${tyres}% Life`, critical: false },
+      { item: "RC Book & Bank NOC Hypothecation Check", status: "Document Verification", critical: true }
+    ];
+
+    return { brand, model, manufactureYear, meterHours: hours, minValuation: minVal, maxValuation: maxVal, recommendedOffer: baseValue, newTractorPrice, effectivePurchaseAmount: effectivePrice, inspectionChecklist: checklist };
+  }
+
+  function generateFollowUpSequences(lead, tractor = null) {
+    const customerName = lead.name || 'Kisan Bhai';
+    const tractorName = tractor ? `${tractor.brand} ${tractor.model}` : (lead.interestedModel || 'Tractor');
+    const acres = lead.landAcres ? `${lead.landAcres} acres` : 'your farm';
+    const village = lead.village ? `Village ${lead.village}` : '';
+
+    return [
+      {
+        day: 1,
+        title: "Day 1: Showroom Visit Gratitude & Shortlisted Model",
+        body: `Namaskar ${customerName} Ji 🙏\n\nThank you for visiting Maa Durga Engineering! Based on your requirement for ${acres} in ${village}, we shortlisted the powerful ${tractorName}.\n\n✓ Best in class fuel efficiency\n✓ High lifting capacity & heavy duty gearbox\n✓ 5-year warranty with showroom service\n\nBrochure attached. Looking forward to serving you!\n\nSales Team | Maa Durga Engineering\nGorakhpur - ${SHOWROOM_INFO.phone}`
+      },
+      {
+        day: 3,
+        title: "Day 3: Rotavator & Implement Field Video",
+        body: `Namaskar ${customerName} Ji,\n\nField demonstration video of ${tractorName} with a 6-ft Rotavator:\n\n📹 Video: https://youtu.be/maadurga-field-demo\n\nNotice the zero RPM drop. Shall our demo team bring this tractor to your farm in ${village} this week?\n\nMaa Durga Engineering`
+      },
+      {
+        day: 7,
+        title: "Day 7: Easy Kisan Loan & Low Harvest EMI Scheme",
+        body: `Namaskar ${customerName} Ji,\n\nWe have an exclusive financing tie-up with State Bank of India & HDFC Bank for ${tractorName}.\n\n💰 Minimum down payment\n🌾 Harvest-Cycle EMI: Pay only after Rabi & Kharif crop sales!\n📄 24-hour sanction\n\nShall we process your loan quotation today?\n\nFinance Desk | Maa Durga Engineering`
+      },
+      {
+        day: 14,
+        title: "Day 14: Seasonal Booking Check-in & Canopy Gift",
+        body: `Namaskar ${customerName} Ji,\n\nHarvest season is beginning and stock of ${tractorName} is moving quickly. If you book before this Sunday, we provide a FREE heavy tractor canopy + 1st year free service kit.\n\nReply 'YES' to reserve your chassis!\n\nDirector, Maa Durga Engineering`
+      }
+    ];
+  }
+
+  function queryBusinessAdvisor(userQuestion) {
+    const q = (userQuestion || '').toLowerCase();
+    const leads = store.getLeads();
+    const snapshot = store.getFinancialSnapshot();
+    const expenses = store.getExpenses();
+    const quotes = store.getQuotes();
+    const tractors = store.getTractors();
+
+    if (q.includes('profit') || q.includes('margin') || q.includes('loss') || q.includes('why')) {
+      const sortedCats = Object.entries(snapshot.categoryTotals).sort((a, b) => b[1] - a[1]);
+      if (expenses.length === 0 && quotes.length === 0) {
+        return {
+          title: "Showroom Financial Ledger (Clean Slate)",
+          summary: "Currently no sales or operating expenses are recorded in the active ledger.",
+          keyFindings: [
+            "Gross Profit: ₹0.00 | Total Showroom Expenses: ₹0.00 | Net Profit: ₹0.00",
+            "To track true landed margins, log showroom costs with '+ Expense' and tag freight/PDI to chassis numbers.",
+            "Issued quotations and recorded tractor sales automatically accrue into showroom revenue."
+          ],
+          recommendation: "Issue your first customer quotation or log initial operational expenses to begin tracking live unit economics."
+        };
+      }
+
+      const top1 = sortedCats[0] || ['Operational', 0];
+      const top2 = sortedCats[1] || ['Utilities', 0];
+      return {
+        title: "Showroom Profitability & Margin Diagnostic",
+        summary: `Gross Profit is ₹${(snapshot.grossProfit / 100000).toFixed(2)}L against total showroom expenses of ₹${(snapshot.totalExpenses / 100000).toFixed(2)}L, leaving Net Profit at ₹${(snapshot.netProfit / 100000).toFixed(2)}L.`,
+        keyFindings: [
+          sortedCats.length > 0 ? `Highest recorded expense category is ${top1[0]} (₹${Number(top1[1]).toLocaleString('en-IN')})${sortedCats.length > 1 ? `, followed by ${top2[0]} (₹${Number(top2[1]).toLocaleString('en-IN')})` : ''}.` : 'No category expenses recorded yet.',
+          `Total approved showroom expenses count: ${expenses.filter(e => e.status === 'Approved').length} records.`,
+          `Net Cash Flow is ₹${(snapshot.netCashFlow / 100000).toFixed(2)}L based on recorded cash in/out transactions.`
+        ],
+        recommendation: snapshot.netProfit < 0 ? "Operating overheads currently exceed gross margins; prioritize closing pending hot quotations." : "Healthy dealer margins maintained. Keep monitoring freight and PDI costs tagged to chassis numbers."
+      };
+    }
+
+    if (q.includes('call') || q.includes('lead') || q.includes('today') || q.includes('focus')) {
+      if (leads.length === 0) {
+        return {
+          title: "Daily Calling Queue (Empty)",
+          summary: "You have 0 active farmer leads in the CRM.",
+          keyFindings: [
+            "The calling queue is currently empty.",
+            "Click '+ Lead' in the top header or customer tab to enter walk-in or referral enquiries.",
+            "The algorithm will immediately calculate a 0-100 buying score and assign next action."
+          ],
+          recommendation: "Record walk-in farmers or phone enquiries to build your active sales calling queue."
+        };
+      }
+
+      const hot = leads.filter(l => (l.buyingScore >= 75) || l.stage === 'Negotiation');
+      const targetLeads = hot.length > 0 ? hot : leads.slice(0, 3);
+      return {
+        title: "Daily Sales Calling Priority Recommendation",
+        summary: hot.length > 0 ? `You have ${hot.length} Hot Leads requiring immediate showroom contact today.` : `You have ${leads.length} customer leads in follow-up pipeline.`,
+        keyFindings: targetLeads.map(l => `🔥 ${l.name} (${l.village || 'Sadar'}) — Score ${l.buyingScore || 70}/100. Stage: ${l.stage || 'Enquiry'}. Next: ${l.nextAction || 'Follow up on tractor requirement'}`),
+        recommendation: targetLeads[0] ? `Call ${targetLeads[0].name} (${targetLeads[0].phone}) first to discuss financing or schedule a village demonstration.` : "Review lead pipeline."
+      };
+    }
+
+    if (q.includes('village') || q.includes('area') || q.includes('map') || q.includes('demand')) {
+      if (leads.length === 0) {
+        return {
+          title: "Village Territory Intelligence",
+          summary: "No village data recorded yet.",
+          keyFindings: [
+            "Territory clustering activates automatically as you add customer leads with their village names.",
+            "The system will highlight high-demand villages, dominant crops, and recommend route planning for field demonstration trolleys."
+          ],
+          recommendation: "Capture farmer village names during enquiry entry to generate geographic demand heatmaps."
+        };
+      }
+
+      const villageCounts = {};
+      for (const l of leads) {
+        const v = l.village || 'Sadar / Town';
+        villageCounts[v] = (villageCounts[v] || 0) + 1;
+      }
+      const sorted = Object.entries(villageCounts).sort((a, b) => b[1] - a[1]);
+      const topV = sorted[0];
+
+      return {
+        title: "Village Territory & Rural Cluster Intelligence",
+        summary: `Top agricultural demand cluster is Village ${topV[0]} with ${topV[1]} active leads.`,
+        keyFindings: sorted.slice(0, 4).map(([vName, count]) => `Village ${vName}: ${count} active farmer ${count === 1 ? 'enquiry' : 'enquiries'}.`),
+        recommendation: `Schedule field demonstration trolley route through Village ${topV[0]} to maximize farmer engagement.`
+      };
+    }
+
+    return {
+      title: "Maa Durga Engineering Sales Advisory",
+      summary: `Analyzed your live showroom database containing ${leads.length} leads, ${tractors.length} tractor catalog models, and ${quotes.length} formal quotations.`,
+      keyFindings: [
+        `Active Leads: ${leads.length} total (${leads.filter(l => (l.buyingScore || 0) >= 75).length} Hot priority).`,
+        `Financials: Gross Profit ₹${(snapshot.grossProfit / 100000).toFixed(2)}L | Operating Expenses ₹${(snapshot.totalExpenses / 100000).toFixed(2)}L.`,
+        `Physical Inventory: ${tractors.reduce((s, t) => s + (t.stockCount || 0), 0)} units currently in stock.`
+      ],
+      recommendation: leads.length === 0 ? "Start by adding customer leads or logging expenses using the top action buttons." : "Try asking: 'Why was profit lower this month?', 'Who should I call today?', or 'Show village demand breakdown'."
+    };
+  }
+
+  // --- 5. UI CONTROLLER ---
+  class TractorOSApp {
+    constructor() {
+      this.currentTab = 'dashboard';
+      this.init();
+    }
+
+    init() {
+      this.bindEvents();
+      this.renderSidebar();
+      this.renderCurrentView();
+
+      store.subscribe(() => {
+        this.renderSidebar();
+        this.renderCurrentView();
+      });
+    }
+
+    bindEvents() {
+      const toggleBtn = document.getElementById('mobileMenuBtn');
+      const sidebar = document.querySelector('.sidebar');
+      if (toggleBtn && sidebar) {
+        toggleBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+      }
+
+      document.querySelectorAll('.nav-item-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.dataset.tab;
+          if (tab) {
+            this.switchTab(tab);
+            if (window.innerWidth <= 768 && sidebar) sidebar.classList.remove('open');
+          }
+        });
+      });
+
+      document.querySelectorAll('.modal-backdrop').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal || e.target.closest('.modal-close-btn')) {
+            this.closeAllModals();
+          }
+        });
+      });
+    }
+
+    switchTab(tabName) {
+      this.currentTab = tabName;
+      document.querySelectorAll('.nav-item-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+      });
+
+      const titleEl = document.getElementById('topbarTitle');
+      const subtitleEl = document.getElementById('topbarSubtitle');
+      const titles = {
+        dashboard: { title: "Executive Command Center", sub: "Daily sales calls, today's cash flow & monthly showroom P&L" },
+        leads: { title: "Customer & Lead CRM", sub: "Farmer profiles, village mapping & algorithmic buying score" },
+        recommend: { title: "Tractor Recommendation Engine", sub: "Deterministic implement & acreage matching without guesswork" },
+        inventory: { title: "Tractor Inventory & Landed Margins", sub: "Live showroom stock, specifications & unit profitability" },
+        quotations: { title: "Quotations & Invoice Generator", sub: "Official GST dealer quotation with exchange & finance schedules" },
+        exchange: { title: "Used Tractor Exchange Valuation", sub: "Inspection checklist, market depreciation & upgrade calculation" },
+        emi: { title: "Farmer EMI & Harvest Calculator", sub: "Monthly and bi-annual harvest-cycle payment schedules" },
+        demos: { title: "Field Demos & Track Testing", sub: "Rotavator/Plough demonstration logs, diesel consumption & feedback" },
+        expenses: { title: "Showroom Expenses & Unit Cost Tagging", sub: "Fast entry, approval workflow & per-tractor landed cost" },
+        cashflow: { title: "Cash & Bank Ledger", sub: "Cash-in vs Cash-out tracking distinct from accounting profit" },
+        villageMap: { title: "Village-Level Territory Analytics", sub: "Geographic demand clustering, crop patterns & route planning" },
+        aiAdvisor: { title: "Grounded Business AI Advisor", sub: "Quantitative diagnostic assistant operating on your real ledger" }
+      };
+
+      if (titleEl && titles[tabName]) {
+        titleEl.textContent = titles[tabName].title;
+        subtitleEl.textContent = titles[tabName].sub;
+      }
+
+      this.renderCurrentView();
+    }
+
+    closeAllModals() {
+      document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active'));
+    }
+
+    openModal(modalId) {
+      this.closeAllModals();
+      const modal = document.getElementById(modalId);
+      if (modal) modal.classList.add('active');
+    }
+
+    renderSidebar() {
+      const leads = store.getLeads();
+      const hotCount = leads.filter(l => (l.buyingScore || 0) >= 75).length;
+      const hotBadge = document.getElementById('hotLeadsBadge');
+      if (hotBadge) hotBadge.textContent = `${hotCount} Hot`;
+
+      const expenses = store.getExpenses();
+      const pendingExpCount = expenses.filter(e => e.status === 'Pending Approval').length;
+      const pendingExpBadge = document.getElementById('pendingExpBadge');
+      if (pendingExpBadge) {
+        if (pendingExpCount > 0) {
+          pendingExpBadge.textContent = `${pendingExpCount} Pending`;
+          pendingExpBadge.style.display = 'inline-block';
+        } else {
+          pendingExpBadge.style.display = 'none';
+        }
+      }
+    }
+
+    renderCurrentView() {
+      const content = document.getElementById('mainContentArea');
+      if (!content) return;
+
+      switch (this.currentTab) {
+        case 'dashboard':
+          content.innerHTML = this.renderDashboardHTML();
+          this.bindDashboardEvents();
+          break;
+        case 'leads':
+          content.innerHTML = this.renderLeadsHTML();
+          this.bindLeadsEvents();
+          break;
+        case 'recommend':
+          content.innerHTML = this.renderRecommendationHTML();
+          this.bindRecommendationEvents();
+          break;
+        case 'inventory':
+          content.innerHTML = this.renderInventoryHTML();
+          this.bindInventoryEvents();
+          break;
+        case 'quotations':
+          content.innerHTML = this.renderQuotationsHTML();
+          this.bindQuotationsEvents();
+          break;
+        case 'exchange':
+          content.innerHTML = this.renderExchangeHTML();
+          this.bindExchangeEvents();
+          break;
+        case 'emi':
+          content.innerHTML = this.renderEmiHTML();
+          this.bindEmiEvents();
+          break;
+        case 'demos':
+          content.innerHTML = this.renderDemosHTML();
+          this.bindDemosEvents();
+          break;
+        case 'expenses':
+          content.innerHTML = this.renderExpensesHTML();
+          this.bindExpensesEvents();
+          break;
+        case 'cashflow':
+          content.innerHTML = this.renderCashFlowHTML();
+          this.bindCashFlowEvents();
+          break;
+        case 'villageMap':
+          content.innerHTML = this.renderVillageMapHTML();
+          break;
+        case 'aiAdvisor':
+          content.innerHTML = this.renderAiAdvisorHTML();
+          this.bindAiAdvisorEvents();
+          break;
+        default:
+          content.innerHTML = this.renderDashboardHTML();
+      }
+    }
+
+    renderDashboardHTML() {
+      const snapshot = store.getFinancialSnapshot();
+      const leads = store.getLeads();
+      const hotLeads = leads.filter(l => (l.buyingScore || 0) >= 75);
+      const todayCalls = getTodayCallsQueue(leads);
+      const expenses = store.getExpenses();
+      const pendingExpenses = expenses.filter(e => e.status === 'Pending Approval');
+      const demos = store.getDemos();
+      const tractors = store.getTractors();
+
+      return `
+        <div class="command-banner">
+          <div class="command-banner-info">
+            <h3>${renderIcon('flame')} ${todayCalls.length > 0 ? `Today's Priority: Call ${todayCalls.length} Hot Leads First` : 'Executive Command Center (Live Showroom)'}</h3>
+            <p>${todayCalls.length > 0 ? 'Prioritized customer queues based on buying score, expected purchase date, and village demos.' : 'Ready for daily dealership operations. Capture leads, issue quotations, and log showroom expenses dynamically.'}</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="quick-action-btn btn-gold" id="dashStartCallingBtn">
+              ${renderIcon('phone')} Start Calling Queue
+            </button>
+            <button class="quick-action-btn btn-outline" style="color:#fff; border-color:rgba(255,255,255,0.3);" id="dashAddLeadBtn">
+              ${renderIcon('plus')} New Lead
+            </button>
+          </div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric-card gold">
+            <div class="metric-top">
+              <span class="metric-label">Sales Revenue (Sep)</span>
+              <div class="metric-icon-wrap gold">${renderIcon('rupee')}</div>
+            </div>
+            <div class="metric-value">₹${(snapshot.salesRevenue / 100000).toFixed(2)}L</div>
+            <div class="metric-sub">${store.getQuotes().length} Quotations / Deals recorded</div>
+          </div>
+
+          <div class="metric-card success">
+            <div class="metric-top">
+              <span class="metric-label">Gross Showroom Profit</span>
+              <div class="metric-icon-wrap success">${renderIcon('calculator')}</div>
+            </div>
+            <div class="metric-value">₹${(snapshot.grossProfit / 100000).toFixed(2)}L</div>
+            <div class="metric-sub">${store.getQuotes().length > 0 ? 'Realized dealer OEM spread' : 'Awaiting delivered deals'}</div>
+          </div>
+
+          <div class="metric-card danger">
+            <div class="metric-top">
+              <span class="metric-label">Total Expenses</span>
+              <div class="metric-icon-wrap danger">${renderIcon('expense')}</div>
+            </div>
+            <div class="metric-value">₹${(snapshot.totalExpenses / 100000).toFixed(2)}L</div>
+            <div class="metric-sub">${expenses.filter(e => e.status === 'Approved').length} Approved expense vouchers</div>
+          </div>
+
+          <div class="metric-card info">
+            <div class="metric-top">
+              <span class="metric-label">Actual Net Profit</span>
+              <div class="metric-icon-wrap info">${renderIcon('bank')}</div>
+            </div>
+            <div class="metric-value">₹${(snapshot.netProfit / 100000).toFixed(2)}L</div>
+            <div class="metric-sub" style="color:${snapshot.netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">Net Cash Flow: ${snapshot.netCashFlow >= 0 ? '+' : '-'}₹${(Math.abs(snapshot.netCashFlow) / 100000).toFixed(2)}L</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid-2col">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">${renderIcon('phone')} High-Priority Calling Queue (Today)</div>
+                <div class="panel-subtitle">Algorithmic selection based on buying score and expected purchase date</div>
+              </div>
+              <span class="badge badge-hot">${todayCalls.length} Leads</span>
+            </div>
+
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Farmer / Lead</th>
+                    <th>Village</th>
+                    <th>Model & Budget</th>
+                    <th>Buying Score</th>
+                    <th>Next Immediate Action</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${todayCalls.length === 0 ? `
+                    <tr>
+                      <td colspan="6" style="text-align:center; padding:36px 20px; color:var(--text-muted);">
+                        <div style="font-size:28px; margin-bottom:8px;">📋</div>
+                        <div style="font-weight:700; font-size:14px; color:var(--text-secondary);">No customer calls in queue</div>
+                        <div style="font-size:12px; margin-top:4px;">As you add farmer leads, prioritized hot calls will automatically appear here.</div>
+                        <button class="quick-action-btn btn-sm btn-primary" style="margin:12px auto 0;" onclick="window.app.openNewLeadModal()">
+                          ${renderIcon('plus')} Add First Lead
+                        </button>
+                      </td>
+                    </tr>
+                  ` : todayCalls.map(lead => {
+                    const score = lead.computedScore ? lead.computedScore.score : (lead.buyingScore || 80);
+                    const tractor = tractors.find(t => t.id === lead.interestedModelId);
+                    const tractorName = tractor ? `${tractor.brand} ${tractor.model}` : '50 HP Tractor';
+                    return `
+                      <tr>
+                        <td>
+                          <strong>${lead.name}</strong><br>
+                          <span style="font-size:11px; color:var(--text-muted);">${lead.phone}</span>
+                        </td>
+                        <td>${lead.village || 'Sadar'}</td>
+                        <td>
+                          <span style="font-weight:700; color:var(--primary);">${tractorName}</span><br>
+                          <span style="font-size:11px; color:var(--text-secondary);">Max: ₹${((lead.budgetMax || 850000) / 100000).toFixed(1)}L</span>
+                        </td>
+                        <td>
+                          <div class="prob-container">
+                            <div class="prob-track">
+                              <div class="prob-fill ${score >= 75 ? 'hot' : 'warm'}" style="width: ${score}%;"></div>
+                            </div>
+                            <span style="font-size:11px; font-weight:800;">${score}%</span>
+                          </div>
+                        </td>
+                        <td style="max-width:220px; font-size:12px;">
+                          <span style="color:var(--danger); font-weight:600;">${lead.nextAction || 'Call to confirm financing'}</span>
+                        </td>
+                        <td>
+                          <div style="display:flex; gap:6px;">
+                            <a href="tel:${lead.phone}" class="quick-action-btn btn-sm btn-primary" title="Call">
+                              ${renderIcon('phone')} Call
+                            </a>
+                            <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="Send WhatsApp">
+                              ${renderIcon('whatsapp')}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">${renderIcon('expense')} Expense Categories (September)</div>
+                <div class="panel-subtitle">Live expense distribution & margin leakage</div>
+              </div>
+              <button class="quick-action-btn btn-sm btn-outline" id="dashFastExpenseBtn">
+                ${renderIcon('plus')} Fast Entry
+              </button>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              ${Object.keys(snapshot.categoryTotals).length === 0 ? `
+                <div style="text-align:center; padding:36px 20px; color:var(--text-muted);">
+                  <div style="font-size:28px; margin-bottom:8px;">💸</div>
+                  <div style="font-weight:700; font-size:14px; color:var(--text-secondary);">No expenses recorded yet</div>
+                  <div style="font-size:12px; margin-top:4px;">Log fuel, rent, staff salary advances, or trailer transport.</div>
+                  <button class="quick-action-btn btn-sm btn-gold" style="margin:12px auto 0;" onclick="window.app.openFastExpenseModal()">
+                    ${renderIcon('plus')} Record Expense
+                  </button>
+                </div>
+              ` : Object.entries(snapshot.categoryTotals).map(([cat, amt]) => {
+                const pct = snapshot.totalExpenses > 0 ? Math.round((amt / snapshot.totalExpenses) * 100) : 0;
+                return `
+                  <div>
+                    <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:4px;">
+                      <span style="font-weight:700;">${cat}</span>
+                      <span style="font-weight:800; color:var(--text-primary);">₹${amt.toLocaleString('en-IN')} <span style="font-weight:500; color:var(--text-muted);">(${pct}%)</span></span>
+                    </div>
+                    <div style="height:6px; background:var(--bg-main); border-radius:var(--radius-full); overflow:hidden;">
+                      <div style="height:100%; width:${pct}%; background:var(--brand-gradient);"></div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <div style="margin-top:20px; padding:14px; background:var(--primary-light); border-radius:var(--radius-md); border:1px solid #bbf7d0;">
+              <div style="font-size:12.5px; font-weight:800; color:var(--primary-dark); display:flex; align-items:center; gap:6px;">
+                ${renderIcon('tractor')} Tractor Unit Margin Intelligence
+              </div>
+              <p style="font-size:11.5px; color:var(--primary); margin-top:4px; line-height:1.4;">
+                Tagging inward freight & repair costs directly to chassis serial numbers reveals true net margins per unit (e.g. VST Zetor 5011: ₹68,500 true profit vs ₹80,000 nominal gross).
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    bindDashboardEvents() {
+      const callBtn = document.getElementById('dashStartCallingBtn');
+      if (callBtn) callBtn.addEventListener('click', () => this.switchTab('leads'));
+
+      const addLeadBtn = document.getElementById('dashAddLeadBtn');
+      if (addLeadBtn) addLeadBtn.addEventListener('click', () => this.openNewLeadModal());
+
+      const fastExpBtn = document.getElementById('dashFastExpenseBtn');
+      if (fastExpBtn) fastExpBtn.addEventListener('click', () => this.openFastExpenseModal());
+
+      document.querySelectorAll('.open-wa-btn').forEach(btn => {
+        btn.addEventListener('click', () => this.openWhatsAppSequenceModal(btn.dataset.leadId));
+      });
+    }
+
+    renderLeadsHTML() {
+      const leads = store.getLeads();
+      const tractors = store.getTractors();
+
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <input type="text" id="leadSearchInput" class="form-input" placeholder="Search farmer, village, phone..." style="width:260px;" />
+            <select id="leadStageFilter" class="form-select" style="width:160px;">
+              <option value="ALL">All Stages</option>
+              <option value="HOT">🔥 Hot Leads</option>
+              <option value="Quotation Sent">Quotation Sent</option>
+              <option value="Demo Scheduled">Demo Scheduled</option>
+              <option value="Negotiation">In Negotiation</option>
+              <option value="New Enquiry">New Enquiry</option>
+            </select>
+          </div>
+          <button class="quick-action-btn btn-primary" id="openNewLeadBtn">
+            ${renderIcon('plus')} Add New Farmer Lead
+          </button>
+        </div>
+
+        <div class="panel-card">
+          <div class="table-responsive">
+            <table class="data-table" id="leadsTable">
+              <thead>
+                <tr>
+                  <th>Farmer & Phone</th>
+                  <th>Village & Land</th>
+                  <th>Crops & Soil</th>
+                  <th>Current Tractor</th>
+                  <th>Interested Model</th>
+                  <th>Buying Score</th>
+                  <th>Finance / Exchange</th>
+                  <th>Next Action</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${leads.length === 0 ? `
+                  <tr>
+                    <td colspan="9" style="text-align:center; padding:48px 20px; color:var(--text-muted);">
+                      <div style="font-size:32px; margin-bottom:12px;">🌾</div>
+                      <div style="font-weight:700; font-size:16px; color:var(--text-secondary);">No customer leads recorded yet</div>
+                      <div style="font-size:13px; margin-top:6px; max-width:440px; margin-left:auto; margin-right:auto;">
+                        Ready for live dealership operations. Click below to register your first farmer enquiry with land size, crops, village, and buying criteria.
+                      </div>
+                      <button class="quick-action-btn btn-primary" style="margin:16px auto 0;" onclick="window.app.openNewLeadModal()">
+                        ${renderIcon('plus')} Register First Lead
+                      </button>
+                    </td>
+                  </tr>
+                ` : leads.map(lead => {
+                  const scoreObj = calculateBuyingScore(lead);
+                  const tractor = tractors.find(t => t.id === lead.interestedModelId);
+                  const tractorName = tractor ? `${tractor.brand} ${tractor.model}` : '50 HP Class';
+                  return `
+                    <tr data-lead-id="${lead.id}">
+                      <td>
+                        <strong>${lead.name}</strong><br>
+                        <span style="font-size:11px; color:var(--text-muted);">${lead.phone}</span><br>
+                        <span class="badge ${scoreObj.category === 'HOT' ? 'badge-hot' : (scoreObj.category === 'WARM' ? 'badge-warm' : 'badge-cold')}">
+                          ${scoreObj.category} (${scoreObj.score}/100)
+                        </span>
+                      </td>
+                      <td>
+                        <strong>${lead.village || 'Sadar'}</strong><br>
+                        <span style="font-size:11.5px; color:var(--text-secondary);">${lead.landAcres || 10} Acres</span>
+                      </td>
+                      <td style="font-size:12px;">
+                        <span>🌾 ${(lead.crops || ['Wheat', 'Rice']).join(', ')}</span><br>
+                        <span style="color:var(--text-muted);">${lead.soilType || 'Medium'}</span>
+                      </td>
+                      <td style="font-size:12px;">${lead.currentTractor || 'None (Rents)'}</td>
+                      <td>
+                        <strong style="color:var(--primary);">${tractorName}</strong><br>
+                        <span style="font-size:11px; color:var(--text-secondary);">Budget: ₹${((lead.budgetMax || 800000) / 100000).toFixed(1)}L</span>
+                      </td>
+                      <td>
+                        <div class="prob-container">
+                          <div class="prob-track">
+                            <div class="prob-fill ${scoreObj.category === 'HOT' ? 'hot' : 'warm'}" style="width: ${scoreObj.score}%;"></div>
+                          </div>
+                          <span style="font-size:11px; font-weight:800;">${scoreObj.score}%</span>
+                        </div>
+                      </td>
+                      <td style="font-size:11.5px;">
+                        <span>Finance: <strong>${lead.financeRequired ? 'Yes (SBI)' : 'Cash'}</strong></span><br>
+                        <span>Exchange: <strong>${lead.exchangeWanted ? 'Yes' : 'No'}</strong></span>
+                      </td>
+                      <td style="font-size:11.5px; max-width:200px;">
+                        <span style="color:var(--danger); font-weight:600;">${lead.nextAction || scoreObj.nextAction}</span>
+                      </td>
+                      <td>
+                        <div style="display:flex; gap:6px;">
+                          <a href="tel:${lead.phone}" class="quick-action-btn btn-sm btn-primary" title="Call">
+                            ${renderIcon('phone')}
+                          </a>
+                          <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="WhatsApp">
+                            ${renderIcon('whatsapp')}
+                          </button>
+                          <button class="quick-action-btn btn-sm btn-outline create-quote-for-lead-btn" data-lead-id="${lead.id}" title="Quote">
+                            ${renderIcon('quote')}
+                          </button>
+                          <button class="quick-action-btn btn-sm btn-danger delete-lead-btn" data-lead-id="${lead.id}" title="Delete">
+                            ${renderIcon('trash')}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    bindLeadsEvents() {
+      const addBtn = document.getElementById('openNewLeadBtn');
+      if (addBtn) addBtn.addEventListener('click', () => this.openNewLeadModal());
+
+      document.querySelectorAll('.open-wa-btn').forEach(btn => {
+        btn.addEventListener('click', () => this.openWhatsAppSequenceModal(btn.dataset.leadId));
+      });
+
+      document.querySelectorAll('.delete-lead-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (confirm("Delete this customer lead?")) store.deleteLead(btn.dataset.leadId);
+        });
+      });
+
+      document.querySelectorAll('.create-quote-for-lead-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lead = store.getLeads().find(l => l.id === btn.dataset.leadId);
+          this.openQuotationModal(lead);
+        });
+      });
+
+      const search = document.getElementById('leadSearchInput');
+      const stageFilter = document.getElementById('leadStageFilter');
+      const filterFn = () => {
+        const q = (search.value || '').toLowerCase();
+        const stage = stageFilter.value;
+        document.querySelectorAll('#leadsTable tbody tr').forEach(row => {
+          const text = row.textContent.toLowerCase();
+          const matchesQuery = text.includes(q);
+          let matchesStage = true;
+          if (stage === 'HOT') matchesStage = text.includes('hot');
+          else if (stage !== 'ALL') matchesStage = text.includes(stage.toLowerCase());
+          row.style.display = (matchesQuery && matchesStage) ? '' : 'none';
+        });
+      };
+      if (search) search.addEventListener('input', filterFn);
+      if (stageFilter) stageFilter.addEventListener('change', filterFn);
+    }
+
+    renderRecommendationHTML() {
+      return `
+        <div class="dashboard-grid-2col" style="grid-template-columns: 1fr 1.3fr;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">${renderIcon('calculator')} Farmer Requirements Input</div>
+                <div class="panel-subtitle">Enter land, crop, implement and budget criteria</div>
+              </div>
+            </div>
+
+            <form id="recommendationForm">
+              <div class="form-group">
+                <label class="form-label">Total Agricultural Land (Acres)</label>
+                <input type="number" id="recLandAcres" class="form-input" value="12" min="1" max="200" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Soil Type in Village</label>
+                <select id="recSoilType" class="form-select">
+                  <option value="Medium Loam" selected>Medium Loam (Standard)</option>
+                  <option value="Heavy Black / Clay">Heavy Black Soil / Sticky Clay</option>
+                  <option value="Sandy Loam">Sandy Loam / Light Alluvial</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Primary Implements Needed</label>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:4px; font-size:12.5px;">
+                  <label style="display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" name="recImplements" value="Rotavator (6 ft)" checked /> Rotavator (6-7 ft)
+                  </label>
+                  <label style="display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" name="recImplements" value="Heavy Trolley (10-12 Ton)" checked /> Heavy Trolley
+                  </label>
+                  <label style="display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" name="recImplements" value="Cultivator 11 Tyne" checked /> Cultivator 11-Tyne
+                  </label>
+                  <label style="display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" name="recImplements" value="2-MB Plough" /> 2-MB Reversible Plough
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Maximum Estimated Budget (₹)</label>
+                <input type="number" id="recBudget" class="form-input" value="880000" step="10000" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Drive Requirement</label>
+                <select id="recDrive" class="form-select">
+                  <option value="Any" selected>2WD / Any</option>
+                  <option value="4WD">4WD (Wet Paddy / Heavy Mud)</option>
+                </select>
+              </div>
+
+              <button type="submit" class="quick-action-btn btn-primary" style="width:100%; justify-content:center; padding:12px; margin-top:8px;">
+                ${renderIcon('sparkles')} Calculate Best Match
+              </button>
+            </form>
+          </div>
+
+          <div class="panel-card" id="recommendationResults"></div>
+        </div>
+      `;
+    }
+
+    bindRecommendationEvents() {
+      const form = document.getElementById('recommendationForm');
+      const runMatch = () => {
+        const landAcres = Number(document.getElementById('recLandAcres').value) || 12;
+        const soilType = document.getElementById('recSoilType').value;
+        const budgetMax = Number(document.getElementById('recBudget').value) || 900000;
+        const drive = document.getElementById('recDrive').value;
+        const checked = Array.from(document.querySelectorAll('input[name="recImplements"]:checked')).map(cb => cb.value);
+
+        const result = matchTractor({
+          landAcres,
+          soilType,
+          implementsNeeded: checked,
+          budgetMax,
+          requiresHeavyTrolley: checked.some(i => i.includes('Trolley')),
+          drivePreference: drive,
+          tractorsList: store.getTractors()
+        });
+        this.renderRecommendationResults(result, landAcres, budgetMax);
+      };
+
+      if (form) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          runMatch();
+        });
+        runMatch();
+      }
+    }
+
+    renderRecommendationResults(result, acres, budget) {
+      const container = document.getElementById('recommendationResults');
+      if (!container) return;
+      const best = result.bestMatch;
+      const alt = result.alternative;
+
+      if (!best) {
+        container.innerHTML = `<div style="padding:30px; text-align:center;">No matching tractor found for criteria.</div>`;
+        return;
+      }
+
+      const tBest = best.tractor;
+      const tAlt = alt ? alt.tractor : null;
+
+      container.innerHTML = `
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">${renderIcon('check')} Deterministic Technical Match</div>
+            <div class="panel-subtitle">Recommended HP Band: <strong>${result.recommendedHpRange}</strong> based on ${acres} acres</div>
+          </div>
+        </div>
+
+        <div class="rec-result-card">
+          <span class="rec-badge-top">★ BEST MATCH (Score: ${best.score} pts)</span>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div class="rec-model-title">${tBest.brand} ${tBest.model}</div>
+              <div style="font-size:13px; color:var(--text-secondary);">${tBest.hp} HP Engine | ${tBest.ptoHp} PTO HP | ${tBest.drive}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:22px; font-weight:900; color:var(--primary);">₹${(tBest.price / 100000).toFixed(2)} Lakh</div>
+              <span class="badge badge-success">In Stock (${tBest.stockCount} Units)</span>
+            </div>
+          </div>
+
+          <div class="rec-specs-chips">
+            <span class="spec-chip">Lift: ${tBest.liftCapacityKg} kg</span>
+            <span class="spec-chip">Transmission: ${tBest.transmission}</span>
+            <span class="spec-chip">Warranty: ${tBest.warranty}</span>
+          </div>
+
+          <div style="font-size:12.5px; font-weight:700; color:var(--primary-dark); margin-top:10px;">Why this model:</div>
+          <ul class="rec-points-list">
+            ${best.reasons.map(r => `<li>${renderIcon('check')} ${r}</li>`).join('')}
+          </ul>
+
+          <div style="display:flex; gap:10px; margin-top:16px;">
+            <button class="quick-action-btn btn-primary" id="recCreateQuoteBestBtn">
+              ${renderIcon('quote')} Generate Quotation
+            </button>
+            <button class="quick-action-btn btn-outline" id="recViewUnitMarginBtn">
+              ${renderIcon('rupee')} View Unit Margin
+            </button>
+          </div>
+        </div>
+
+        ${tAlt ? `
+          <div style="margin-top:20px; padding:16px; border:1px solid var(--border-color); border-radius:var(--radius-lg); background:var(--bg-main);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <span class="badge badge-info" style="margin-bottom:4px;">ALTERNATIVE UPGRADE</span>
+                <h4 style="font-size:15px; font-weight:800;">${tAlt.brand} ${tAlt.model} (${tAlt.hp} HP)</h4>
+                <p style="font-size:12px; color:var(--text-secondary);">₹${(tAlt.price / 100000).toFixed(2)} Lakh | Higher lift capacity (${tAlt.liftCapacityKg} kg)</p>
+              </div>
+              <button class="quick-action-btn btn-sm btn-outline" id="recCreateQuoteAltBtn">
+                Quote Alternative
+              </button>
+            </div>
+          </div>
+        ` : ''}
+      `;
+
+      const bestQuoteBtn = document.getElementById('recCreateQuoteBestBtn');
+      if (bestQuoteBtn) bestQuoteBtn.addEventListener('click', () => this.openQuotationModal(null, tBest));
+
+      const altQuoteBtn = document.getElementById('recCreateQuoteAltBtn');
+      if (altQuoteBtn && tAlt) altQuoteBtn.addEventListener('click', () => this.openQuotationModal(null, tAlt));
+
+      const unitMarginBtn = document.getElementById('recViewUnitMarginBtn');
+      if (unitMarginBtn) unitMarginBtn.addEventListener('click', () => this.openUnitMarginModal(tBest.id));
+    }
+
+    renderInventoryHTML() {
+      const tractors = store.getTractors();
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+          <div style="font-size:13.5px; color:var(--text-secondary);">
+            Physical Stock: <strong>${tractors.reduce((s, t) => s + (t.stockCount || 0), 0)} Units</strong> | <strong>${tractors.length} Models</strong> in Showroom Catalog
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="quick-action-btn btn-primary" onclick="window.app.openAddTractorModal()">
+              ${renderIcon('plus')} Add Tractor / Stock
+            </button>
+            <button class="quick-action-btn btn-outline" onclick="window.app.openFastExpenseModal()">
+              ${renderIcon('plus')} Tag Freight / Repair
+            </button>
+          </div>
+        </div>
+
+        <div class="inventory-grid">
+          ${tractors.map(t => {
+            const unitEcon = store.getTractorUnitEconomics(t.id);
+            const nominalMargin = t.price - t.dealerPurchaseCost;
+            const trueMargin = unitEcon ? unitEcon.actualMargin : nominalMargin;
+            const directExpenses = unitEcon ? unitEcon.directExpensesTotal : 0;
+            return `
+              <div class="tractor-card">
+                <div class="tractor-card-header">
+                  <div>
+                    <h4>${t.brand} ${t.model}</h4>
+                    <span>${t.hp} HP | ${t.ptoHp} PTO HP | ${t.drive}</span>
+                  </div>
+                  <span class="badge ${t.stockCount > 0 ? 'badge-success' : 'badge-pending'}">
+                    ${t.stockCount > 0 ? `${t.stockCount} In Stock` : '0 In Stock (Order)'}
+                  </span>
+                </div>
+
+                <div class="tractor-card-body">
+                  <div class="tractor-spec-row">
+                    <span class="label">Ex-Showroom Price:</span>
+                    <span class="value" style="font-size:14px; color:var(--primary);">₹${t.price.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div class="tractor-spec-row">
+                    <span class="label">OEM Purchase Cost:</span>
+                    <span class="value">₹${t.dealerPurchaseCost.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div class="tractor-spec-row">
+                    <span class="label">Tagged Direct Costs (PDI/Freight):</span>
+                    <span class="value" style="color:var(--danger);">-₹${directExpenses.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div class="tractor-spec-row" style="border-top:1px solid var(--border-color); padding-top:6px;">
+                    <span class="label" style="font-weight:700;">True Dealer Unit Profit:</span>
+                    <span class="value" style="font-weight:800; color:var(--success);">₹${trueMargin.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style="font-size:11.5px; color:var(--text-muted); margin-top:6px;">
+                    Active Chassis: ${t.chassisList && t.chassisList.length > 0 ? t.chassisList.join(', ') : 'None currently assigned (Click + Stock to add)'}
+                  </div>
+                </div>
+
+                <div class="tractor-card-footer">
+                  <button class="quick-action-btn btn-sm btn-outline add-stock-btn" data-tractor-id="${t.id}" title="Add physical unit">
+                    + Stock
+                  </button>
+                  <button class="quick-action-btn btn-sm btn-outline view-unit-margin-btn" data-tractor-id="${t.id}">
+                    ${renderIcon('calculator')} Margin
+                  </button>
+                  <button class="quick-action-btn btn-sm btn-primary quote-this-tractor-btn" data-tractor-id="${t.id}">
+                    ${renderIcon('quote')} Quote
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    bindInventoryEvents() {
+      document.querySelectorAll('.add-stock-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const chassis = prompt("Enter Chassis Serial Number for new incoming unit (optional):", "");
+          store.updateTractorStock(btn.dataset.tractorId, 1, chassis ? chassis.trim() : null);
+        });
+      });
+      document.querySelectorAll('.view-unit-margin-btn').forEach(btn => {
+        btn.addEventListener('click', () => this.openUnitMarginModal(btn.dataset.tractorId));
+      });
+      document.querySelectorAll('.quote-this-tractor-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tractor = store.getTractors().find(t => t.id === btn.dataset.tractorId);
+          this.openQuotationModal(null, tractor);
+        });
+      });
+    }
+
+    renderQuotationsHTML() {
+      const quotes = store.getQuotes();
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div style="font-size:13px; color:var(--text-secondary);">
+            Official Quotations issued for <strong>Maa Durga Engineering</strong>
+          </div>
+          <button class="quick-action-btn btn-primary" id="createNewQuoteBtn">
+            ${renderIcon('plus')} New Quotation Bill
+          </button>
+        </div>
+
+        <div class="panel-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Quote #</th>
+                  <th>Date</th>
+                  <th>Farmer Name</th>
+                  <th>Village</th>
+                  <th>Tractor Model</th>
+                  <th>Ex-Showroom</th>
+                  <th>Exchange Value</th>
+                  <th>Net Total</th>
+                  <th>Monthly / Harvest EMI</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${quotes.length === 0 ? `
+                  <tr>
+                    <td colspan="10" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+                      <div style="font-size:32px; margin-bottom:10px;">📑</div>
+                      <div style="font-weight:700; font-size:15px; color:var(--text-secondary);">No quotations issued yet</div>
+                      <div style="font-size:12px; margin-top:4px;">Generate an official dealer quote with GST, accessories, exchange discount, and bank loan schedule.</div>
+                      <button class="quick-action-btn btn-sm btn-primary" style="margin:14px auto 0;" onclick="window.app.openQuotationModal()">
+                        ${renderIcon('plus')} Create First Quotation
+                      </button>
+                    </td>
+                  </tr>
+                ` : quotes.map(q => `
+                  <tr>
+                    <td><strong>${q.quoteNumber}</strong></td>
+                    <td>${q.date}</td>
+                    <td><strong>${q.customerName}</strong><br><span style="font-size:11px; color:var(--text-muted);">${q.phone}</span></td>
+                    <td>${q.village}</td>
+                    <td><strong style="color:var(--primary);">${q.tractorName}</strong></td>
+                    <td>₹${(q.exShowroomPrice || 0).toLocaleString('en-IN')}</td>
+                    <td style="color:var(--danger);">-₹${(q.exchangeDeduction || 0).toLocaleString('en-IN')}</td>
+                    <td><strong style="font-size:13.5px; color:var(--primary-dark);">₹${(q.grandTotal || 0).toLocaleString('en-IN')}</strong></td>
+                    <td style="font-size:12px;">
+                      Monthly: ₹${(q.monthlyEmi || 0).toLocaleString('en-IN')}<br>
+                      <span style="color:var(--accent-dark); font-weight:700;">Harvest: ₹${(q.harvestEmi || 0).toLocaleString('en-IN')}</span>
+                    </td>
+                    <td>
+                      <button class="quick-action-btn btn-sm btn-outline print-quote-btn" data-quote-no="${q.quoteNumber}">
+                        ${renderIcon('print')} Print / View
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    bindQuotationsEvents() {
+      const newBtn = document.getElementById('createNewQuoteBtn');
+      if (newBtn) newBtn.addEventListener('click', () => this.openQuotationModal());
+      document.querySelectorAll('.print-quote-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const quote = store.getQuotes().find(q => q.quoteNumber === btn.dataset.quoteNo);
+          if (quote) this.openPrintQuotationPreview(quote);
+        });
+      });
+    }
+
+    renderExchangeHTML() {
+      return `
+        <div class="dashboard-grid-2col" style="grid-template-columns: 1fr 1.3fr;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">${renderIcon('exchange')} Old Tractor Evaluation Entry</div>
+                <div class="panel-subtitle">Enter old tractor details for instant objective appraisal</div>
+              </div>
+            </div>
+
+            <form id="exchangeForm">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Old Tractor Brand</label>
+                  <input type="text" id="exBrand" class="form-input" value="Mahindra" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Model Name / HP</label>
+                  <input type="text" id="exModel" class="form-input" value="265 DI (35 HP)" />
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Year of Manufacture</label>
+                  <input type="number" id="exYear" class="form-input" value="2018" min="2000" max="2026" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Meter Working Hours</label>
+                  <input type="number" id="exHours" class="form-input" value="3800" step="100" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Rear Tyre Condition Remaining (%)</label>
+                <input type="range" id="exTyreRange" min="10" max="100" value="60" style="width:100%; accent-color:var(--primary);" />
+                <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
+                  <span>10% (Bald)</span>
+                  <span id="exTyreVal" style="font-weight:700; color:var(--primary);">60% Remaining Life</span>
+                  <span>100% (Fresh)</span>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Engine Condition</label>
+                  <select id="exEngine" class="form-select">
+                    <option value="Excellent">Excellent (Zero Smoke)</option>
+                    <option value="Good" selected>Good (Minor blow-by)</option>
+                    <option value="Average">Average (Ring work needed)</option>
+                    <option value="Poor">Poor (Heavy smoke)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Hydraulics & PTO</label>
+                  <select id="exHydraulics" class="form-select">
+                    <option value="Good" selected>Good (Holds steady)</option>
+                    <option value="Average">Average (Minor leakage)</option>
+                    <option value="Poor">Poor (Overhaul needed)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Upgrade to New Tractor (Select Model)</label>
+                <select id="exNewTractorSelect" class="form-select">
+                  ${store.getTractors().map(t => `
+                    <option value="${t.price}">${t.brand} ${t.model} (₹${(t.price / 100000).toFixed(2)}L)</option>
+                  `).join('')}
+                </select>
+              </div>
+
+              <button type="submit" class="quick-action-btn btn-primary" style="width:100%; justify-content:center; padding:12px; margin-top:6px;">
+                ${renderIcon('calculator')} Run Exchange Appraisal
+              </button>
+            </form>
+          </div>
+
+          <div class="panel-card" id="exchangeResultContainer"></div>
+        </div>
+      `;
+    }
+
+    bindExchangeEvents() {
+      const range = document.getElementById('exTyreRange');
+      const valText = document.getElementById('exTyreVal');
+      if (range && valText) range.addEventListener('input', () => valText.textContent = `${range.value}% Remaining Life`);
+
+      const form = document.getElementById('exchangeForm');
+      const runEval = () => {
+        const brand = document.getElementById('exBrand').value;
+        const model = document.getElementById('exModel').value;
+        const manufactureYear = Number(document.getElementById('exYear').value) || 2018;
+        const meterHours = Number(document.getElementById('exHours').value) || 3500;
+        const tyrePercent = Number(range ? range.value : 60);
+        const engineCondition = document.getElementById('exEngine').value;
+        const hydraulicsCondition = document.getElementById('exHydraulics').value;
+        const newTractorPrice = Number(document.getElementById('exNewTractorSelect').value) || 840000;
+
+        const evalData = evaluateUsedTractor({
+          brand, model, manufactureYear, meterHours,
+          tyreConditionPercent: tyrePercent,
+          engineCondition, hydraulicsCondition,
+          newTractorPrice
+        });
+        this.renderExchangeResults(evalData);
+      };
+
+      if (form) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          runEval();
+        });
+        runEval();
+      }
+    }
+
+    renderExchangeResults(evalData) {
+      const container = document.getElementById('exchangeResultContainer');
+      if (!container) return;
+
+      container.innerHTML = `
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">${renderIcon('check')} Official Used Tractor Appraisal</div>
+            <div class="panel-subtitle">For: ${evalData.brand} ${evalData.model} (${evalData.manufactureYear} Model)</div>
+          </div>
+        </div>
+
+        <div style="background:var(--primary-light); border:1px solid #bbf7d0; border-radius:var(--radius-lg); padding:20px; margin-bottom:18px;">
+          <span style="font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase;">Estimated Exchange Valuation Range</span>
+          <div style="font-size:26px; font-weight:900; color:var(--primary-dark); margin:4px 0;">
+            ₹${(evalData.minValuation / 100000).toFixed(2)}L – ₹${(evalData.maxValuation / 100000).toFixed(2)} Lakh
+          </div>
+          <div style="font-size:12px; color:var(--text-secondary);">
+            Recommended Showroom Offer: <strong style="color:var(--text-primary);">₹${evalData.recommendedOffer.toLocaleString('en-IN')}</strong>
+          </div>
+        </div>
+
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:18px;">
+          <div style="font-size:13px; font-weight:800; margin-bottom:8px; color:var(--text-primary);">Customer Deal Sheet Summary:</div>
+          <div style="display:flex; justify-content:space-between; font-size:13.5px; padding:6px 0; border-bottom:1px solid var(--border-subtle);">
+            <span>New Tractor Price:</span>
+            <span style="font-weight:700;">₹${evalData.newTractorPrice.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:13.5px; padding:6px 0; border-bottom:1px solid var(--border-subtle); color:var(--danger);">
+            <span>Less: Old Tractor Trade-in:</span>
+            <span style="font-weight:700;">-₹${evalData.recommendedOffer.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:16px; padding:10px 0; font-weight:900; color:var(--primary);">
+            <span>Effective Cash Outflow to Upgrade:</span>
+            <span>₹${evalData.effectivePurchaseAmount.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button class="quick-action-btn btn-primary" id="applyExchangeToQuoteBtn">
+            ${renderIcon('quote')} Transfer to Quotation
+          </button>
+          <button class="quick-action-btn btn-whatsapp" id="sendExchangeOnWaBtn">
+            ${renderIcon('whatsapp')} Send on WhatsApp
+          </button>
+        </div>
+      `;
+
+      const applyQuoteBtn = document.getElementById('applyExchangeToQuoteBtn');
+      if (applyQuoteBtn) applyQuoteBtn.addEventListener('click', () => this.openQuotationModal(null, null, evalData.recommendedOffer));
+
+      const waBtn = document.getElementById('sendExchangeOnWaBtn');
+      if (waBtn) {
+        waBtn.addEventListener('click', () => {
+          const msg = `Namaskar Kisan Bhai 🙏\n\nExchange Evaluation for your ${evalData.brand} ${evalData.model} (${evalData.manufactureYear}):\n\n💰 Estimated Trade-in Value: ₹${evalData.recommendedOffer.toLocaleString('en-IN')}\n🚜 New Tractor Price: ₹${evalData.newTractorPrice.toLocaleString('en-IN')}\n✨ Net Upgrade Amount: ₹${evalData.effectivePurchaseAmount.toLocaleString('en-IN')}\n\nVisit Maa Durga Engineering showroom for inspection!`;
+          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        });
+      }
+    }
+
+    renderEmiHTML() {
+      return `
+        <div class="dashboard-grid-2col" style="grid-template-columns: 1fr 1.3fr;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">${renderIcon('calculator')} Loan & Harvest EMI Settings</div>
+                <div class="panel-subtitle">Calculates monthly and bi-annual harvest payments</div>
+              </div>
+            </div>
+
+            <form id="emiForm">
+              <div class="form-group">
+                <label class="form-label">Tractor On-Road Price (₹)</label>
+                <input type="number" id="emiTractorPrice" class="form-input" value="840000" step="5000" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Govt Agricultural Subsidy</label>
+                <input type="number" id="emiSubsidy" class="form-input" value="0" step="5000" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Farmer Down Payment (₹)</label>
+                <input type="number" id="emiDownPayment" class="form-input" value="200000" step="5000" />
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Loan Tenure (Years)</label>
+                  <select id="emiTenure" class="form-select">
+                    <option value="3">3 Years (36 Months)</option>
+                    <option value="5" selected>5 Years (60 Months)</option>
+                    <option value="7">7 Years (84 Months)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Bank Interest Rate (% p.a.)</label>
+                  <input type="number" id="emiRate" class="form-input" value="10.5" step="0.25" />
+                </div>
+              </div>
+
+              <button type="submit" class="quick-action-btn btn-primary" style="width:100%; justify-content:center; padding:12px; margin-top:6px;">
+                ${renderIcon('calculator')} Calculate EMI Schedule
+              </button>
+            </form>
+          </div>
+
+          <div class="panel-card" id="emiResultContainer"></div>
+        </div>
+      `;
+    }
+
+    bindEmiEvents() {
+      const form = document.getElementById('emiForm');
+      const runEmi = () => {
+        const price = Number(document.getElementById('emiTractorPrice').value) || 840000;
+        const subsidy = Number(document.getElementById('emiSubsidy').value) || 0;
+        const downPayment = Number(document.getElementById('emiDownPayment').value) || 200000;
+        const tenureYears = Number(document.getElementById('emiTenure').value) || 5;
+        const annualInterestRate = Number(document.getElementById('emiRate').value) || 10.5;
+
+        const calc = calculateTractorLoan({ tractorPrice: price, subsidyAmount: subsidy, downPayment, tenureYears, annualInterestRate });
+        this.renderEmiResults(calc);
+      };
+
+      if (form) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          runEmi();
+        });
+        runEmi();
+      }
+    }
+
+    renderEmiResults(calc) {
+      const container = document.getElementById('emiResultContainer');
+      if (!container) return;
+
+      container.innerHTML = `
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">${renderIcon('bank')} Repayment Schedule Breakdown</div>
+            <div class="panel-subtitle">Loan Principal: ₹${calc.loanPrincipal.toLocaleString('en-IN')} over ${calc.tenureYears} Years</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:20px;">
+          <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; text-align:center;">
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Standard Monthly EMI</span>
+            <div style="font-size:22px; font-weight:900; color:var(--text-primary); margin:6px 0;">
+              ₹${calc.monthlyEmi.toLocaleString('en-IN')}
+            </div>
+            <span style="font-size:11px; color:var(--text-secondary);">60 monthly installments</span>
+          </div>
+
+          <div style="background:var(--primary-light); border:1px solid #bbf7d0; border-radius:var(--radius-md); padding:16px; text-align:center;">
+            <span style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;">🌾 Harvest-Cycle EMI (Bi-Annual)</span>
+            <div style="font-size:22px; font-weight:900; color:var(--primary-dark); margin:6px 0;">
+              ₹${calc.biAnnualHarvestEmi.toLocaleString('en-IN')}
+            </div>
+            <span style="font-size:11px; color:var(--primary);">Paid twice a year after crop sale</span>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px; font-size:13px; margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-subtle);">
+            <span>Farmer Down Payment:</span>
+            <span style="font-weight:700; color:var(--accent-dark);">₹${calc.downPayment.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-subtle);">
+            <span>Loan Amount Financed:</span>
+            <span style="font-weight:700;">₹${calc.loanPrincipal.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-subtle);">
+            <span>Total Interest:</span>
+            <span style="font-weight:700; color:var(--danger);">₹${calc.totalInterest.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:15px; font-weight:900; color:var(--primary-dark);">
+            <span>Total Repayment Amount:</span>
+            <span>₹${calc.totalRepayment.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+
+        <button class="quick-action-btn btn-whatsapp" id="shareEmiWhatsAppBtn">
+          ${renderIcon('whatsapp')} Send EMI Plan on WhatsApp
+        </button>
+      `;
+
+      const waBtn = document.getElementById('shareEmiWhatsAppBtn');
+      if (waBtn) {
+        waBtn.addEventListener('click', () => {
+          const msg = `Namaskar Kisan Bhai 🙏\n\nTractor Loan Plan from Maa Durga Engineering:\n\n🚜 Tractor Cost: ₹${calc.netTractorCost.toLocaleString('en-IN')}\n💰 Down Payment: ₹${calc.downPayment.toLocaleString('en-IN')}\n📄 Financed Amount: ₹${calc.loanPrincipal.toLocaleString('en-IN')}\n✓ Monthly EMI: ₹${calc.monthlyEmi.toLocaleString('en-IN')}\n🌾 Harvest Season EMI (Twice/Yr): ₹${calc.biAnnualHarvestEmi.toLocaleString('en-IN')}`;
+          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        });
+      }
+    }
+
+    renderDemosHTML() {
+      const demos = store.getDemos();
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div style="font-size:13px; color:var(--text-secondary);">
+            Track field demonstrations across farmer villages
+          </div>
+          <button class="quick-action-btn btn-primary" onclick="window.app.openNewDemoModal()">
+            ${renderIcon('plus')} Schedule Tractor Demo
+          </button>
+        </div>
+
+        <div class="panel-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Demo ID</th>
+                  <th>Farmer Name</th>
+                  <th>Village</th>
+                  <th>Tractor & Implement</th>
+                  <th>Demo Date</th>
+                  <th>Salesman</th>
+                  <th>Diesel Mileage</th>
+                  <th>Customer Reaction</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${demos.length === 0 ? `
+                  <tr>
+                    <td colspan="10" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+                      <div style="font-size:32px; margin-bottom:10px;">🚜</div>
+                      <div style="font-weight:700; font-size:15px; color:var(--text-secondary);">No field demos scheduled yet</div>
+                      <div style="font-size:12px; margin-top:4px;">Log tractor demonstrations with rotavator or plough to track field performance and customer reactions.</div>
+                      <button class="quick-action-btn btn-sm btn-primary" style="margin:14px auto 0;" onclick="window.app.openNewDemoModal()">
+                        ${renderIcon('plus')} Schedule First Demo
+                      </button>
+                    </td>
+                  </tr>
+                ` : demos.map(d => `
+                  <tr>
+                    <td><strong>${d.id}</strong></td>
+                    <td><strong>${d.leadName}</strong></td>
+                    <td>${d.village}</td>
+                    <td>
+                      <strong style="color:var(--primary);">${d.tractorModel}</strong><br>
+                      <span style="font-size:11px; color:var(--text-muted);">${d.implement}</span>
+                    </td>
+                    <td>${d.demoDate}</td>
+                    <td>${d.salesman}</td>
+                    <td>${d.dieselConsumedLtr || 'Pending'}</td>
+                    <td>
+                      ${d.customerRating ? `⭐ ${d.customerRating}/5` : 'Awaiting trial'}<br>
+                      <span style="font-size:11px; color:var(--text-secondary);">${d.reaction || ''}</span>
+                    </td>
+                    <td>
+                      <span class="badge ${d.status === 'Completed' ? 'badge-success' : 'badge-pending'}">
+                        ${d.status}
+                      </span>
+                    </td>
+                    <td>
+                      ${d.status !== 'Completed' ? `
+                        <button class="quick-action-btn btn-sm btn-outline mark-demo-completed-btn" data-demo-id="${d.id}">
+                          ${renderIcon('check')} Complete
+                        </button>
+                      ` : '<span style="color:var(--success); font-weight:700;">Finished</span>'}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    bindDemosEvents() {
+      document.querySelectorAll('.mark-demo-completed-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const rating = prompt("Enter customer reaction rating (1 to 5 stars):", "5");
+          const diesel = prompt("Enter diesel consumption (e.g. 4.6 L/Acre):", "4.6 Litres / Acre");
+          if (rating) {
+            store.updateDemo(btn.dataset.demoId, {
+              status: 'Completed',
+              customerRating: Number(rating) || 5,
+              dieselConsumedLtr: diesel || '4.5 L/Acre',
+              reaction: 'Customer pleased with field speed.'
+            });
+          }
+        });
+      });
+    }
+
+    renderExpensesHTML() {
+      const expenses = store.getExpenses();
+      const pending = expenses.filter(e => e.status === 'Pending Approval');
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div style="font-size:13px; color:var(--text-secondary);">
+            Automatic Rules: Expenses <strong>&lt; ₹5,000 auto-approved</strong> | <strong>&ge; ₹5,000 requires Director approval</strong>
+          </div>
+          <button class="quick-action-btn btn-primary" onclick="window.app.openFastExpenseModal()">
+            ${renderIcon('plus')} Fast Expense Entry
+          </button>
+        </div>
+
+        ${pending.length > 0 ? `
+          <div style="background:var(--warning-light); border:1px solid #fde68a; border-radius:var(--radius-lg); padding:14px 18px; margin-bottom:20px;">
+            <h4 style="font-size:14.5px; font-weight:800; color:#b45309;">
+              Pending Manager Approvals (${pending.length})
+            </h4>
+            <p style="font-size:12px; color:#92400e; margin-top:2px;">
+              Expenses &ge; ₹5,000 require director authorization before posting to cash outflows.
+            </p>
+          </div>
+        ` : ''}
+
+        <div class="panel-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Date</th>
+                  <th>Category</th>
+                  <th>Amount (₹)</th>
+                  <th>Mode</th>
+                  <th>Paid To / Purpose</th>
+                  <th>Chassis Tag (Unit Cost)</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${expenses.length === 0 ? `
+                  <tr>
+                    <td colspan="9" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+                      <div style="font-size:32px; margin-bottom:10px;">💸</div>
+                      <div style="font-weight:700; font-size:15px; color:var(--text-secondary);">No showroom expenses recorded yet</div>
+                      <div style="font-size:12px; margin-top:4px;">Use fast entry for fuel, tea, transport, rent, or maintenance. Expenses &lt; ₹5k auto-approve; &ge; ₹5k require director sign-off.</div>
+                      <button class="quick-action-btn btn-sm btn-primary" style="margin:14px auto 0;" onclick="window.app.openFastExpenseModal()">
+                        ${renderIcon('plus')} Record First Expense
+                      </button>
+                    </td>
+                  </tr>
+                ` : expenses.map(e => `
+                  <tr>
+                    <td><strong>${e.id}</strong></td>
+                    <td>${e.date}</td>
+                    <td><span class="badge badge-info">${e.category}</span></td>
+                    <td><strong style="font-size:13.5px;">₹${Number(e.amount).toLocaleString('en-IN')}</strong></td>
+                    <td>${e.paymentMode || 'Cash'}</td>
+                    <td>
+                      <strong>${e.paidTo || 'Vendor'}</strong><br>
+                      <span style="font-size:11px; color:var(--text-secondary);">${e.notes || ''}</span>
+                    </td>
+                    <td>
+                      ${e.chassisTag ? `<span class="badge badge-warm">🏷️ ${e.chassisTag}</span>` : '<span style="color:var(--text-muted); font-size:11px;">General Showroom</span>'}
+                    </td>
+                    <td>
+                      <span class="badge ${e.status === 'Approved' ? 'badge-success' : 'badge-pending'}">
+                        ${e.status}
+                      </span><br>
+                      <span style="font-size:10px; color:var(--text-muted);">${e.approvedBy || 'Pending'}</span>
+                    </td>
+                    <td>
+                      <div style="display:flex; gap:6px;">
+                        ${e.status === 'Pending Approval' ? `
+                          <button class="quick-action-btn btn-sm btn-primary approve-expense-btn" data-exp-id="${e.id}">
+                            Approve
+                          </button>
+                        ` : ''}
+                        <button class="quick-action-btn btn-sm btn-danger delete-expense-btn" data-exp-id="${e.id}">
+                          ${renderIcon('trash')}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    bindExpensesEvents() {
+      document.querySelectorAll('.approve-expense-btn').forEach(btn => {
+        btn.addEventListener('click', () => store.approveExpense(btn.dataset.expId, 'Showroom Director (Approved)'));
+      });
+      document.querySelectorAll('.delete-expense-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (confirm("Delete this expense record?")) store.deleteExpense(btn.dataset.expId);
+        });
+      });
+    }
+
+    renderCashFlowHTML() {
+      const snapshot = store.getFinancialSnapshot();
+      const txns = store.getCashTransactions();
+      return `
+        <div style="background:linear-gradient(135deg, #091e13 0%, #173f27 100%); color:#fff; border-radius:var(--radius-lg); padding:20px 24px; margin-bottom:24px;">
+          <h3 style="font-size:18px; font-weight:800; color:#fbbf24; margin-bottom:4px;">
+            Cash Flow vs Profit: The Showroom Reality
+          </h3>
+          <p style="font-size:13px; color:#d1fae5; line-height:1.4;">
+            Accounting Net Profit is <strong>₹${(snapshot.netProfit / 100000).toFixed(2)}L</strong>, while Net Cash Flow is <strong>₹${(snapshot.netCashFlow / 100000).toFixed(2)}L</strong>.
+          </p>
+        </div>
+
+        <div class="metric-grid" style="grid-template-columns: repeat(3, 1fr);">
+          <div class="metric-card success">
+            <div class="metric-top">
+              <span class="metric-label">Total Money In (Collections)</span>
+              <div class="metric-icon-wrap success">${renderIcon('bank')}</div>
+            </div>
+            <div class="metric-value" style="color:var(--success);">+₹${snapshot.cashIn.toLocaleString('en-IN')}</div>
+          </div>
+
+          <div class="metric-card danger">
+            <div class="metric-top">
+              <span class="metric-label">Total Money Out (Payments)</span>
+              <div class="metric-icon-wrap danger">${renderIcon('expense')}</div>
+            </div>
+            <div class="metric-value" style="color:var(--danger);">-₹${snapshot.cashOut.toLocaleString('en-IN')}</div>
+          </div>
+
+          <div class="metric-card gold">
+            <div class="metric-top">
+              <span class="metric-label">Net Cash Balance</span>
+              <div class="metric-icon-wrap gold">${renderIcon('rupee')}</div>
+            </div>
+            <div class="metric-value">+₹${snapshot.netCashFlow.toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-header">
+            <div class="panel-title">${renderIcon('bank')} Recent Cash & Bank Movements</div>
+            <button class="quick-action-btn btn-sm btn-primary" id="openAddCashTxnBtn">
+              ${renderIcon('plus')} Record Cash Movement
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Txn ID</th>
+                  <th>Date</th>
+                  <th>Flow</th>
+                  <th>Category</th>
+                  <th>Amount (₹)</th>
+                  <th>Party / Source</th>
+                  <th>Payment Mode</th>
+                  <th>Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${txns.length === 0 ? `
+                  <tr>
+                    <td colspan="8" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+                      <div style="font-size:32px; margin-bottom:10px;">🏦</div>
+                      <div style="font-weight:700; font-size:15px; color:var(--text-secondary);">No cash movements recorded yet</div>
+                      <div style="font-size:12px; margin-top:4px;">Record customer token advances, margin payments, or bank loan credits.</div>
+                      <button class="quick-action-btn btn-sm btn-primary" style="margin:14px auto 0;" onclick="document.getElementById('openAddCashTxnBtn')?.click()">
+                        ${renderIcon('plus')} Record Movement
+                      </button>
+                    </td>
+                  </tr>
+                ` : txns.map(t => `
+                  <tr>
+                    <td><strong>${t.id}</strong></td>
+                    <td>${t.date}</td>
+                    <td>
+                      <span class="badge ${t.type === 'IN' ? 'badge-success' : 'badge-hot'}">
+                        ${t.type === 'IN' ? '↓ MONEY IN' : '↑ MONEY OUT'}
+                      </span>
+                    </td>
+                    <td><strong>${t.category}</strong></td>
+                    <td>
+                      <strong style="font-size:14px; color:${t.type === 'IN' ? 'var(--success)' : 'var(--danger)'};">
+                        ${t.type === 'IN' ? '+' : '-'}₹${Number(t.amount).toLocaleString('en-IN')}
+                      </strong>
+                    </td>
+                    <td>${t.party}</td>
+                    <td>${t.mode}</td>
+                    <td style="font-size:11px; color:var(--text-muted);">${t.ref || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    bindCashFlowEvents() {
+      const addBtn = document.getElementById('openAddCashTxnBtn');
+      if (addBtn) {
+        addBtn.addEventListener('click', () => {
+          const party = prompt("Enter Party / Customer / Vendor Name:", "Kisan Token Advance");
+          const amount = prompt("Enter Amount (₹):", "50000");
+          const type = confirm("Click OK for Money IN (Collection), or Cancel for Money OUT (Payment)") ? 'IN' : 'OUT';
+          if (party && amount) {
+            store.addCashTransaction({
+              type,
+              category: type === 'IN' ? 'Customer Advance' : 'Operational Expense',
+              amount: Number(amount) || 0,
+              party,
+              mode: 'Bank / Cash',
+              ref: 'Manual Entry'
+            });
+          }
+        });
+      }
+    }
+
+    renderVillageMapHTML() {
+      const leads = store.getLeads();
+      if (leads.length === 0) {
+        return `
+          <div class="panel-card" style="text-align:center; padding:50px 20px;">
+            <div style="font-size:36px; margin-bottom:12px;">🗺️</div>
+            <h3 style="font-size:18px; font-weight:800; color:var(--text-primary);">No Village Enquiries Mapped Yet</h3>
+            <p style="font-size:13px; color:var(--text-secondary); max-width:480px; margin:8px auto 20px;">
+              As you record customer leads with their respective village names, this territory intelligence dashboard will automatically cluster demand, identify dominant regional crops, and optimize field demonstration routes.
+            </p>
+            <button class="quick-action-btn btn-primary" style="margin:0 auto;" onclick="window.app.openNewLeadModal()">
+              ${renderIcon('plus')} Register First Customer Lead
+            </button>
+          </div>
+        `;
+      }
+
+      const villageCounts = {};
+      for (const l of leads) {
+        const v = l.village || 'Sadar / Town';
+        villageCounts[v] = (villageCounts[v] || 0) + 1;
+      }
+      const sorted = Object.entries(villageCounts).sort((a, b) => b[1] - a[1]);
+      const maxCount = sorted.length > 0 ? sorted[0][1] : 1;
+      const topVillage = sorted[0][0];
+      const topCount = sorted[0][1];
+      const villageLeads = leads.filter(l => (l.village || 'Sadar / Town') === topVillage);
+      const crops = Array.from(new Set(villageLeads.flatMap(l => l.crops || []))).slice(0, 4).join(', ') || 'Mixed Crops';
+      const avgBudget = villageLeads.length > 0 ? Math.round(villageLeads.reduce((s, l) => s + Number(l.budgetMax || 0), 0) / villageLeads.length) : 800000;
+
+      return `
+        <div class="dashboard-grid-2col" style="grid-template-columns: 1.4fr 1fr;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">${renderIcon('map')} Village Territory Lead Concentration</div>
+                <div class="panel-subtitle">Visual distribution of enquiries across agricultural clusters</div>
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              ${sorted.map(([vName, count]) => {
+                const widthPct = Math.round((count / maxCount) * 100);
+                return `
+                  <div class="village-bar-item">
+                    <div class="village-name">${vName}</div>
+                    <div class="village-bar-wrap">
+                      <div class="village-bar-fill" style="width:${Math.max(12, widthPct)}%;">
+                        ${count} Leads
+                      </div>
+                    </div>
+                    <div class="village-stats">${count >= 2 ? '🔥 Hot Cluster' : 'Active'}</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <div style="margin-top:24px; padding:16px; background:var(--bg-main); border-radius:var(--radius-md); border:1px solid var(--border-color);">
+              <div style="font-size:13px; font-weight:800; margin-bottom:6px;">Territory Route Planning:</div>
+              <p style="font-size:12px; color:var(--text-secondary); line-height:1.4;">
+                <strong>Village ${topVillage}</strong> has the highest concentration of enquiries (${topCount} farmer leads). Prioritize your field demonstration trolley route through Village ${topVillage} this week.
+              </p>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-header">
+              <div class="panel-title">Cluster Profile: Village ${topVillage}</div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:12px; font-size:13px;">
+              <div style="display:flex; justify-content:space-between; padding-bottom:6px; border-bottom:1px solid var(--border-subtle);">
+                <span style="color:var(--text-secondary);">Active Leads:</span>
+                <strong style="color:var(--primary);">${topCount} Farmers</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding-bottom:6px; border-bottom:1px solid var(--border-subtle);">
+                <span style="color:var(--text-secondary);">Dominant Crops:</span>
+                <strong>${crops}</strong>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding-bottom:6px; border-bottom:1px solid var(--border-subtle);">
+                <span style="color:var(--text-secondary);">Average Farmer Budget:</span>
+                <strong>₹${(avgBudget / 100000).toFixed(2)} Lakh</strong>
+              </div>
+            </div>
+
+            <div style="margin-top:20px;">
+              <button class="quick-action-btn btn-primary" style="width:100%; justify-content:center;" onclick="showToast('Demonstration route planned for Village ${topVillage}!', 'info', 'Demo Tour Planned')">
+                ${renderIcon('calendar')} Plan Demonstration Tour
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    renderAiAdvisorHTML() {
+      return `
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">${renderIcon('bot')} Grounded Showroom Business Advisor</div>
+              <div class="panel-subtitle">Ask questions about your live transactions, margin leakage, and lead follow-up strategy</div>
+            </div>
+            <span class="badge badge-success">Grounded on Real Ledger</span>
+          </div>
+
+          <div class="ai-chat-box">
+            <div class="ai-messages-wrap" id="aiMessagesContainer">
+              <div class="ai-bubble assistant">
+                <strong>Namaskar! I am your Maa Durga Engineering business advisor.</strong><br>
+                I inspect your actual showroom ledgers, unit expenses, lead scores, and village demand to give you concrete, actionable insights without guesswork.<br><br>
+                Try clicking one of the common questions below or type your own question!
+              </div>
+            </div>
+
+            <div class="ai-quick-prompts">
+              <span class="quick-prompt-pill" data-prompt="Why was my profit lower this month?">Why was my profit lower this month?</span>
+              <span class="quick-prompt-pill" data-prompt="Which leads should I call today?">Who should I call today?</span>
+              <span class="quick-prompt-pill" data-prompt="Which tractor model has the best margin?">Which tractor has the best unit margin?</span>
+              <span class="quick-prompt-pill" data-prompt="Which village has the most demand?">Which village has the most demand?</span>
+            </div>
+
+            <form id="aiChatForm" class="ai-input-wrap">
+              <input type="text" id="aiUserInput" class="form-input" placeholder="Ask about showroom profit, high expenses, lead priorities..." style="flex:1;" />
+              <button type="submit" class="quick-action-btn btn-primary">
+                ${renderIcon('sparkles')} Ask Advisor
+              </button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    bindAiAdvisorEvents() {
+      const form = document.getElementById('aiChatForm');
+      const input = document.getElementById('aiUserInput');
+      const container = document.getElementById('aiMessagesContainer');
+
+      const handleQuery = (questionText) => {
+        if (!questionText || !container) return;
+        const userDiv = document.createElement('div');
+        userDiv.className = 'ai-bubble user';
+        userDiv.textContent = questionText;
+        container.appendChild(userDiv);
+
+        const reply = queryBusinessAdvisor(questionText);
+        const botDiv = document.createElement('div');
+        botDiv.className = 'ai-bubble assistant';
+        botDiv.innerHTML = `
+          <strong style="font-size:14px; color:var(--primary-dark);">${reply.title}</strong>
+          <p style="margin:6px 0; font-size:13px;">${reply.summary}</p>
+          <ul style="margin:8px 0; padding-left:18px; font-size:12.5px; display:flex; flex-direction:column; gap:4px;">
+            ${reply.keyFindings.map(k => `<li>${k}</li>`).join('')}
+          </ul>
+          <div style="margin-top:10px; padding:10px; background:#fff; border-radius:var(--radius-sm); border:1px solid #bbf7d0; font-size:12px;">
+            <strong>Actionable Strategy:</strong> ${reply.recommendation}
+          </div>
+        `;
+        container.appendChild(botDiv);
+        container.scrollTop = container.scrollHeight;
+      };
+
+      if (form && input) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const text = input.value.trim();
+          if (text) {
+            input.value = '';
+            handleQuery(text);
+          }
+        });
+      }
+
+      document.querySelectorAll('.quick-prompt-pill').forEach(pill => {
+        pill.addEventListener('click', () => handleQuery(pill.dataset.prompt));
+      });
+    }
+
+    openNewLeadModal() {
+      this.openModal('newLeadModal');
+      const form = document.getElementById('newLeadForm');
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const name = document.getElementById('nlName').value.trim() || 'Farmer Customer';
+          const phone = document.getElementById('nlPhone').value.trim() || '-';
+          const village = document.getElementById('nlVillage').value.trim() || 'Local Area';
+          const acres = Number(document.getElementById('nlAcres').value) || 5;
+          const cropVal = document.getElementById('nlCrop').value.trim();
+          const crop = cropVal ? cropVal.split(',').map(c => c.trim()).filter(Boolean) : ['Wheat', 'Paddy'];
+          const modelId = document.getElementById('nlModelSelect').value || null;
+          const budget = Number(document.getElementById('nlBudget').value) || 750000;
+          const finance = document.getElementById('nlFinance').value === 'Yes';
+          const exchange = document.getElementById('nlExchange').value === 'Yes';
+          const days = Number(document.getElementById('nlDays').value) || 15;
+
+          const newLead = store.addLead({
+            name, phone, village,
+            landAcres: acres, crops: crop,
+            interestedModelId: modelId,
+            budgetMax: budget, financeRequired: finance,
+            exchangeWanted: exchange, expectedPurchaseDays: days,
+            stage: 'New Enquiry'
+          });
+
+          this.closeAllModals();
+          showToast(`Lead for <strong>${newLead.name}</strong> created! Buying Score: <strong>${calculateBuyingScore(newLead).score}/100</strong>`, 'success', 'Lead Captured');
+        };
+      }
+    }
+
+    openFastExpenseModal() {
+      this.openModal('fastExpenseModal');
+      const form = document.getElementById('fastExpenseForm');
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const amount = Number(document.getElementById('feAmount').value) || 0;
+          const category = document.getElementById('feCategory').value || 'Miscellaneous';
+          const paymentMode = document.getElementById('feMode').value || 'Cash';
+          const paidTo = document.getElementById('fePaidTo').value.trim() || 'Vendor / Counter';
+          const chassisTag = document.getElementById('feChassisTag').value.trim() || null;
+          const notes = document.getElementById('feNotes').value.trim();
+
+          store.addExpense({ amount, category, paymentMode, paidTo, chassisTag, notes });
+          this.closeAllModals();
+          if (amount >= 5000) {
+            showToast(`Expense of ₹${amount.toLocaleString('en-IN')} logged! Pending manager approval (≥ ₹5,000).`, 'warning', 'Pending Approval');
+          } else {
+            showToast(`Expense of ₹${amount.toLocaleString('en-IN')} logged and auto-approved (< ₹5,000)!`, 'success', 'Expense Recorded');
+          }
+        };
+      }
+    }
+
+    openWhatsAppSequenceModal(leadId) {
+      const lead = store.getLeads().find(l => l.id === leadId);
+      if (!lead) return;
+      const tractor = store.getTractors().find(t => t.id === lead.interestedModelId);
+      const sequences = generateFollowUpSequences(lead, tractor);
+
+      const bodyEl = document.getElementById('waSequenceModalBody');
+      if (bodyEl) {
+        bodyEl.innerHTML = `
+          <div style="margin-bottom:16px;">
+            <h4 style="font-size:16px; font-weight:800;">WhatsApp Nurturing Sequence for ${lead.name}</h4>
+            <span style="font-size:12px; color:var(--text-secondary);">Phone: ${lead.phone} | Village: ${lead.village}</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            ${sequences.map(seq => {
+              let cleanPhone = (lead.phone || '').replace(/[^0-9]/g, '');
+              if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+              const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(seq.body)}`;
+              return `
+                <div style="border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; background:var(--bg-main);">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span class="badge badge-info">${seq.title}</span>
+                    <a href="${waUrl}" target="_blank" class="quick-action-btn btn-sm btn-whatsapp">
+                      ${renderIcon('whatsapp')} Send on WhatsApp
+                    </a>
+                  </div>
+                  <textarea readonly style="width:100%; height:85px; font-size:12px; font-family:inherit; padding:8px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:#fff; resize:none;">${seq.body}</textarea>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+      this.openModal('waSequenceModal');
+    }
+
+    openUnitMarginModal(tractorId) {
+      const unitEcon = store.getTractorUnitEconomics(tractorId);
+      if (!unitEcon) return;
+      const modalBody = document.getElementById('unitMarginModalBody');
+      if (modalBody) {
+        const t = unitEcon.tractor;
+        modalBody.innerHTML = `
+          <div style="margin-bottom:16px;">
+            <h4 style="font-size:18px; font-weight:800; color:var(--primary-dark);">${t.brand} ${t.model} Unit Economics</h4>
+            <p style="font-size:12px; color:var(--text-secondary);">True unit landed cost vs retail margin</p>
+          </div>
+          <div style="background:var(--bg-main); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; font-size:13.5px; padding:4px 0;">
+              <span>Retail Selling Price:</span>
+              <span style="font-weight:800; color:var(--primary);">₹${unitEcon.sellingPrice.toLocaleString('en-IN')}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13.5px; padding:4px 0;">
+              <span>OEM Landed Purchase Cost:</span>
+              <span style="font-weight:700;">-₹${unitEcon.purchaseCost.toLocaleString('en-IN')}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:13.5px; padding:4px 0; color:var(--danger);">
+              <span>Direct Freight & PDI Prep Expenses:</span>
+              <span style="font-weight:700;">-₹${unitEcon.directExpensesTotal.toLocaleString('en-IN')}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:16px; padding:8px 0; font-weight:900; color:var(--success); border-top:2px solid var(--border-color);">
+              <span>True Dealer Unit Profit:</span>
+              <span>₹${unitEcon.actualMargin.toLocaleString('en-IN')} (${unitEcon.marginPercent}%)</span>
+            </div>
+          </div>
+        `;
+      }
+      this.openModal('unitMarginModal');
+    }
+
+    openQuotationModal(prefillLead = null, prefillTractor = null, prefillExchangeVal = 0) {
+      if (prefillLead) {
+        document.getElementById('nqCustomerName').value = prefillLead.name || '';
+        document.getElementById('nqPhone').value = prefillLead.phone || '';
+        document.getElementById('nqVillage').value = prefillLead.village || '';
+      }
+      const tractorSelect = document.getElementById('nqTractorSelect');
+      if (tractorSelect) {
+        const tractors = store.getTractors();
+        tractorSelect.innerHTML = tractors.map(t => 
+          `<option value="${t.id}">${t.brand} ${t.model} (${t.hp} HP ${t.drive})</option>`
+        ).join('');
+        tractorSelect.onchange = () => {
+          const sel = tractors.find(t => t.id === tractorSelect.value);
+          if (sel) {
+            document.getElementById('nqPrice').value = sel.price;
+          }
+        };
+      }
+
+      if (prefillTractor) {
+        document.getElementById('nqTractorSelect').value = prefillTractor.id;
+        document.getElementById('nqPrice').value = prefillTractor.price;
+      } else if (tractorSelect && store.getTractors()[0]) {
+        document.getElementById('nqPrice').value = store.getTractors()[0].price;
+      }
+      if (prefillExchangeVal > 0) {
+        document.getElementById('nqExchangeVal').value = prefillExchangeVal;
+      }
+      this.openModal('newQuoteModal');
+
+      const form = document.getElementById('newQuoteForm');
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const customerName = document.getElementById('nqCustomerName').value.trim() || 'Farmer Customer';
+          const phone = document.getElementById('nqPhone').value.trim() || '-';
+          const village = document.getElementById('nqVillage').value.trim() || 'Local Area';
+          const tractorId = document.getElementById('nqTractorSelect').value;
+          const tractor = store.getTractors().find(t => t.id === tractorId) || store.getTractors()[0];
+          const exShowroom = Number(document.getElementById('nqPrice').value) || (tractor ? tractor.price : 745000);
+          const rtoInsurance = Number(document.getElementById('nqRto').value) || 40000;
+          const exchangeVal = Number(document.getElementById('nqExchangeVal').value) || 0;
+          const downPayment = Number(document.getElementById('nqDown').value) || 100000;
+
+          const grandTotal = exShowroom + rtoInsurance - exchangeVal;
+          const loanCalc = calculateTractorLoan({ tractorPrice: grandTotal, downPayment, tenureYears: 5, annualInterestRate: 10.5 });
+
+          const createdQuote = store.addQuote({
+            customerName, phone, village,
+            tractorName: tractor ? `${tractor.brand} ${tractor.model}` : 'Tractor',
+            exShowroomPrice: exShowroom,
+            insuranceRTO: rtoInsurance,
+            exchangeDeduction: exchangeVal,
+            grandTotal, downPayment,
+            loanAmount: loanCalc.loanPrincipal,
+            tenureYears: 5,
+            monthlyEmi: loanCalc.monthlyEmi,
+            harvestEmi: loanCalc.biAnnualHarvestEmi,
+            salesman: 'Amit Kumar'
+          });
+
+          this.closeAllModals();
+          this.openPrintQuotationPreview(createdQuote);
+        };
+      }
+    }
+
+    openPrintQuotationPreview(quote) {
+      const previewBox = document.getElementById('quotePrintPreviewBody');
+      if (previewBox) {
+        const info = store.getSettings();
+        previewBox.innerHTML = `
+          <div class="quote-sheet">
+            <div class="quote-header">
+              <div class="quote-brand">
+                <h2>${info.name}</h2>
+                <p>${info.tagline}</p>
+                <p>${info.address}</p>
+                <p>Phone: ${info.phone} | GSTIN: ${info.gstin}</p>
+              </div>
+              <div class="quote-meta">
+                <h3 style="font-size:16px; font-weight:800; color:var(--primary);">DEALER QUOTATION</h3>
+                <p><strong>Quote #:</strong> ${quote.quoteNumber}</p>
+                <p><strong>Date:</strong> ${quote.date}</p>
+                <p><strong>Valid Till:</strong> 15 Days</p>
+              </div>
+            </div>
+
+            <div class="quote-parties">
+              <div>
+                <strong>Customer Information:</strong><br>
+                <span style="font-size:14px; font-weight:700;">${quote.customerName}</span><br>
+                Village / Tehsil: ${quote.village}<br>
+                Phone: ${quote.phone}
+              </div>
+              <div>
+                <strong>Showroom Desk:</strong><br>
+                Salesman: ${quote.salesman || 'Amit Kumar'}<br>
+                State Bank of India Agro Loan Desk Tie-up
+              </div>
+            </div>
+
+            <table class="quote-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Specifications / Inclusions</th>
+                  <th style="text-align:right;">Amount (₹)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>${quote.tractorName}</strong></td>
+                  <td>Standard Agricultural Tractor with 5-Year OEM Warranty</td>
+                  <td style="text-align:right;">₹${(quote.exShowroomPrice || 0).toLocaleString('en-IN')}</td>
+                </tr>
+                <tr>
+                  <td>RTO Registration & Comprehensive Insurance</td>
+                  <td>1 Year Comprehensive + 5 Year Third Party</td>
+                  <td style="text-align:right;">₹${(quote.insuranceRTO || 0).toLocaleString('en-IN')}</td>
+                </tr>
+                ${quote.exchangeDeduction > 0 ? `
+                  <tr style="color:var(--danger);">
+                    <td><strong>Less: Old Tractor Exchange Value</strong></td>
+                    <td>Trade-in adjustment for used tractor</td>
+                    <td style="text-align:right;">-₹${quote.exchangeDeduction.toLocaleString('en-IN')}</td>
+                  </tr>
+                ` : ''}
+              </tbody>
+            </table>
+
+            <div class="quote-total-box">
+              <div class="quote-row grand">
+                <span>Grand Total On-Road:</span>
+                <span>₹${(quote.grandTotal || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div class="quote-row" style="margin-top:6px;">
+                <span>Farmer Down Payment:</span>
+                <span>₹${(quote.downPayment || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div class="quote-row">
+                <span>Proposed Loan Amount:</span>
+                <span>₹${(quote.loanAmount || 0).toLocaleString('en-IN')}</span>
+              </div>
+              <div class="quote-row" style="font-weight:700; color:var(--primary);">
+                <span>Estimated Monthly EMI (5 Yrs):</span>
+                <span>₹${(quote.monthlyEmi || 0).toLocaleString('en-IN')} / Mo</span>
+              </div>
+              <div class="quote-row" style="font-weight:800; color:var(--accent-dark);">
+                <span>🌾 Harvest-Cycle Payment (Bi-Annual):</span>
+                <span>₹${(quote.harvestEmi || 0).toLocaleString('en-IN')} (Twice/Yr)</span>
+              </div>
+            </div>
+
+            <div class="quote-signatures">
+              <div class="sign-line">Customer Signature</div>
+              <div class="sign-line">Authorized Signatory<br><strong>Maa Durga Engineering</strong></div>
+            </div>
+          </div>
+        `;
+      }
+      this.openModal('quotePrintPreviewModal');
+    }
+
+    openNewDemoModal() {
+      this.openModal('newDemoModal');
+      const form = document.getElementById('newDemoForm');
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const leadName = document.getElementById('ndLeadName').value.trim() || 'Farmer Customer';
+          const village = document.getElementById('ndVillage').value.trim() || 'Local Area';
+          const tractorModel = document.getElementById('ndTractorModel').value.trim() || 'VST Zetor 5011 4WD';
+          const implement = document.getElementById('ndImplement').value.trim() || 'Rotavator (6 ft)';
+          const demoDate = document.getElementById('ndDate').value || new Date().toISOString().split('T')[0];
+          const salesman = document.getElementById('ndSalesman').value.trim() || 'Sales Team';
+
+          store.addDemo({ leadName, village, tractorModel, implement, demoDate, salesman });
+          this.closeAllModals();
+          showToast(`Field demo with ${tractorModel} scheduled for ${leadName} on ${demoDate}!`, 'success', 'Demo Scheduled');
+        };
+      }
+    }
+
+    openGatePassModal() {
+      this.openModal('gatePassModal');
+      const tractorSelect = document.getElementById('gpTractorSelect');
+      if (tractorSelect) {
+        const tractors = store.getTractors();
+        if (tractors.length > 0) {
+          tractorSelect.innerHTML = tractors.map(t => `<option value="${t.brand} ${t.model} (${t.hp} HP)">${t.brand} ${t.model} (${t.hp} HP) - Stock: ${t.stockCount || 0}</option>`).join('');
+        }
+      }
+      const form = document.getElementById('gatePassForm');
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const customer = document.getElementById('gpCustomer').value.trim() || 'Customer';
+          const phone = document.getElementById('gpPhone').value.trim() || '-';
+          const village = document.getElementById('gpVillage').value.trim() || 'Local Area';
+          const model = document.getElementById('gpTractorSelect').value || (store.getTractors()[0] ? `${store.getTractors()[0].brand} ${store.getTractors()[0].model}` : 'VST Zetor 5011 4WD');
+          const chassis = document.getElementById('gpChassis').value.trim() || ('VZ-' + Date.now().toString().slice(-6));
+          const engine = document.getElementById('gpEngine').value.trim() || ('ENG-' + Date.now().toString().slice(-6));
+          const battery = document.getElementById('gpBattery').value.trim() || 'Standard Battery';
+          const bank = document.getElementById('gpBank').value.trim() || 'Cash / Self';
+
+          this.closeAllModals();
+          const previewBox = document.getElementById('quotePrintPreviewBody');
+          if (previewBox) {
+            const info = store.getSettings();
+            previewBox.innerHTML = `
+              <div class="quote-sheet">
+                <div class="quote-header">
+                  <div class="quote-brand">
+                    <h2>${info.name}</h2>
+                    <p>${info.tagline}</p>
+                    <p>${info.address}</p>
+                    <p>GSTIN: ${info.gstin} | Phone: ${info.phone}</p>
+                  </div>
+                  <div class="quote-meta">
+                    <h3 style="font-size:16px; font-weight:800; color:var(--primary);">VEHICLE DELIVERY GATE PASS</h3>
+                    <p><strong>Challan #:</strong> MDE/GP/${Date.now().toString().slice(-6)}</p>
+                    <p><strong>Date:</strong> ${new Date().toISOString().split('T')[0]}</p>
+                    <p><strong>Status:</strong> Handover Approved</p>
+                  </div>
+                </div>
+
+                <div class="quote-parties">
+                  <div>
+                    <strong>Delivered To (Customer):</strong><br>
+                    <span style="font-size:14px; font-weight:700;">${customer}</span><br>
+                    Village: ${village}<br>
+                    Contact: ${phone}
+                  </div>
+                  <div>
+                    <strong>Financial Hypothecation:</strong><br>
+                    Bank / Financier: <strong>${bank}</strong><br>
+                    PDI Inspection: Passed 100% OK
+                  </div>
+                </div>
+
+                <table class="quote-table">
+                  <thead>
+                    <tr>
+                      <th>Vehicle Parameter</th>
+                      <th>Verified Showroom Identification</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><strong>Tractor Model</strong></td><td>${model}</td></tr>
+                    <tr><td><strong>Chassis Number</strong></td><td><code style="font-size:13px; font-weight:700;">${chassis}</code></td></tr>
+                    <tr><td><strong>Engine Number</strong></td><td><code style="font-size:13px; font-weight:700;">${engine}</code></td></tr>
+                    <tr><td><strong>Battery Serial Number</strong></td><td>${battery}</td></tr>
+                    <tr><td><strong>Transit Diesel Filled</strong></td><td>10.0 Litres (Complimentary)</td></tr>
+                  </tbody>
+                </table>
+
+                <div style="margin-top:16px; padding:12px; background:#f9fafb; border-radius:6px; font-size:12px;">
+                  <strong>Customer Delivery Acknowledgment:</strong><br>
+                  I hereby confirm that I have taken delivery of the above described tractor along with 2 ignition keys, standard toolkit, owner's manual, top link, and warranty card in satisfactory working condition after complete showroom trial and explanation of operations.
+                </div>
+
+                <div class="quote-signatures" style="margin-top:36px;">
+                  <div class="sign-line">Customer Signature / Thumb</div>
+                  <div class="sign-line">Showroom Delivery In-Charge<br><strong>Maa Durga Engineering</strong></div>
+                </div>
+              </div>
+            `;
+          }
+          this.openModal('quotePrintPreviewModal');
+        };
+      }
+    }
+
+    openBackupModal() {
+      this.openModal('backupModal');
+      const dlBtn = document.getElementById('downloadBackupBtn');
+      if (dlBtn) {
+        dlBtn.onclick = () => {
+          const backupData = {
+            exportDate: new Date().toISOString(),
+            showroom: store.getSettings(),
+            tractors: store.getTractors(),
+            leads: store.getLeads(),
+            expenses: store.getExpenses(),
+            cashTxns: store.getCashTransactions(),
+            demos: store.getDemos(),
+            quotes: store.getQuotes()
+          };
+          const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Maa_Durga_Engineering_Backup_${new Date().toISOString().split('T')[0]}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+      }
+
+      const resetBtn = document.getElementById('resetDataBtn');
+      if (resetBtn) {
+        resetBtn.onclick = () => {
+          if (confirm("Are you sure you want to reset all data back to the clean default seed data? This will clear local changes.")) {
+            store.resetToDefault();
+            this.closeAllModals();
+            showToast("Database reset to clean defaults successfully!", 'info', 'Database Reset');
+          }
+        };
+      }
+    }
+
+    toggleLanguage() {
+      this.lang = (this.lang === 'hi') ? 'en' : 'hi';
+      const btn = document.getElementById('langToggleBtn');
+      if (btn) {
+        btn.textContent = this.lang === 'hi' ? '🌐 English' : '🌐 हिन्दी';
+      }
+
+      // Sidebar Hindi / English translations
+      const sidebarTranslations = {
+        dashboard: this.lang === 'hi' ? '📊 डैशबोर्ड' : '📊 Dashboard',
+        leads: this.lang === 'hi' ? '👥 किसान एवं ग्राहक' : '👥 Customers & Leads',
+        recommend: this.lang === 'hi' ? '🌾 ट्रैक्टर चयन' : '🌾 Recommendation',
+        inventory: this.lang === 'hi' ? '🚜 स्टॉक एवं मुनाफा' : '🚜 Inventory & Margins',
+        quotations: this.lang === 'hi' ? '🧾 कोटेशन बिल' : '🧾 Quotations',
+        exchange: this.lang === 'hi' ? '🔄 पुराना ट्रैक्टर एक्सचेंज' : '🔄 Used Exchange',
+        emi: this.lang === 'hi' ? '🧮 किस्त एवं फसल चक्र' : '🧮 EMI & Harvest Calc',
+        demos: this.lang === 'hi' ? '🚜 फील्ड डेमो ट्रायल' : '🚜 Field Demos',
+        expenses: this.lang === 'hi' ? '💸 शोरूम खर्चे' : '💸 Expenses',
+        cashflow: this.lang === 'hi' ? '🏦 रोकड़ एवं बैंक' : '🏦 Cash & Bank',
+        villageMap: this.lang === 'hi' ? '🗺️ ग्रामीण बिक्री नक्शा' : '🗺️ Village Sales Map',
+        aiAdvisor: this.lang === 'hi' ? '🤖 व्यापार सलाहकार' : '🤖 AI Business Advisor'
+      };
+
+      document.querySelectorAll('.nav-item-btn').forEach(b => {
+        const tab = b.dataset.tab;
+        const span = b.querySelector('span:first-of-type');
+        if (span && sidebarTranslations[tab]) {
+          span.textContent = sidebarTranslations[tab];
+        }
+      });
+
+      this.switchTab(this.currentTab);
+    }
+
+    openLoanDocsModal() {
+      this.openModal('loanDocsModal');
+      const farmerSelect = document.getElementById('ldFarmerSelect');
+      if (farmerSelect) {
+        const leads = store.getLeads();
+        if (leads.length === 0) {
+          farmerSelect.innerHTML = `<option value="">-- No Farmer Leads Saved (Add lead first) --</option>`;
+        } else {
+          farmerSelect.innerHTML = `<option value="">-- Select Farmer Lead --</option>` +
+            leads.map(l => `<option value="${l.name} (${l.village})">${l.name} - ${l.village} [${l.phone}]</option>`).join('');
+        }
+      }
+      const waBtn = document.getElementById('sendLoanChecklistWaBtn');
+      if (waBtn) {
+        waBtn.onclick = () => {
+          const farmer = document.getElementById('ldFarmerSelect').value || "Kisan";
+          const bank = document.getElementById('ldBankSelect').value;
+          const msg = `Namaskar ${farmer} Ji 🙏\n\nMaa Durga Engineering se Tractor Loan file update:\n\nAapka loan file ${bank} me process ho raha hai. Loan sanction aur delivery teji se pane ke liye kripya yeh baaki documents showroom me jama karein:\n\n1. Khasra / Khatauni (7/12 Land Records certified copy)\n2. Aadhaar & PAN Card self-attested copy\n3. Bank No-Due Certificate (NOC)\n\nSampark: +91 98380 12345 | Maa Durga Engineering`;
+          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        };
+      }
+    }
+
+    openAddTractorModal() {
+      this.openModal('addTractorModal');
+      const form = document.getElementById('addTractorForm');
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const brand = document.getElementById('ntBrand').value.trim() || 'VST Zetor';
+          const model = document.getElementById('ntModel').value.trim() || 'Custom Model';
+          const hp = parseInt(document.getElementById('ntHp').value, 10) || 45;
+          const ptoHp = parseInt(document.getElementById('ntPtoHp').value, 10) || Math.round(hp * 0.88);
+          const drive = document.getElementById('ntDrive').value || '2WD';
+          const liftCapacity = parseInt(document.getElementById('ntLift').value, 10) || 1800;
+          const price = parseFloat(document.getElementById('ntPrice').value) || 750000;
+          const dealerCost = parseFloat(document.getElementById('ntCost').value) || 675000;
+          const stockCount = parseInt(document.getElementById('ntStock').value, 10) || 1;
+          const chassis = document.getElementById('ntChassis').value.trim();
+
+          const chassisList = chassis ? [chassis] : [];
+
+          store.addTractor({
+            brand,
+            model,
+            hp,
+            ptoHp,
+            drive,
+            liftCapacity,
+            price,
+            dealerCost,
+            stockCount,
+            chassisList,
+            status: stockCount > 0 ? "In Stock" : "Available to Order",
+            badge: stockCount > 0 ? "In Stock" : "Order Ready"
+          });
+
+          form.reset();
+          this.closeAllModals();
+          this.switchTab('inventory');
+          showToast(`Tractor model ${brand} ${model} added to inventory!`, 'success', 'Inventory Updated');
+        };
+      }
+    }
+  }
+
+  // Initialize application
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      window.app = new TractorOSApp();
+    });
+  } else {
+    window.app = new TractorOSApp();
+  }
+})();
