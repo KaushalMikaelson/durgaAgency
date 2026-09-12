@@ -52,6 +52,31 @@ class DealershipStore {
 
     if (!localStorage.getItem(STORAGE_KEYS.LEADS)) {
       localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(DEFAULT_LEADS));
+    } else {
+      // Clean up any legacy accidental mock fallbacks on leads created previously
+      try {
+        const storedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADS) || '[]');
+        let changed = false;
+        storedLeads.forEach(l => {
+          if (l.village === 'Local Area') { l.village = ''; changed = true; }
+          if (l.phone === '-') { l.phone = ''; changed = true; }
+          if (l.crops && l.crops.length === 2 && l.crops[0] === 'Wheat' && l.crops[1] === 'Paddy' && l.landAcres === 5 && l.budgetMax === 750000 && !l.soilType) {
+            l.crops = [];
+            l.landAcres = null;
+            l.budgetMax = null;
+            changed = true;
+          }
+          if (l.nextAction === 'Send WhatsApp implement video & personalized EMI calculation.' && !l.interestedModelId) {
+            l.nextAction = '';
+            changed = true;
+          }
+        });
+        if (changed) {
+          localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(storedLeads));
+        }
+      } catch (e) {
+        console.warn("Lead sanitize notice:", e);
+      }
     }
     if (!localStorage.getItem(STORAGE_KEYS.EXPENSES)) {
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(DEFAULT_EXPENSES));
@@ -352,6 +377,21 @@ class DealershipStore {
     localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
     this.notify();
     return newTractor;
+  }
+
+  updateTractor(tractorId, updatedFields) {
+    const tractors = this.getTractors();
+    const index = tractors.findIndex(t => t.id === tractorId);
+    if (index !== -1) {
+      tractors[index] = { ...tractors[index], ...updatedFields };
+      if (updatedFields.stockCount !== undefined) {
+        tractors[index].status = Number(tractors[index].stockCount) > 0 ? 'In Stock' : 'Available to Order';
+      }
+      localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
+      this.notify();
+      return tractors[index];
+    }
+    return null;
   }
 
   updateTractorStock(tractorId, deltaCount, newChassis = null) {

@@ -52,12 +52,6 @@
           </button>
         </li>
         <li>
-          <button class="nav-item-btn" data-tab="exchange">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
-            <span>Used Exchange</span>
-          </button>
-        </li>
-        <li>
           <button class="nav-item-btn" data-tab="emi">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="14" y2="18"/></svg>
             <span>EMI & Harvest Calc</span>
@@ -165,8 +159,8 @@
         <div class="modal-body">
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label">Farmer Full Name</label>
-              <input type="text" id="nlName" class="form-input" placeholder="e.g. Ramesh Chandra Verma" />
+              <label class="form-label">Farmer Full Name *</label>
+              <input type="text" id="nlName" class="form-input" placeholder="e.g. Ramesh Chandra Verma" required />
             </div>
             <div class="form-group">
               <label class="form-label">Mobile Number</label>
@@ -191,9 +185,20 @@
               <input type="text" id="nlCrop" class="form-input" placeholder="e.g. Wheat, Rice, Sugarcane" />
             </div>
             <div class="form-group">
+              <label class="form-label">Soil Type</label>
+              <input type="text" id="nlSoilType" class="form-input" placeholder="e.g. Medium / Black / Sandy Loam" />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Current Tractor Owned</label>
+              <input type="text" id="nlCurrentTractor" class="form-input" placeholder="e.g. Swaraj 744 / None" />
+            </div>
+            <div class="form-group">
               <label class="form-label">Interested Tractor Model</label>
               <select id="nlModelSelect" class="form-select">
-                <option value="">-- Select Tractor Model --</option>
+                <option value="">-- Select Tractor Model (Optional) --</option>
               </select>
             </div>
           </div>
@@ -206,7 +211,8 @@
             <div class="form-group">
               <label class="form-label">Finance / Loan Required?</label>
               <select id="nlFinance" class="form-select">
-                <option value="Yes" selected>Yes (SBI / HDFC / KCC)</option>
+                <option value="" selected>-- Not Specified --</option>
+                <option value="Yes">Yes (SBI / HDFC / KCC)</option>
                 <option value="No">No (Full Cash Payment)</option>
               </select>
             </div>
@@ -216,25 +222,281 @@
             <div class="form-group">
               <label class="form-label">Used Tractor Exchange?</label>
               <select id="nlExchange" class="form-select">
-                <option value="No" selected>No Old Tractor</option>
+                <option value="" selected>-- Not Specified --</option>
+                <option value="No">No Old Tractor</option>
                 <option value="Yes">Yes (Has old tractor to trade-in)</option>
               </select>
             </div>
             <div class="form-group">
               <label class="form-label">Expected Purchase Horizon</label>
               <select id="nlDays" class="form-select">
+                <option value="" selected>-- Not Specified --</option>
                 <option value="7">Within 7 Days (Urgent)</option>
-                <option value="15" selected>Within 15 Days</option>
+                <option value="15">Within 15 Days</option>
                 <option value="30">Within This Month (Harvest)</option>
                 <option value="60">2-3 Months</option>
               </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Buying Score (0 - 100) <span style="font-weight:normal; color:var(--text-muted);">(Self-Managed)</span></label>
+              <div style="display:flex; gap:8px;">
+                <input type="number" id="nlScore" class="form-input" placeholder="Leave empty or set (0-100)" min="0" max="100" />
+                <button type="button" class="quick-action-btn btn-sm btn-outline" id="nlCalcScoreBtn" style="white-space:nowrap;" title="Calculate score suggestion from inputs">Suggest Score</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Next Action / Notes</label>
+              <input type="text" id="nlNextAction" class="form-input" placeholder="e.g. Call for tractor demo next week" />
             </div>
           </div>
         </div>
 
         <div class="modal-footer">
           <button type="button" class="quick-action-btn btn-outline modal-close-btn">Cancel</button>
-          <button type="submit" class="quick-action-btn btn-primary">Save Lead & Compute Score</button>
+          <button type="submit" class="quick-action-btn btn-primary">Save Lead</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 1B: Quick Buying Score Manager -->
+  <div class="modal-backdrop" id="quickScoreModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Manage Lead Buying Score</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="quickScoreForm">
+        <input type="hidden" id="qsLeadId" />
+        <div class="modal-body">
+          <div style="margin-bottom:14px;">
+            <div style="font-weight:700; font-size:16px; color:var(--text-primary);" id="qsLeadName">Farmer Name</div>
+            <div style="font-size:12px; color:var(--text-secondary);" id="qsLeadInfo">Village & Contact</div>
+          </div>
+
+          <div class="form-group" style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <label class="form-label" style="margin:0;">Buying Score (0 to 100)</label>
+              <span id="qsScoreBadge" class="badge badge-warm">WARM (60/100)</span>
+            </div>
+            <div style="display:flex; gap:12px; align-items:center;">
+              <input type="range" id="qsSlider" min="0" max="100" value="60" style="flex:1; accent-color:var(--primary); cursor:pointer;" />
+              <input type="number" id="qsScoreInput" min="0" max="100" class="form-input" style="width:70px; text-align:center; font-weight:800; font-size:15px;" placeholder="-" />
+            </div>
+          </div>
+
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;">
+            <button type="button" class="quick-action-btn btn-xs btn-outline" onclick="window.app.setQuickScore(30)">Cold (30)</button>
+            <button type="button" class="quick-action-btn btn-xs btn-outline" onclick="window.app.setQuickScore(60)">Warm (60)</button>
+            <button type="button" class="quick-action-btn btn-xs btn-outline" onclick="window.app.setQuickScore(85)">Hot (85)</button>
+            <button type="button" class="quick-action-btn btn-xs btn-outline" onclick="window.app.setQuickScore('')">Clear (No Score)</button>
+            <button type="button" class="quick-action-btn btn-xs btn-outline" id="qsSuggestBtn" style="color:var(--primary);">Suggest from Data</button>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Next Action / Follow-up Note</label>
+            <input type="text" id="qsNextAction" class="form-input" placeholder="e.g. Call tomorrow for loan approval" />
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="quick-action-btn btn-outline modal-close-btn">Cancel</button>
+          <button type="submit" class="quick-action-btn btn-primary">Save Score & Action</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 1C: Full Edit Lead -->
+  <div class="modal-backdrop" id="editLeadModal">
+    <div class="modal-box large">
+      <div class="modal-header">
+        <h3>Edit Customer / Lead Details</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="editLeadForm">
+        <input type="hidden" id="elLeadId" />
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Farmer Full Name *</label>
+              <input type="text" id="elName" class="form-input" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Mobile Number</label>
+              <input type="tel" id="elPhone" class="form-input" placeholder="e.g. 9839123456" />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Village Name</label>
+              <input type="text" id="elVillage" class="form-input" placeholder="e.g. Kalyanpur" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Total Land Size (Acres)</label>
+              <input type="number" id="elAcres" class="form-input" placeholder="e.g. 10" min="0" max="500" />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Main Crops (comma separated)</label>
+              <input type="text" id="elCrop" class="form-input" placeholder="e.g. Wheat, Rice, Sugarcane" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Soil Type</label>
+              <input type="text" id="elSoilType" class="form-input" placeholder="e.g. Medium / Black / Sandy Loam" />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Current Tractor Owned</label>
+              <input type="text" id="elCurrentTractor" class="form-input" placeholder="e.g. Swaraj 744 / None" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Interested Tractor Model</label>
+              <select id="elModelSelect" class="form-select">
+                <option value="">-- Select Tractor Model (Optional) --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Estimated Budget (₹)</label>
+              <input type="number" id="elBudget" class="form-input" placeholder="e.g. 800000" step="10000" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lead Stage</label>
+              <select id="elStage" class="form-select">
+                <option value="New Enquiry">New Enquiry</option>
+                <option value="Needs Analyzed">Needs Analyzed</option>
+                <option value="Demo Scheduled">Demo Scheduled</option>
+                <option value="Demo Completed">Demo Completed</option>
+                <option value="Quotation Sent">Quotation Sent</option>
+                <option value="Negotiation">Negotiation</option>
+                <option value="Closed Won">Closed Won</option>
+                <option value="Lost">Lost</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Finance / Loan Required?</label>
+              <select id="elFinance" class="form-select">
+                <option value="">-- Not Specified --</option>
+                <option value="Yes">Yes (SBI / HDFC / KCC)</option>
+                <option value="No">No (Full Cash Payment)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Used Tractor Exchange?</label>
+              <select id="elExchange" class="form-select">
+                <option value="">-- Not Specified --</option>
+                <option value="No">No Old Tractor</option>
+                <option value="Yes">Yes (Has old tractor to trade-in)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Buying Score (0 - 100) <span style="font-weight:normal; color:var(--text-muted);">(Self-Managed)</span></label>
+              <input type="number" id="elScore" class="form-input" placeholder="Leave empty or set 0-100" min="0" max="100" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Next Action / Notes</label>
+              <input type="text" id="elNextAction" class="form-input" placeholder="e.g. Follow up on price negotiation" />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="quick-action-btn btn-outline modal-close-btn">Cancel</button>
+          <button type="submit" class="quick-action-btn btn-primary">Update Lead</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 1D: Edit Tractor Specifications & Pricing -->
+  <div class="modal-backdrop" id="editTractorModal">
+    <div class="modal-box large">
+      <div class="modal-header">
+        <h3>Edit Tractor Specifications & Pricing</h3>
+        <button class="modal-close-btn">&times;</button>
+      </div>
+      <form id="editTractorForm">
+        <input type="hidden" id="etTractorId" />
+        <div class="modal-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Brand</label>
+              <input type="text" id="etBrand" class="form-input" placeholder="e.g. VST Zetor" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Model Name</label>
+              <input type="text" id="etModel" class="form-input" placeholder="e.g. 5011 4WD" required />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Engine Horsepower (HP)</label>
+              <input type="number" id="etHp" class="form-input" placeholder="e.g. 50" min="20" max="120" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">PTO HP</label>
+              <input type="number" id="etPtoHp" class="form-input" placeholder="e.g. 44" min="15" max="110" step="0.1" required />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Drive Type</label>
+              <select id="etDrive" class="form-select">
+                <option value="2WD">2WD</option>
+                <option value="4WD">4WD</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lift Capacity (kg)</label>
+              <input type="number" id="etLift" class="form-input" placeholder="e.g. 1800" />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Showroom Retail Price (₹)</label>
+              <input type="number" id="etPrice" class="form-input" placeholder="e.g. 820000" step="1000" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dealer OEM Purchase Cost (₹)</label>
+              <input type="number" id="etCost" class="form-input" placeholder="e.g. 740000" step="1000" required />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Physical Stock Count</label>
+              <input type="number" id="etStock" class="form-input" placeholder="e.g. 0" min="0" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Warranty Details</label>
+              <input type="text" id="etWarranty" class="form-input" placeholder="e.g. 6 Years / 6000 Hours Warranty" />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="quick-action-btn btn-outline modal-close-btn">Cancel</button>
+          <button type="submit" class="quick-action-btn btn-primary">Save Tractor Changes</button>
         </div>
       </form>
     </div>

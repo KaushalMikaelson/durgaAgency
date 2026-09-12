@@ -513,50 +513,65 @@ class TractorOSApp {
               ${leads.map(lead => {
                 const scoreObj = calculateBuyingScore(lead);
                 const tractor = tractors.find(t => t.id === lead.interestedModelId);
-                const tractorName = tractor ? `${tractor.brand} ${tractor.model}` : '50 HP Class';
+                const tractorNamePart = tractor ? `<strong style="color:var(--primary);">${tractor.brand} ${tractor.model}</strong>` : (lead.interestedModelName ? `<strong style="color:var(--primary);">${lead.interestedModelName}</strong>` : '');
+                const budgetPart = (lead.budgetMax !== null && lead.budgetMax !== undefined && lead.budgetMax !== '' && Number(lead.budgetMax) > 0) ? `<span style="font-size:11.5px; color:var(--text-secondary);">Budget: ₹${(Number(lead.budgetMax) / 100000).toFixed(1)}L</span>` : '';
+                const modelBudgetContent = (tractorNamePart && budgetPart) ? `${tractorNamePart}<br>${budgetPart}` : (tractorNamePart || budgetPart || '<span style="color:var(--text-muted);">-</span>');
+
+                const villagePart = lead.village ? `<strong>${lead.village}</strong>` : '';
+                const landPart = (lead.landAcres !== null && lead.landAcres !== undefined && lead.landAcres !== '' && Number(lead.landAcres) > 0) ? `<span style="font-size:12px; color:var(--text-secondary);">${lead.landAcres} Acres</span>` : '';
+                const villageLandContent = (villagePart && landPart) ? `${villagePart}<br>${landPart}` : (villagePart || landPart || '<span style="color:var(--text-muted);">-</span>');
+
+                const cropsPart = (lead.crops && lead.crops.length > 0) ? `<span>🌾 ${lead.crops.join(', ')}</span>` : '';
+                const soilPart = lead.soilType ? `<span style="color:var(--text-muted); font-size:11px;">${lead.soilType}</span>` : '';
+                const cropsSoilContent = (cropsPart && soilPart) ? `${cropsPart}<br>${soilPart}` : (cropsPart || soilPart || '<span style="color:var(--text-muted);">-</span>');
+
+                const finPart = lead.financeRequired === true ? `<span>Finance: <strong>Yes${lead.financeBank ? ' (' + lead.financeBank + ')' : ''}</strong></span>` : (lead.financeRequired === false ? '<span>Finance: <strong>Cash</strong></span>' : '');
+                const exPart = lead.exchangeWanted === true ? '<span>Exchange: <strong>Yes</strong></span>' : (lead.exchangeWanted === false ? '<span>Exchange: <strong>No</strong></span>' : '');
+                const finExContent = (finPart && exPart) ? `${finPart}<br>${exPart}` : (finPart || exPart || '<span style="color:var(--text-muted);">-</span>');
+
                 return `
                   <tr data-lead-id="${lead.id}">
                     <td>
-                      <strong>${lead.name}</strong><br>
-                      <span style="font-size:11.5px; color:var(--text-muted);">${lead.phone}</span><br>
-                      <span class="badge ${scoreObj.category === 'HOT' ? 'badge-hot' : (scoreObj.category === 'WARM' ? 'badge-warm' : 'badge-cold')}" style="margin-top:2px;">
-                        ${scoreObj.category} (${scoreObj.score}/100)
-                      </span>
+                      <strong>${lead.name || 'Farmer Customer'}</strong><br>
+                      ${lead.phone && lead.phone !== '-' ? `<span style="font-size:11.5px; color:var(--text-muted);">${lead.phone}</span><br>` : ''}
+                      ${scoreObj.score !== null ? `
+                        <span class="badge ${scoreObj.category === 'HOT' ? 'badge-hot' : (scoreObj.category === 'WARM' ? 'badge-warm' : 'badge-cold')}" style="cursor:pointer; margin-top:2px;" title="Click to edit score" onclick="window.app.openScoreModal('${lead.id}')">
+                          ${scoreObj.category} (${scoreObj.score}/100) ✎
+                        </span>
+                      ` : `
+                        <span class="badge" style="background:#f8fafc; color:#64748b; border:1px dashed #cbd5e1; cursor:pointer; margin-top:2px;" title="Click to set score" onclick="window.app.openScoreModal('${lead.id}')">
+                          + Set Score
+                        </span>
+                      `}
                     </td>
-                    <td>
-                      <strong>${lead.village || 'Sadar'}</strong><br>
-                      <span style="font-size:12px; color:var(--text-secondary);">${lead.landAcres || 10} Acres</span>
-                    </td>
+                    <td>${villageLandContent}</td>
+                    <td style="font-size:12px;">${cropsSoilContent}</td>
                     <td style="font-size:12px;">
-                      <span>🌾 ${(lead.crops || ['Wheat', 'Rice']).join(', ')}</span><br>
-                      <span style="color:var(--text-muted);">${lead.soilType || 'Medium'}</span>
+                      ${lead.currentTractor ? `<span>${lead.currentTractor}</span>` : '<span style="color:var(--text-muted);">-</span>'}
                     </td>
-                    <td style="font-size:12px;">
-                      ${lead.currentTractor || 'None (Rents)'}
-                    </td>
+                    <td>${modelBudgetContent}</td>
                     <td>
-                      <strong style="color:var(--primary);">${tractorName}</strong><br>
-                      <span style="font-size:11.5px; color:var(--text-secondary);">Budget: ₹${((lead.budgetMax || 800000) / 100000).toFixed(1)}L</span>
-                    </td>
-                    <td>
-                      <div class="prob-container">
-                        <div class="prob-track">
-                          <div class="prob-fill ${scoreObj.category === 'HOT' ? 'hot' : 'warm'}" style="width: ${scoreObj.score}%;"></div>
+                      ${scoreObj.score !== null ? `
+                        <div class="prob-container" style="cursor:pointer;" title="Click to edit score" onclick="window.app.openScoreModal('${lead.id}')">
+                          <div class="prob-track">
+                            <div class="prob-fill ${scoreObj.category === 'HOT' ? 'hot' : 'warm'}" style="width: ${scoreObj.score}%;"></div>
+                          </div>
+                          <span style="font-size:11px; font-weight:800;">${scoreObj.score}%</span>
+                          <button class="quick-action-btn btn-xs btn-outline" style="padding:1px 5px; font-size:10px; margin-left:4px;" title="Edit Score">✎</button>
                         </div>
-                        <span style="font-size:11px; font-weight:800;">${scoreObj.score}%</span>
-                      </div>
-                      <span style="font-size:10px; color:var(--text-muted);">${lead.stage}</span>
+                      ` : `
+                        <button class="quick-action-btn btn-xs btn-outline" style="font-size:11px; padding:3px 8px;" onclick="window.app.openScoreModal('${lead.id}')">
+                          + Add Score
+                        </button>
+                      `}
                     </td>
-                    <td style="font-size:11.5px;">
-                      <span>Finance: <strong>${lead.financeRequired ? 'Yes (SBI/KCC)' : 'Cash / Self'}</strong></span><br>
-                      <span>Exchange: <strong>${lead.exchangeWanted ? 'Yes' : 'No'}</strong></span>
-                    </td>
+                    <td style="font-size:11.5px;">${finExContent}</td>
                     <td style="font-size:11.5px; max-width:200px;">
-                      <span style="color:var(--danger); font-weight:600;">${lead.nextAction || scoreObj.nextAction}</span>
+                      ${lead.nextAction ? `<span style="color:var(--danger); font-weight:600;">${lead.nextAction}</span>` : '<span style="color:var(--text-muted);">-</span>'}
                     </td>
                     <td>
                       <div style="display:flex; gap:6px;">
-                        <a href="tel:${lead.phone}" class="quick-action-btn btn-sm btn-primary" title="Call">
+                        <a href="${lead.phone && lead.phone !== '-' ? `tel:${lead.phone}` : '#'}" class="quick-action-btn btn-sm btn-primary" title="Call">
                           ${renderIcon('phone')}
                         </a>
                         <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="WhatsApp Follow-up">
@@ -564,6 +579,9 @@ class TractorOSApp {
                         </button>
                         <button class="quick-action-btn btn-sm btn-outline create-quote-for-lead-btn" data-lead-id="${lead.id}" title="Generate Quote">
                           ${renderIcon('quote')}
+                        </button>
+                        <button class="quick-action-btn btn-sm btn-outline edit-lead-btn" data-lead-id="${lead.id}" title="Edit Lead Details">
+                          ${renderIcon('edit')}
                         </button>
                         <button class="quick-action-btn btn-sm btn-danger delete-lead-btn" data-lead-id="${lead.id}" title="Delete">
                           ${renderIcon('trash')}
@@ -590,6 +608,12 @@ class TractorOSApp {
     document.querySelectorAll('.open-wa-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.openWhatsAppSequenceModal(btn.dataset.leadId);
+      });
+    });
+
+    document.querySelectorAll('.edit-lead-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.openEditLeadModal(btn.dataset.leadId);
       });
     });
 

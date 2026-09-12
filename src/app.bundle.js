@@ -299,6 +299,33 @@
         }
         if (!localStorage.getItem(STORAGE_KEYS.LEADS)) {
           localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(DEFAULT_LEADS));
+        } else {
+          try {
+            const storedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADS) || '[]');
+            let changed = false;
+            storedLeads.forEach(l => {
+              if (l.village === 'Local Area') { l.village = ''; changed = true; }
+              if (l.phone === '-') { l.phone = ''; changed = true; }
+              if (l.landAcres === 5) { l.landAcres = null; changed = true; }
+              if (l.crops && l.crops.length === 2 && l.crops[0] === 'Wheat' && l.crops[1] === 'Paddy') { l.crops = []; changed = true; }
+              if (l.soilType === 'Medium') { l.soilType = ''; changed = true; }
+              if (l.currentTractor === 'None (Rents)' || l.currentTractor === 'None') { l.currentTractor = ''; changed = true; }
+              if (l.budgetMax === 750000) { l.budgetMax = null; changed = true; }
+              if (!l.userSetScore) {
+                l.buyingScore = null;
+                changed = true;
+              }
+              if (l.nextAction && (l.nextAction.includes('Add to seasonal WhatsApp') || l.nextAction.includes('Send WhatsApp implement video'))) {
+                l.nextAction = '';
+                changed = true;
+              }
+            });
+            if (changed) {
+              localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(storedLeads));
+            }
+          } catch (err) {
+            console.warn("Lead sanitize error", err);
+          }
         }
         if (!localStorage.getItem(STORAGE_KEYS.EXPENSES)) {
           localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(DEFAULT_EXPENSES));
@@ -365,6 +392,18 @@
       localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
       this.notify();
       return newLead;
+    }
+
+    updateLead(id, updatedData) {
+      const leads = this.getLeads();
+      const index = leads.findIndex(l => l.id === id);
+      if (index !== -1) {
+        leads[index] = { ...leads[index], ...updatedData };
+        localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+        this.notify();
+        return leads[index];
+      }
+      return null;
     }
 
     deleteLead(id) {
@@ -492,6 +531,21 @@
       return newTractor;
     }
 
+    updateTractor(tractorId, updatedFields) {
+      const tractors = this.getTractors();
+      const index = tractors.findIndex(t => t.id === tractorId);
+      if (index !== -1) {
+        tractors[index] = { ...tractors[index], ...updatedFields };
+        if (updatedFields.stockCount !== undefined) {
+          tractors[index].status = Number(tractors[index].stockCount) > 0 ? 'In Stock' : 'Available to Order';
+        }
+        localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
+        this.notify();
+        return tractors[index];
+      }
+      return null;
+    }
+
     updateTractorStock(tractorId, deltaCount, newChassis = null) {
       const tractors = this.getTractors();
       const t = tractors.find(tr => tr.id === tractorId);
@@ -593,6 +647,35 @@
 
   // --- 4. DETERMINISTIC ALGORITHMS ---
   function calculateBuyingScore(lead) {
+    if (!lead) return { score: null, category: null, probability: null, reasons: [], nextAction: '' };
+
+    // 1. Direct user-managed score (if provided/edited by user)
+    if (lead.buyingScore !== undefined && lead.buyingScore !== null && lead.buyingScore !== '') {
+      const finalScore = Math.max(0, Math.min(100, Math.round(Number(lead.buyingScore))));
+      let category = 'COLD';
+      if (finalScore >= 75) category = 'HOT';
+      else if (finalScore >= 50) category = 'WARM';
+
+      return {
+        score: finalScore,
+        category,
+        probability: `${finalScore}%`,
+        reasons: ['User-managed score'],
+        nextAction: lead.nextAction || (category === 'HOT' ? 'Call customer today: High purchase intent' : '')
+      };
+    }
+
+    // 2. If not provided, remains empty!
+    return {
+      score: null,
+      category: null,
+      probability: null,
+      reasons: [],
+      nextAction: lead.nextAction || ''
+    };
+  }
+
+  function suggestLeadBuyingScore(lead) {
     let score = 25;
     const reasons = [];
     const stage = lead.stage || 'New Enquiry';
@@ -601,33 +684,21 @@
     else if (stage === 'Demo Scheduled' || stage === 'Demo Completed') { score += 22; reasons.push('Field demonstration interest'); }
     else if (stage === 'Needs Analyzed') { score += 15; reasons.push('Implement needs matched'); }
 
-    const days = Number(lead.expectedPurchaseDays) || 30;
-    if (days <= 7) { score += 25; reasons.push('Immediate purchase intended within 7 days'); }
-    else if (days <= 15) { score += 18; reasons.push('Purchase planned within 2 weeks'); }
-    else if (days <= 30) { score += 10; reasons.push('Planning purchase this harvest season'); }
-    else { score -= 10; reasons.push('Long-term horizon (> 30 days)'); }
+    const days = Number(lead.expectedPurchaseDays);
+    if (days && days <= 7) { score += 25; reasons.push('Immediate purchase intended within 7 days'); }
+    else if (days && days <= 15) { score += 18; reasons.push('Purchase planned within 2 weeks'); }
+    else if (days && days <= 30) { score += 10; reasons.push('Planning purchase this harvest season'); }
+    else if (days && days > 30) { score -= 10; reasons.push('Long-term horizon (> 30 days)'); }
 
-    if (lead.financeRequired) { score += 8; reasons.push('Finance / KCC ready for processing'); }
-    if (lead.exchangeWanted) { score += 10; reasons.push('Old tractor exchange evaluation in progress'); }
+    if (lead.financeRequired === true) { score += 8; reasons.push('Finance / KCC ready for processing'); }
+    if (lead.exchangeWanted === true) { score += 10; reasons.push('Old tractor exchange evaluation in progress'); }
 
     const finalScore = Math.max(10, Math.min(98, Math.round(score)));
     let category = 'COLD';
     if (finalScore >= 75) category = 'HOT';
     else if (finalScore >= 50) category = 'WARM';
 
-    let nextAction = '';
-    if (category === 'HOT') {
-      if (stage === 'Negotiation') nextAction = 'Call today: Close booking with festive canopy waiver.';
-      else if (stage === 'Quotation Sent') nextAction = 'Call today: Confirm loan documentation & collect token advance.';
-      else if (stage === 'Demo Scheduled') nextAction = 'Call today: Confirm demo tractor driver for village field test.';
-      else nextAction = 'Call today: High purchase intent; schedule showroom visit or demo.';
-    } else if (category === 'WARM') {
-      nextAction = lead.exchangeWanted ? 'Dispatch showroom mechanic for used tractor appraisal.' : 'Send WhatsApp implement video & personalized EMI calculation.';
-    } else {
-      nextAction = 'Add to seasonal WhatsApp broadcast list & follow up next month.';
-    }
-
-    return { score: finalScore, category, probability: `${finalScore}%`, reasons, nextAction };
+    return { score: finalScore, category, probability: `${finalScore}%`, reasons };
   }
 
   function getTodayCallsQueue(leadsList) {
@@ -636,8 +707,8 @@
       computedScore: calculateBuyingScore(lead)
     }));
     return scored
-      .filter(l => l.computedScore.category === 'HOT' || l.stage === 'Negotiation' || l.stage === 'Quotation Sent')
-      .sort((a, b) => b.computedScore.score - a.computedScore.score);
+      .filter(l => (l.computedScore && l.computedScore.category === 'HOT') || l.stage === 'Negotiation' || l.stage === 'Quotation Sent')
+      .sort((a, b) => (b.computedScore.score || 0) - (a.computedScore.score || 0));
   }
 
   function matchTractor({ landAcres, soilType = 'Medium', implementsNeeded = [], budgetMax, requiresHeavyTrolley = false, drivePreference = 'Any', tractorsList = [] }) {
@@ -962,6 +1033,7 @@
     }
 
     switchTab(tabName) {
+      if (tabName === 'exchange') tabName = 'dashboard';
       this.currentTab = tabName;
       document.querySelectorAll('.nav-item-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabName);
@@ -975,7 +1047,6 @@
         recommend: { title: "Tractor Recommendation Engine", sub: "Deterministic implement & acreage matching without guesswork" },
         inventory: { title: "Tractor Inventory & Landed Margins", sub: "Live showroom stock, specifications & unit profitability" },
         quotations: { title: "Quotations & Invoice Generator", sub: "Official GST dealer quotation with exchange & finance schedules" },
-        exchange: { title: "Used Tractor Exchange Valuation", sub: "Inspection checklist, market depreciation & upgrade calculation" },
         emi: { title: "Farmer EMI & Harvest Calculator", sub: "Monthly and bi-annual harvest-cycle payment schedules" },
         demos: { title: "Field Demos & Track Testing", sub: "Rotavator/Plough demonstration logs, diesel consumption & feedback" },
         expenses: { title: "Showroom Expenses & Unit Cost Tagging", sub: "Fast entry, approval workflow & per-tractor landed cost" },
@@ -1045,10 +1116,6 @@
         case 'quotations':
           content.innerHTML = this.renderQuotationsHTML();
           this.bindQuotationsEvents();
-          break;
-        case 'exchange':
-          content.innerHTML = this.renderExchangeHTML();
-          this.bindExchangeEvents();
           break;
         case 'emi':
           content.innerHTML = this.renderEmiHTML();
@@ -1340,47 +1407,63 @@
                 ` : leads.map(lead => {
                   const scoreObj = calculateBuyingScore(lead);
                   const tractor = tractors.find(t => t.id === lead.interestedModelId);
-                  const tractorName = tractor ? `${tractor.brand} ${tractor.model}` : '50 HP Class';
+                  const tractorNamePart = tractor ? `<strong style="color:var(--primary);">${tractor.brand} ${tractor.model}</strong>` : (lead.interestedModelName ? `<strong style="color:var(--primary);">${lead.interestedModelName}</strong>` : '');
+                  const budgetPart = (lead.budgetMax !== null && lead.budgetMax !== undefined && lead.budgetMax !== '' && Number(lead.budgetMax) > 0) ? `<span style="font-size:11px; color:var(--text-secondary);">Budget: ₹${(Number(lead.budgetMax) / 100000).toFixed(1)}L</span>` : '';
+                  const modelBudgetContent = (tractorNamePart && budgetPart) ? `${tractorNamePart}<br>${budgetPart}` : (tractorNamePart || budgetPart || '<span style="color:var(--text-muted);">-</span>');
+
+                  const villagePart = lead.village ? `<strong>${lead.village}</strong>` : '';
+                  const landPart = (lead.landAcres !== null && lead.landAcres !== undefined && lead.landAcres !== '' && Number(lead.landAcres) > 0) ? `<span style="font-size:11.5px; color:var(--text-secondary);">${lead.landAcres} Acres</span>` : '';
+                  const villageLandContent = (villagePart && landPart) ? `${villagePart}<br>${landPart}` : (villagePart || landPart || '<span style="color:var(--text-muted);">-</span>');
+
+                  const cropsPart = (lead.crops && lead.crops.length > 0) ? `<span>🌾 ${lead.crops.join(', ')}</span>` : '';
+                  const soilPart = lead.soilType ? `<span style="color:var(--text-muted); font-size:11px;">${lead.soilType}</span>` : '';
+                  const cropsSoilContent = (cropsPart && soilPart) ? `${cropsPart}<br>${soilPart}` : (cropsPart || soilPart || '<span style="color:var(--text-muted);">-</span>');
+
+                  const finPart = lead.financeRequired === true ? `<span>Finance: <strong>Yes${lead.financeBank ? ' (' + lead.financeBank + ')' : ''}</strong></span>` : (lead.financeRequired === false ? '<span>Finance: <strong>Cash</strong></span>' : '');
+                  const exPart = lead.exchangeWanted === true ? '<span>Exchange: <strong>Yes</strong></span>' : (lead.exchangeWanted === false ? '<span>Exchange: <strong>No</strong></span>' : '');
+                  const finExContent = (finPart && exPart) ? `${finPart}<br>${exPart}` : (finPart || exPart || '<span style="color:var(--text-muted);">-</span>');
+
                   return `
                     <tr data-lead-id="${lead.id}">
                       <td>
-                        <strong>${lead.name}</strong><br>
-                        <span style="font-size:11px; color:var(--text-muted);">${lead.phone}</span><br>
-                        <span class="badge ${scoreObj.category === 'HOT' ? 'badge-hot' : (scoreObj.category === 'WARM' ? 'badge-warm' : 'badge-cold')}">
-                          ${scoreObj.category} (${scoreObj.score}/100)
-                        </span>
+                        <strong>${lead.name || 'Farmer Customer'}</strong><br>
+                        ${lead.phone && lead.phone !== '-' ? `<span style="font-size:11px; color:var(--text-muted);">${lead.phone}</span><br>` : ''}
+                        ${scoreObj.score !== null ? `
+                          <span class="badge ${scoreObj.category === 'HOT' ? 'badge-hot' : (scoreObj.category === 'WARM' ? 'badge-warm' : 'badge-cold')}" style="cursor:pointer;" title="Click to edit score" onclick="window.app.openScoreModal('${lead.id}')">
+                            ${scoreObj.category} (${scoreObj.score}/100) ✎
+                          </span>
+                        ` : `
+                          <span class="badge" style="background:#f8fafc; color:#64748b; border:1px dashed #cbd5e1; cursor:pointer;" title="Click to set score" onclick="window.app.openScoreModal('${lead.id}')">
+                            + Set Score
+                          </span>
+                        `}
                       </td>
+                      <td>${villageLandContent}</td>
+                      <td style="font-size:12px;">${cropsSoilContent}</td>
+                      <td style="font-size:12px;">${lead.currentTractor ? `<span>${lead.currentTractor}</span>` : '<span style="color:var(--text-muted);">-</span>'}</td>
+                      <td>${modelBudgetContent}</td>
                       <td>
-                        <strong>${lead.village || 'Sadar'}</strong><br>
-                        <span style="font-size:11.5px; color:var(--text-secondary);">${lead.landAcres || 10} Acres</span>
-                      </td>
-                      <td style="font-size:12px;">
-                        <span>🌾 ${(lead.crops || ['Wheat', 'Rice']).join(', ')}</span><br>
-                        <span style="color:var(--text-muted);">${lead.soilType || 'Medium'}</span>
-                      </td>
-                      <td style="font-size:12px;">${lead.currentTractor || 'None (Rents)'}</td>
-                      <td>
-                        <strong style="color:var(--primary);">${tractorName}</strong><br>
-                        <span style="font-size:11px; color:var(--text-secondary);">Budget: ₹${((lead.budgetMax || 800000) / 100000).toFixed(1)}L</span>
-                      </td>
-                      <td>
-                        <div class="prob-container">
-                          <div class="prob-track">
-                            <div class="prob-fill ${scoreObj.category === 'HOT' ? 'hot' : 'warm'}" style="width: ${scoreObj.score}%;"></div>
+                        ${scoreObj.score !== null ? `
+                          <div class="prob-container" style="cursor:pointer;" title="Click to edit score" onclick="window.app.openScoreModal('${lead.id}')">
+                            <div class="prob-track">
+                              <div class="prob-fill ${scoreObj.category === 'HOT' ? 'hot' : 'warm'}" style="width: ${scoreObj.score}%;"></div>
+                            </div>
+                            <span style="font-size:11px; font-weight:800;">${scoreObj.score}%</span>
+                            <button class="quick-action-btn btn-xs btn-outline" style="padding:1px 5px; font-size:10px; margin-left:4px;" title="Edit Score">✎</button>
                           </div>
-                          <span style="font-size:11px; font-weight:800;">${scoreObj.score}%</span>
-                        </div>
+                        ` : `
+                          <button class="quick-action-btn btn-xs btn-outline" style="font-size:11px; padding:3px 8px;" onclick="window.app.openScoreModal('${lead.id}')">
+                            + Add Score
+                          </button>
+                        `}
                       </td>
-                      <td style="font-size:11.5px;">
-                        <span>Finance: <strong>${lead.financeRequired ? 'Yes (SBI)' : 'Cash'}</strong></span><br>
-                        <span>Exchange: <strong>${lead.exchangeWanted ? 'Yes' : 'No'}</strong></span>
-                      </td>
+                      <td style="font-size:11.5px;">${finExContent}</td>
                       <td style="font-size:11.5px; max-width:200px;">
-                        <span style="color:var(--danger); font-weight:600;">${lead.nextAction || scoreObj.nextAction}</span>
+                        ${lead.nextAction ? `<span style="color:var(--danger); font-weight:600;">${lead.nextAction}</span>` : '<span style="color:var(--text-muted);">-</span>'}
                       </td>
                       <td>
                         <div style="display:flex; gap:6px;">
-                          <a href="tel:${lead.phone}" class="quick-action-btn btn-sm btn-primary" title="Call">
+                          <a href="${lead.phone && lead.phone !== '-' ? `tel:${lead.phone}` : '#'}" class="quick-action-btn btn-sm btn-primary" title="Call">
                             ${renderIcon('phone')}
                           </a>
                           <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="WhatsApp">
@@ -1388,6 +1471,9 @@
                           </button>
                           <button class="quick-action-btn btn-sm btn-outline create-quote-for-lead-btn" data-lead-id="${lead.id}" title="Quote">
                             ${renderIcon('quote')}
+                          </button>
+                          <button class="quick-action-btn btn-sm btn-outline edit-lead-btn" data-lead-id="${lead.id}" title="Edit Lead Details">
+                            ${renderIcon('edit')}
                           </button>
                           <button class="quick-action-btn btn-sm btn-danger delete-lead-btn" data-lead-id="${lead.id}" title="Delete">
                             ${renderIcon('trash')}
@@ -1410,6 +1496,10 @@
 
       document.querySelectorAll('.open-wa-btn').forEach(btn => {
         btn.addEventListener('click', () => this.openWhatsAppSequenceModal(btn.dataset.leadId));
+      });
+
+      document.querySelectorAll('.edit-lead-btn').forEach(btn => {
+        btn.addEventListener('click', () => this.openEditLeadModal(btn.dataset.leadId));
       });
 
       document.querySelectorAll('.delete-lead-btn').forEach(btn => {
@@ -1681,6 +1771,9 @@
                 </div>
 
                 <div class="tractor-card-footer">
+                  <button class="quick-action-btn btn-sm btn-outline edit-tractor-btn" data-tractor-id="${t.id}" title="Edit Tractor Specs & Pricing">
+                    ${renderIcon('edit')} Edit
+                  </button>
                   <button class="quick-action-btn btn-sm btn-outline add-stock-btn" data-tractor-id="${t.id}" title="Add physical unit">
                     + Stock
                   </button>
@@ -1699,6 +1792,9 @@
     }
 
     bindInventoryEvents() {
+      document.querySelectorAll('.edit-tractor-btn').forEach(btn => {
+        btn.addEventListener('click', () => this.openEditTractorModal(btn.dataset.tractorId));
+      });
       document.querySelectorAll('.add-stock-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const chassis = prompt("Enter Chassis Serial Number for new incoming unit (optional):", "");
@@ -1794,184 +1890,6 @@
           if (quote) this.openPrintQuotationPreview(quote);
         });
       });
-    }
-
-    renderExchangeHTML() {
-      return `
-        <div class="dashboard-grid-2col" style="grid-template-columns: 1fr 1.3fr;">
-          <div class="panel-card">
-            <div class="panel-header">
-              <div>
-                <div class="panel-title">${renderIcon('exchange')} Old Tractor Evaluation Entry</div>
-                <div class="panel-subtitle">Enter old tractor details for instant objective appraisal</div>
-              </div>
-            </div>
-
-            <form id="exchangeForm">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Old Tractor Brand</label>
-                  <input type="text" id="exBrand" class="form-input" value="Mahindra" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Model Name / HP</label>
-                  <input type="text" id="exModel" class="form-input" value="265 DI (35 HP)" />
-                </div>
-              </div>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Year of Manufacture</label>
-                  <input type="number" id="exYear" class="form-input" value="2018" min="2000" max="2026" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Meter Working Hours</label>
-                  <input type="number" id="exHours" class="form-input" value="3800" step="100" />
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Rear Tyre Condition Remaining (%)</label>
-                <input type="range" id="exTyreRange" min="10" max="100" value="60" style="width:100%; accent-color:var(--primary);" />
-                <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted);">
-                  <span>10% (Bald)</span>
-                  <span id="exTyreVal" style="font-weight:700; color:var(--primary);">60% Remaining Life</span>
-                  <span>100% (Fresh)</span>
-                </div>
-              </div>
-
-              <div class="form-grid">
-                <div class="form-group">
-                  <label class="form-label">Engine Condition</label>
-                  <select id="exEngine" class="form-select">
-                    <option value="Excellent">Excellent (Zero Smoke)</option>
-                    <option value="Good" selected>Good (Minor blow-by)</option>
-                    <option value="Average">Average (Ring work needed)</option>
-                    <option value="Poor">Poor (Heavy smoke)</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Hydraulics & PTO</label>
-                  <select id="exHydraulics" class="form-select">
-                    <option value="Good" selected>Good (Holds steady)</option>
-                    <option value="Average">Average (Minor leakage)</option>
-                    <option value="Poor">Poor (Overhaul needed)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label">Upgrade to New Tractor (Select Model)</label>
-                <select id="exNewTractorSelect" class="form-select">
-                  ${store.getTractors().map(t => `
-                    <option value="${t.price}">${t.brand} ${t.model} (₹${(t.price / 100000).toFixed(2)}L)</option>
-                  `).join('')}
-                </select>
-              </div>
-
-              <button type="submit" class="quick-action-btn btn-primary" style="width:100%; justify-content:center; padding:12px; margin-top:6px;">
-                ${renderIcon('calculator')} Run Exchange Appraisal
-              </button>
-            </form>
-          </div>
-
-          <div class="panel-card" id="exchangeResultContainer"></div>
-        </div>
-      `;
-    }
-
-    bindExchangeEvents() {
-      const range = document.getElementById('exTyreRange');
-      const valText = document.getElementById('exTyreVal');
-      if (range && valText) range.addEventListener('input', () => valText.textContent = `${range.value}% Remaining Life`);
-
-      const form = document.getElementById('exchangeForm');
-      const runEval = () => {
-        const brand = document.getElementById('exBrand').value;
-        const model = document.getElementById('exModel').value;
-        const manufactureYear = Number(document.getElementById('exYear').value) || 2018;
-        const meterHours = Number(document.getElementById('exHours').value) || 3500;
-        const tyrePercent = Number(range ? range.value : 60);
-        const engineCondition = document.getElementById('exEngine').value;
-        const hydraulicsCondition = document.getElementById('exHydraulics').value;
-        const newTractorPrice = Number(document.getElementById('exNewTractorSelect').value) || 840000;
-
-        const evalData = evaluateUsedTractor({
-          brand, model, manufactureYear, meterHours,
-          tyreConditionPercent: tyrePercent,
-          engineCondition, hydraulicsCondition,
-          newTractorPrice
-        });
-        this.renderExchangeResults(evalData);
-      };
-
-      if (form) {
-        form.addEventListener('submit', (e) => {
-          e.preventDefault();
-          runEval();
-        });
-        runEval();
-      }
-    }
-
-    renderExchangeResults(evalData) {
-      const container = document.getElementById('exchangeResultContainer');
-      if (!container) return;
-
-      container.innerHTML = `
-        <div class="panel-header">
-          <div>
-            <div class="panel-title">${renderIcon('check')} Official Used Tractor Appraisal</div>
-            <div class="panel-subtitle">For: ${evalData.brand} ${evalData.model} (${evalData.manufactureYear} Model)</div>
-          </div>
-        </div>
-
-        <div style="background:var(--primary-light); border:1px solid #bbf7d0; border-radius:var(--radius-lg); padding:20px; margin-bottom:18px;">
-          <span style="font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase;">Estimated Exchange Valuation Range</span>
-          <div style="font-size:26px; font-weight:900; color:var(--primary-dark); margin:4px 0;">
-            ₹${(evalData.minValuation / 100000).toFixed(2)}L – ₹${(evalData.maxValuation / 100000).toFixed(2)} Lakh
-          </div>
-          <div style="font-size:12px; color:var(--text-secondary);">
-            Recommended Showroom Offer: <strong style="color:var(--text-primary);">₹${evalData.recommendedOffer.toLocaleString('en-IN')}</strong>
-          </div>
-        </div>
-
-        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:18px;">
-          <div style="font-size:13px; font-weight:800; margin-bottom:8px; color:var(--text-primary);">Customer Deal Sheet Summary:</div>
-          <div style="display:flex; justify-content:space-between; font-size:13.5px; padding:6px 0; border-bottom:1px solid var(--border-subtle);">
-            <span>New Tractor Price:</span>
-            <span style="font-weight:700;">₹${evalData.newTractorPrice.toLocaleString('en-IN')}</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; font-size:13.5px; padding:6px 0; border-bottom:1px solid var(--border-subtle); color:var(--danger);">
-            <span>Less: Old Tractor Trade-in:</span>
-            <span style="font-weight:700;">-₹${evalData.recommendedOffer.toLocaleString('en-IN')}</span>
-          </div>
-          <div style="display:flex; justify-content:space-between; font-size:16px; padding:10px 0; font-weight:900; color:var(--primary);">
-            <span>Effective Cash Outflow to Upgrade:</span>
-            <span>₹${evalData.effectivePurchaseAmount.toLocaleString('en-IN')}</span>
-          </div>
-        </div>
-
-        <div style="display:flex; gap:10px;">
-          <button class="quick-action-btn btn-primary" id="applyExchangeToQuoteBtn">
-            ${renderIcon('quote')} Transfer to Quotation
-          </button>
-          <button class="quick-action-btn btn-whatsapp" id="sendExchangeOnWaBtn">
-            ${renderIcon('whatsapp')} Send on WhatsApp
-          </button>
-        </div>
-      `;
-
-      const applyQuoteBtn = document.getElementById('applyExchangeToQuoteBtn');
-      if (applyQuoteBtn) applyQuoteBtn.addEventListener('click', () => this.openQuotationModal(null, null, evalData.recommendedOffer));
-
-      const waBtn = document.getElementById('sendExchangeOnWaBtn');
-      if (waBtn) {
-        waBtn.addEventListener('click', () => {
-          const msg = `Namaskar Kisan Bhai 🙏\n\nExchange Evaluation for your ${evalData.brand} ${evalData.model} (${evalData.manufactureYear}):\n\n💰 Estimated Trade-in Value: ₹${evalData.recommendedOffer.toLocaleString('en-IN')}\n🚜 New Tractor Price: ₹${evalData.newTractorPrice.toLocaleString('en-IN')}\n✨ Net Upgrade Amount: ₹${evalData.effectivePurchaseAmount.toLocaleString('en-IN')}\n\nVisit Maa Durga Engineering showroom for inspection!`;
-          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
-        });
-      }
     }
 
     renderEmiHTML() {
@@ -2608,36 +2526,299 @@
     }
 
     openNewLeadModal() {
+      // populate tractor models
+      const modelSelect = document.getElementById('nlModelSelect');
+      if (modelSelect) {
+        const tractors = store.getTractors();
+        modelSelect.innerHTML = `<option value="">-- Select Tractor Model (Optional) --</option>` +
+          tractors.map(t => `<option value="${t.id}">${t.brand} ${t.model} (₹${(t.price / 100000).toFixed(2)}L)</option>`).join('');
+      }
+
+      // bind suggest score button
+      const calcScoreBtn = document.getElementById('nlCalcScoreBtn');
+      if (calcScoreBtn) {
+        calcScoreBtn.onclick = () => {
+          const tempLead = {
+            expectedPurchaseDays: Number(document.getElementById('nlDays').value) || null,
+            financeRequired: document.getElementById('nlFinance').value === 'Yes',
+            exchangeWanted: document.getElementById('nlExchange').value === 'Yes'
+          };
+          const suggested = suggestLeadBuyingScore(tempLead);
+          document.getElementById('nlScore').value = suggested.score;
+          showToast(`Suggested Score: ${suggested.score}/100 (${suggested.category}). You can adjust it anytime!`, 'info', 'Score Suggestion');
+        };
+      }
+
       this.openModal('newLeadModal');
       const form = document.getElementById('newLeadForm');
       if (form) {
         form.onsubmit = (e) => {
           e.preventDefault();
           const name = document.getElementById('nlName').value.trim() || 'Farmer Customer';
-          const phone = document.getElementById('nlPhone').value.trim() || '-';
-          const village = document.getElementById('nlVillage').value.trim() || 'Local Area';
-          const acres = Number(document.getElementById('nlAcres').value) || 5;
+          const phone = document.getElementById('nlPhone').value.trim();
+          const village = document.getElementById('nlVillage').value.trim();
+          const acresVal = document.getElementById('nlAcres').value.trim();
+          const acres = acresVal ? Number(acresVal) : null;
           const cropVal = document.getElementById('nlCrop').value.trim();
-          const crop = cropVal ? cropVal.split(',').map(c => c.trim()).filter(Boolean) : ['Wheat', 'Paddy'];
+          const crop = cropVal ? cropVal.split(',').map(c => c.trim()).filter(Boolean) : [];
+          const soilType = document.getElementById('nlSoilType') ? document.getElementById('nlSoilType').value.trim() : '';
+          const currentTractor = document.getElementById('nlCurrentTractor') ? document.getElementById('nlCurrentTractor').value.trim() : '';
           const modelId = document.getElementById('nlModelSelect').value || null;
-          const budget = Number(document.getElementById('nlBudget').value) || 750000;
-          const finance = document.getElementById('nlFinance').value === 'Yes';
-          const exchange = document.getElementById('nlExchange').value === 'Yes';
-          const days = Number(document.getElementById('nlDays').value) || 15;
+          const budgetVal = document.getElementById('nlBudget').value.trim();
+          const budget = budgetVal ? Number(budgetVal) : null;
+          const financeVal = document.getElementById('nlFinance').value;
+          const finance = financeVal === 'Yes' ? true : (financeVal === 'No' ? false : null);
+          const exchangeVal = document.getElementById('nlExchange').value;
+          const exchange = exchangeVal === 'Yes' ? true : (exchangeVal === 'No' ? false : null);
+          const daysVal = document.getElementById('nlDays').value;
+          const days = daysVal ? Number(daysVal) : null;
+          const scoreVal = document.getElementById('nlScore') ? document.getElementById('nlScore').value.trim() : '';
+          const buyingScore = scoreVal !== '' ? Math.max(0, Math.min(100, Number(scoreVal))) : null;
+          const nextAction = document.getElementById('nlNextAction') ? document.getElementById('nlNextAction').value.trim() : '';
 
           const newLead = store.addLead({
-            name, phone, village,
-            landAcres: acres, crops: crop,
+            name,
+            phone,
+            village,
+            landAcres: acres,
+            crops: crop,
+            soilType,
+            currentTractor,
             interestedModelId: modelId,
-            budgetMax: budget, financeRequired: finance,
-            exchangeWanted: exchange, expectedPurchaseDays: days,
+            budgetMax: budget,
+            financeRequired: finance,
+            exchangeWanted: exchange,
+            expectedPurchaseDays: days,
+            buyingScore,
+            userSetScore: buyingScore !== null,
+            nextAction,
             stage: 'New Enquiry'
           });
 
+          form.reset();
           this.closeAllModals();
-          showToast(`Lead for <strong>${newLead.name}</strong> created! Buying Score: <strong>${calculateBuyingScore(newLead).score}/100</strong>`, 'success', 'Lead Captured');
+          showToast(`Lead for <strong>${newLead.name}</strong> saved! ${buyingScore !== null ? `Score: <strong>${buyingScore}/100</strong>` : 'Score: <em>Not Set (Editable)</em>'}`, 'success', 'Lead Captured');
         };
       }
+    }
+
+    setQuickScore(val) {
+      const input = document.getElementById('qsScoreInput');
+      const slider = document.getElementById('qsSlider');
+      const badge = document.getElementById('qsScoreBadge');
+      if (input) input.value = val;
+      if (slider) slider.value = val === '' ? 50 : val;
+      if (badge) {
+        if (val === '') {
+          badge.className = 'badge';
+          badge.textContent = 'No Score';
+          badge.style.background = '#f1f5f9';
+          badge.style.color = '#64748b';
+        } else {
+          const num = Number(val);
+          const cat = num >= 75 ? 'HOT' : (num >= 50 ? 'WARM' : 'COLD');
+          badge.className = `badge ${cat === 'HOT' ? 'badge-hot' : (cat === 'WARM' ? 'badge-warm' : 'badge-cold')}`;
+          badge.textContent = `${cat} (${num}/100)`;
+        }
+      }
+    }
+
+    openScoreModal(leadId) {
+      const lead = store.getLeads().find(l => l.id === leadId);
+      if (!lead) return;
+
+      const leadIdEl = document.getElementById('qsLeadId');
+      const nameEl = document.getElementById('qsLeadName');
+      const infoEl = document.getElementById('qsLeadInfo');
+      const input = document.getElementById('qsScoreInput');
+      const slider = document.getElementById('qsSlider');
+      const actionInput = document.getElementById('qsNextAction');
+
+      if (leadIdEl) leadIdEl.value = lead.id;
+      if (nameEl) nameEl.textContent = lead.name || 'Farmer Customer';
+      if (infoEl) infoEl.textContent = `Village: ${lead.village || 'Not specified'} | Contact: ${lead.phone || 'Not specified'}`;
+      if (actionInput) actionInput.value = lead.nextAction || '';
+
+      const currentScore = (lead.buyingScore !== undefined && lead.buyingScore !== null && lead.buyingScore !== '') ? Number(lead.buyingScore) : '';
+      this.setQuickScore(currentScore);
+
+      if (input && slider) {
+        input.oninput = () => {
+          const val = input.value.trim();
+          if (val === '') {
+            this.setQuickScore('');
+          } else {
+            const clamped = Math.max(0, Math.min(100, Number(val)));
+            this.setQuickScore(clamped);
+          }
+        };
+        slider.oninput = () => {
+          this.setQuickScore(slider.value);
+        };
+      }
+
+      const suggestBtn = document.getElementById('qsSuggestBtn');
+      if (suggestBtn) {
+        suggestBtn.onclick = () => {
+          const sug = suggestLeadBuyingScore(lead);
+          this.setQuickScore(sug.score);
+          showToast(`Suggested Score: ${sug.score}/100 (${sug.category})`, 'info', 'Algorithm Suggestion');
+        };
+      }
+
+      const form = document.getElementById('quickScoreForm');
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const rawScore = document.getElementById('qsScoreInput').value.trim();
+          const newScore = rawScore !== '' ? Math.max(0, Math.min(100, Number(rawScore))) : null;
+          const nextAct = document.getElementById('qsNextAction').value.trim();
+
+          store.updateLead(lead.id, {
+            buyingScore: newScore,
+            userSetScore: newScore !== null,
+            nextAction: nextAct
+          });
+
+          this.closeAllModals();
+          showToast(`Score updated for <strong>${lead.name}</strong>!`, 'success', 'Score Saved');
+        };
+      }
+
+      this.openModal('quickScoreModal');
+    }
+
+    openEditLeadModal(leadId) {
+      const lead = store.getLeads().find(l => l.id === leadId);
+      if (!lead) return;
+
+      const tractors = store.getTractors();
+      const modelSelect = document.getElementById('elModelSelect');
+      if (modelSelect) {
+        modelSelect.innerHTML = `<option value="">-- Select Tractor Model (Optional) --</option>` +
+          tractors.map(t => `<option value="${t.id}">${t.brand} ${t.model} (₹${(t.price / 100000).toFixed(2)}L)</option>`).join('');
+      }
+
+      document.getElementById('elLeadId').value = lead.id;
+      document.getElementById('elName').value = lead.name || '';
+      document.getElementById('elPhone').value = lead.phone || '';
+      document.getElementById('elVillage').value = lead.village || '';
+      document.getElementById('elAcres').value = (lead.landAcres !== null && lead.landAcres !== undefined) ? lead.landAcres : '';
+      document.getElementById('elCrop').value = (lead.crops && lead.crops.length > 0) ? lead.crops.join(', ') : '';
+      document.getElementById('elSoilType').value = lead.soilType || '';
+      document.getElementById('elCurrentTractor').value = lead.currentTractor || '';
+      if (modelSelect) modelSelect.value = lead.interestedModelId || '';
+      document.getElementById('elBudget').value = (lead.budgetMax !== null && lead.budgetMax !== undefined) ? lead.budgetMax : '';
+      document.getElementById('elStage').value = lead.stage || 'New Enquiry';
+      document.getElementById('elFinance').value = lead.financeRequired === true ? 'Yes' : (lead.financeRequired === false ? 'No' : '');
+      document.getElementById('elExchange').value = lead.exchangeWanted === true ? 'Yes' : (lead.exchangeWanted === false ? 'No' : '');
+      document.getElementById('elScore').value = (lead.buyingScore !== null && lead.buyingScore !== undefined) ? lead.buyingScore : '';
+      document.getElementById('elNextAction').value = lead.nextAction || '';
+
+      const form = document.getElementById('editLeadForm');
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const name = document.getElementById('elName').value.trim() || 'Farmer Customer';
+          const phone = document.getElementById('elPhone').value.trim();
+          const village = document.getElementById('elVillage').value.trim();
+          const acresVal = document.getElementById('elAcres').value.trim();
+          const acres = acresVal ? Number(acresVal) : null;
+          const cropVal = document.getElementById('elCrop').value.trim();
+          const crop = cropVal ? cropVal.split(',').map(c => c.trim()).filter(Boolean) : [];
+          const soilType = document.getElementById('elSoilType').value.trim();
+          const currentTractor = document.getElementById('elCurrentTractor').value.trim();
+          const modelId = document.getElementById('elModelSelect').value || null;
+          const budgetVal = document.getElementById('elBudget').value.trim();
+          const budget = budgetVal ? Number(budgetVal) : null;
+          const stage = document.getElementById('elStage').value;
+          const financeVal = document.getElementById('elFinance').value;
+          const finance = financeVal === 'Yes' ? true : (financeVal === 'No' ? false : null);
+          const exchangeVal = document.getElementById('elExchange').value;
+          const exchange = exchangeVal === 'Yes' ? true : (exchangeVal === 'No' ? false : null);
+          const scoreVal = document.getElementById('elScore').value.trim();
+          const buyingScore = scoreVal !== '' ? Math.max(0, Math.min(100, Number(scoreVal))) : null;
+          const nextAction = document.getElementById('elNextAction').value.trim();
+
+          store.updateLead(lead.id, {
+            name,
+            phone,
+            village,
+            landAcres: acres,
+            crops: crop,
+            soilType,
+            currentTractor,
+            interestedModelId: modelId,
+            budgetMax: budget,
+            stage,
+            financeRequired: finance,
+            exchangeWanted: exchange,
+            buyingScore,
+            userSetScore: buyingScore !== null,
+            nextAction
+          });
+
+          this.closeAllModals();
+          showToast(`Customer lead for <strong>${name}</strong> updated successfully!`, 'success', 'Lead Updated');
+        };
+      }
+
+      this.openModal('editLeadModal');
+    }
+
+    openEditTractorModal(tractorId) {
+      const tractor = store.getTractors().find(t => t.id === tractorId);
+      if (!tractor) return;
+
+      document.getElementById('etTractorId').value = tractor.id;
+      document.getElementById('etBrand').value = tractor.brand || 'VST Zetor';
+      document.getElementById('etModel').value = tractor.model || '';
+      document.getElementById('etHp').value = tractor.hp || 45;
+      document.getElementById('etPtoHp').value = tractor.ptoHp || 40;
+      document.getElementById('etDrive').value = tractor.drive || '2WD';
+      document.getElementById('etLift').value = tractor.liftCapacityKg || tractor.liftCapacity || 1800;
+      document.getElementById('etPrice').value = tractor.price || 750000;
+      document.getElementById('etCost').value = tractor.dealerPurchaseCost || tractor.dealerCost || 675000;
+      document.getElementById('etStock').value = tractor.stockCount || 0;
+      document.getElementById('etWarranty').value = tractor.warranty || '6 Years / 6000 Hours Warranty';
+
+      const form = document.getElementById('editTractorForm');
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const brand = document.getElementById('etBrand').value.trim() || 'VST Zetor';
+          const model = document.getElementById('etModel').value.trim();
+          const hp = Number(document.getElementById('etHp').value) || 45;
+          const ptoHp = Number(document.getElementById('etPtoHp').value) || 40;
+          const drive = document.getElementById('etDrive').value || '2WD';
+          const liftCapacityKg = Number(document.getElementById('etLift').value) || 1800;
+          const price = Number(document.getElementById('etPrice').value) || 750000;
+          const dealerPurchaseCost = Number(document.getElementById('etCost').value) || 675000;
+          const stockCount = Number(document.getElementById('etStock').value) || 0;
+          const warranty = document.getElementById('etWarranty').value.trim();
+
+          store.updateTractor(tractor.id, {
+            brand,
+            model,
+            hp,
+            ptoHp,
+            drive,
+            liftCapacityKg,
+            liftCapacity: liftCapacityKg,
+            price,
+            dealerPurchaseCost,
+            dealerCost: dealerPurchaseCost,
+            stockCount,
+            warranty,
+            status: stockCount > 0 ? 'In Stock' : 'Available to Order'
+          });
+
+          this.closeAllModals();
+          showToast(`Tractor <strong>${brand} ${model}</strong> updated successfully!`, 'success', 'Inventory Updated');
+        };
+      }
+
+      this.openModal('editTractorModal');
     }
 
     openFastExpenseModal() {
