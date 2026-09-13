@@ -41,9 +41,9 @@ export function suggestLeadBuyingScore(lead) {
   if (stage === 'Negotiation') {
     score += 35;
     reasons.push('Customer in active price negotiation');
-  } else if (stage === 'Quotation Sent') {
+  } else if (stage === 'Price / Estimate Sent' || stage === 'Quotation Sent') {
     score += 25;
-    reasons.push('Customer formally requested & received quotation');
+    reasons.push('Customer received official price estimate breakdown');
   } else if (stage === 'Demo Scheduled' || stage === 'Demo Completed') {
     score += 22;
     reasons.push('Field demonstration interest / completed');
@@ -100,6 +100,6 @@ export function getTodayCallsQueue(leadsList) {
   }));
 
   return scored
-    .filter(l => (l.computedScore && l.computedScore.category === 'HOT') || l.stage === 'Negotiation' || l.stage === 'Quotation Sent')
+    .filter(l => (l.computedScore && l.computedScore.category === 'HOT') || l.stage === 'Negotiation' || l.stage === 'Price / Estimate Sent' || l.stage === 'Quotation Sent')
     .sort((a, b) => (b.computedScore.score || 0) - (a.computedScore.score || 0));
 }

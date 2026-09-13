@@ -233,7 +233,7 @@ export function Modals() {
                     <option value="Needs Analyzed">Needs Analyzed</option>
                     <option value="Demo Scheduled">Demo Scheduled</option>
                     <option value="Demo Completed">Demo Completed</option>
-                    <option value="Quotation Sent">Quotation Sent</option>
+                    <option value="Price / Estimate Sent">Price / Estimate Sent</option>
                     <option value="Negotiation">Negotiation</option>
                     <option value="Closed Won">Closed Won</option>
                     <option value="Lost">Lost</option>
@@ -452,76 +452,7 @@ export function Modals() {
         </div>
       </div>
 
-      {/* Modal 5: New Quotation Generator */}
-      <div className="modal-backdrop" id="newQuoteModal">
-        <div className="modal-box large">
-          <div className="modal-header">
-            <h3>Create Formal Dealer Quotation</h3>
-            <button className="modal-close-btn">&times;</button>
-          </div>
-          <form id="newQuoteForm">
-            <div className="modal-body">
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">Customer Name</label>
-                  <input type="text" id="nqCustomerName" className="form-input" placeholder="e.g. Ramesh Chandra" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Customer Phone</label>
-                  <input type="tel" id="nqPhone" className="form-input" placeholder="e.g. 9839123456" />
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">Village & District</label>
-                  <input type="text" id="nqVillage" className="form-input" placeholder="e.g. Kalyanpur, Gorakhpur" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Tractor Model</label>
-                  <select id="nqTractorSelect" className="form-select">
-                    <option value="TRAC-001">VST Zetor 4211 (42 HP 2WD)</option>
-                    <option value="TRAC-002">VST Zetor 4211 4WD (42 HP 4x4)</option>
-                    <option value="TRAC-003">VST Zetor 4511 (47 HP 2WD)</option>
-                    <option value="TRAC-004">VST Zetor 4511 4WD (47 HP 4x4)</option>
-                    <option value="TRAC-005">VST Zetor 5011 (50 HP 2WD)</option>
-                    <option value="TRAC-006">VST Zetor 5011 4WD (50 HP 4x4)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">Ex-Showroom Price (₹)</label>
-                  <input type="number" id="nqPrice" className="form-input" placeholder="e.g. 840000" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">RTO Registration & Insurance (₹)</label>
-                  <input type="number" id="nqRto" className="form-input" placeholder="e.g. 42000" />
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">Used Tractor Exchange Deduction (₹)</label>
-                  <input type="number" id="nqExchangeVal" className="form-input" placeholder="0 if no exchange" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Farmer Down Payment (₹)</label>
-                  <input type="number" id="nqDown" className="form-input" placeholder="e.g. 150000" />
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button type="button" className="quick-action-btn btn-outline modal-close-btn">Cancel</button>
-              <button type="submit" className="quick-action-btn btn-primary">Generate & Print Quotation</button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {/* Modal 5B: Create New Bill (Maa Durga Diesel) */}
+      {/* Modal 5: Create New Bill (Maa Durga Diesel) */}
       <div className="modal-backdrop" id="newBillModal">
         <div className="modal-box large" style={{ maxWidth: '860px' }}>
           <div className="modal-header">
@@ -625,21 +556,7 @@ export function Modals() {
         </div>
       </div>
 
-      {/* Modal 6: Printable Quotation Sheet Preview */}
-      <div className="modal-backdrop" id="quotePrintPreviewModal">
-        <div className="modal-box large">
-          <div className="modal-header">
-            <h3>Quotation Bill Preview</h3>
-            <button className="modal-close-btn">&times;</button>
-          </div>
-          <div className="modal-body" id="quotePrintPreviewBody">
-          </div>
-          <div className="modal-footer no-print">
-            <button type="button" className="quick-action-btn btn-outline modal-close-btn">Close</button>
-            <button type="button" className="quick-action-btn btn-primary" onClick={() => window.print()}>Print Official Bill</button>
-          </div>
-        </div>
-      </div>
+
 
       {/* Modal 7: Schedule Field Demo */}
       <div className="modal-backdrop" id="newDemoModal">
@@ -780,7 +697,7 @@ export function Modals() {
           </div>
           <div className="modal-body">
             <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-              Export your complete dealership records (leads, quotations, expenses, inventory, demos) to an offline backup JSON file, or restore from a previous save.
+              Export your complete dealership records (leads, bills, expenses, inventory, demos) to an offline backup JSON file, or restore from a previous save.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button className="quick-action-btn btn-primary" id="downloadBackupBtn" style={{ justifyContent: 'center', padding: '12px' }}>
@@ -850,7 +767,7 @@ export function Modals() {
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', padding: '6px', background: 'var(--bg-main)', borderRadius: '6px' }}>
                 <input type="checkbox" className="ld-check" defaultChecked />
-                <span><strong>Official Dealer Quotation (Maa Durga Engineering)</strong> — Including GST & chassis specification</span>
+                <span><strong>Official Showroom Bill & Estimate (Maa Durga Diesel)</strong> — Including GST & chassis specification</span>
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', padding: '6px', background: 'var(--bg-main)', borderRadius: '6px' }}>
                 <input type="checkbox" className="ld-check" defaultChecked />

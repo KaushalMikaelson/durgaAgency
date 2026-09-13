@@ -60,7 +60,7 @@ aiAdvisorRouter.post('/query', (req, res) => {
         `High-intent leads: ${leads.filter(l => Number(l.buyingScore) >= 75).length} farmers with buying score >= 75%`,
         `Active Field Demos: ${db.get('demos').length} scheduled village demonstrations.`
       ],
-      recommendation: "Focus on closing hot quotation negotiations and scheduling village field demonstrations."
+      recommendation: "Focus on closing hot customer negotiations and scheduling village field demonstrations."
     }
   });
 });

@@ -8,21 +8,21 @@ export function queryBusinessAdvisor(userQuestion) {
   const leads = store.getLeads();
   const snapshot = store.getFinancialSnapshot();
   const expenses = store.getExpenses();
-  const quotes = store.getQuotes();
+  const bills = store.getBills ? store.getBills() : [];
   const tractors = store.getTractors();
 
   if (q.includes('profit') || q.includes('margin') || q.includes('loss') || q.includes('why')) {
     const sortedCats = Object.entries(snapshot.categoryTotals).sort((a, b) => b[1] - a[1]);
-    if (expenses.length === 0 && quotes.length === 0) {
+    if (expenses.length === 0 && bills.length === 0) {
       return {
         title: "Showroom Financial Ledger (Clean Slate)",
         summary: "Currently no sales or operating expenses are recorded in the active ledger.",
         keyFindings: [
           "Gross Profit: ₹0.00 | Total Showroom Expenses: ₹0.00 | Net Profit: ₹0.00",
           "To track true landed margins, log showroom costs with '+ Expense' and tag freight/PDI to chassis numbers.",
-          "Issued quotations and recorded tractor sales automatically accrue into showroom revenue."
+          "Showroom bills, tractor sales and spare parts receipts automatically accrue into showroom revenue."
         ],
-        recommendation: "Issue your first customer quotation or log initial operational expenses to begin tracking live unit economics."
+        recommendation: "Issue your first customer bill or log initial operational expenses to begin tracking live unit economics."
       };
     }
 
@@ -36,7 +36,7 @@ export function queryBusinessAdvisor(userQuestion) {
         `Total approved showroom expenses count: ${expenses.filter(e => e.status === 'Approved').length} records.`,
         `Net Cash Flow is ₹${(snapshot.netCashFlow / 100000).toFixed(2)}L based on recorded cash in/out transactions.`
       ],
-      recommendation: snapshot.netProfit < 0 ? "Operating overheads currently exceed gross margins; prioritize closing pending hot quotations." : "Healthy dealer margins maintained. Keep monitoring freight and PDI costs tagged to chassis numbers."
+      recommendation: snapshot.netProfit < 0 ? "Operating overheads currently exceed gross margins; prioritize closing pending hot deals." : "Healthy dealer margins maintained. Keep monitoring freight and PDI costs tagged to chassis numbers."
     };
   }
 
@@ -95,7 +95,7 @@ export function queryBusinessAdvisor(userQuestion) {
 
   return {
     title: "Maa Durga Engineering Sales Advisory",
-    summary: `Analyzed your live showroom database containing ${leads.length} leads, ${tractors.length} tractor catalog models, and ${quotes.length} formal quotations.`,
+    summary: `Analyzed your live showroom database containing ${leads.length} leads, ${tractors.length} tractor catalog models, and ${(store.getBills ? store.getBills() : []).length} showroom bills & estimates.`,
     keyFindings: [
       `Active Leads: ${leads.length} total (${leads.filter(l => (l.buyingScore || 0) >= 75).length} Hot priority).`,
       `Financials: Gross Profit ₹${(snapshot.grossProfit / 100000).toFixed(2)}L | Operating Expenses ₹${(snapshot.totalExpenses / 100000).toFixed(2)}L.`,

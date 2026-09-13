@@ -143,7 +143,7 @@ export function LeadModal({ initialData = null, onClose }) {
               <option value="New Enquiry">New Enquiry</option>
               <option value="Needs Analyzed">Needs Analyzed</option>
               <option value="Demo Scheduled">Demo Scheduled</option>
-              <option value="Quotation Sent">Quotation Sent</option>
+              <option value="Price / Estimate Sent">Price / Estimate Sent</option>
               <option value="Negotiation">Negotiation (Hot Deal)</option>
               <option value="Booked / Delivered">Booked / Delivered</option>
             </select>

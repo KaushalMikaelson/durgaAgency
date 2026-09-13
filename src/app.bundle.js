@@ -759,7 +759,7 @@
     const reasons = [];
     const stage = lead.stage || 'New Enquiry';
     if (stage === 'Negotiation') { score += 35; reasons.push('Customer in active price negotiation'); }
-    else if (stage === 'Quotation Sent') { score += 25; reasons.push('Customer formally received quotation'); }
+    else if (stage === 'Price / Estimate Sent' || stage === 'Quotation Sent') { score += 25; reasons.push('Customer received price breakdown & estimate'); }
     else if (stage === 'Demo Scheduled' || stage === 'Demo Completed') { score += 22; reasons.push('Field demonstration interest'); }
     else if (stage === 'Needs Analyzed') { score += 15; reasons.push('Implement needs matched'); }
 
@@ -786,7 +786,7 @@
       computedScore: calculateBuyingScore(lead)
     }));
     return scored
-      .filter(l => (l.computedScore && l.computedScore.category === 'HOT') || l.stage === 'Negotiation' || l.stage === 'Quotation Sent')
+      .filter(l => (l.computedScore && l.computedScore.category === 'HOT') || l.stage === 'Negotiation' || l.stage === 'Price / Estimate Sent' || l.stage === 'Quotation Sent')
       .sort((a, b) => (b.computedScore.score || 0) - (a.computedScore.score || 0));
   }
 
@@ -955,7 +955,7 @@
       {
         day: 7,
         title: "Day 7: Easy Kisan Loan & Low Harvest EMI Scheme",
-        body: `Namaskar ${customerName} Ji,\n\nWe have an exclusive financing tie-up with State Bank of India & HDFC Bank for ${tractorName}.\n\n💰 Minimum down payment\n🌾 Harvest-Cycle EMI: Pay only after Rabi & Kharif crop sales!\n📄 24-hour sanction\n\nShall we process your loan quotation today?\n\nFinance Desk | Maa Durga Engineering`
+        body: `Namaskar ${customerName} Ji,\n\nWe have an exclusive financing tie-up with State Bank of India & HDFC Bank for ${tractorName}.\n\n💰 Minimum down payment\n🌾 Harvest-Cycle EMI: Pay only after Rabi & Kharif crop sales!\n📄 24-hour sanction\n\nShall we process your loan paperwork & price estimate today?\n\nFinance Desk | Maa Durga Engineering`
       },
       {
         day: 14,
@@ -970,21 +970,21 @@
     const leads = store.getLeads();
     const snapshot = store.getFinancialSnapshot();
     const expenses = store.getExpenses();
-    const quotes = store.getQuotes();
+    const bills = store.getBills ? store.getBills() : [];
     const tractors = store.getTractors();
 
     if (q.includes('profit') || q.includes('margin') || q.includes('loss') || q.includes('why')) {
       const sortedCats = Object.entries(snapshot.categoryTotals).sort((a, b) => b[1] - a[1]);
-      if (expenses.length === 0 && quotes.length === 0) {
+      if (expenses.length === 0 && bills.length === 0) {
         return {
           title: "Showroom Financial Ledger (Clean Slate)",
           summary: "Currently no sales or operating expenses are recorded in the active ledger.",
           keyFindings: [
             "Gross Profit: ₹0.00 | Total Showroom Expenses: ₹0.00 | Net Profit: ₹0.00",
             "To track true landed margins, log showroom costs with '+ Expense' and tag freight/PDI to chassis numbers.",
-            "Issued quotations and recorded tractor sales automatically accrue into showroom revenue."
+            "Showroom bills, tractor sales and spare parts receipts automatically accrue into showroom revenue."
           ],
-          recommendation: "Issue your first customer quotation or log initial operational expenses to begin tracking live unit economics."
+          recommendation: "Issue your first customer bill or log initial operational expenses to begin tracking live unit economics."
         };
       }
 
@@ -998,7 +998,7 @@
           `Total approved showroom expenses count: ${expenses.filter(e => e.status === 'Approved').length} records.`,
           `Net Cash Flow is ₹${(snapshot.netCashFlow / 100000).toFixed(2)}L based on recorded cash in/out transactions.`
         ],
-        recommendation: snapshot.netProfit < 0 ? "Operating overheads currently exceed gross margins; prioritize closing pending hot quotations." : "Healthy dealer margins maintained. Keep monitoring freight and PDI costs tagged to chassis numbers."
+        recommendation: snapshot.netProfit < 0 ? "Operating overheads currently exceed gross margins; prioritize closing pending hot deals." : "Healthy dealer margins maintained. Keep monitoring freight and PDI costs tagged to chassis numbers."
       };
     }
 
@@ -1057,7 +1057,7 @@
 
     return {
       title: "Maa Durga Engineering Sales Advisory",
-      summary: `Analyzed your live showroom database containing ${leads.length} leads, ${tractors.length} tractor catalog models, and ${quotes.length} formal quotations.`,
+      summary: `Analyzed your live showroom database containing ${leads.length} leads, ${tractors.length} tractor catalog models, and ${(store.getBills ? store.getBills() : []).length} showroom bills & estimates.`,
       keyFindings: [
         `Active Leads: ${leads.length} total (${leads.filter(l => (l.buyingScore || 0) >= 75).length} Hot priority).`,
         `Financials: Gross Profit ₹${(snapshot.grossProfit / 100000).toFixed(2)}L | Operating Expenses ₹${(snapshot.totalExpenses / 100000).toFixed(2)}L.`,
@@ -1421,10 +1421,14 @@
     }
 
     switchTab(tabName) {
-      if (tabName === 'exchange' || tabName === 'recommend') tabName = 'dashboard';
-      this.currentTab = tabName;
+      if (tabName === 'exchange' || tabName === 'recommend' || tabName === 'emi' || tabName === 'quotations') tabName = 'dashboard';
+      if (tabName === 'billing') {
+        this.currentTab = 'billing';
+      } else {
+        this.currentTab = tabName;
+      }
       document.querySelectorAll('.nav-item-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
+        btn.classList.toggle('active', btn.dataset.tab === this.currentTab);
       });
 
       const titleEl = document.getElementById('topbarTitle');
@@ -1434,9 +1438,6 @@
         leads: { title: "Customer & Lead CRM", sub: "Farmer profiles, village mapping & algorithmic buying score" },
         inventory: { title: "Tractor Inventory & Landed Margins", sub: "Live showroom stock, specifications & unit profitability" },
         billing: { title: "Billing & Bills Command Center (माँ दुर्गा डीजल)", sub: "Official Maa Durga Diesel bills, estimates & customer receipts" },
-        quotations: { title: "Dealer Quotations & Sales Invoicing", sub: "Official tractor sales quotations, down payments & bank estimates" },
-        emi: { title: "Farmer EMI & Harvest-Cycle Calculator", sub: "Calculates monthly and bi-annual harvest payments" },
-
         demos: { title: "Field Demos & Track Testing", sub: "Rotavator/Plough demonstration logs, diesel consumption & feedback" },
         expenses: { title: "Showroom Expenses & Unit Cost Tagging", sub: "Fast entry, approval workflow & per-tractor landed cost" },
         cashflow: { title: "Cash & Bank Ledger", sub: "Cash-in vs Cash-out tracking distinct from accounting profit" },
@@ -1499,9 +1500,8 @@
           this.bindInventoryEvents();
           break;
         case 'billing':
-        case 'quotations':
-          content.innerHTML = this.renderQuotationsHTML();
-          this.bindQuotationsEvents();
+          content.innerHTML = this.renderBillingHTML();
+          this.bindBillingEvents();
           break;
         case 'emi':
           content.innerHTML = this.renderEmiHTML();
@@ -1545,7 +1545,7 @@
         <div class="command-banner">
           <div class="command-banner-info">
             <h3>${renderIcon('flame')} ${todayCalls.length > 0 ? `Today's Priority: Call ${todayCalls.length} Hot Leads First` : 'Executive Command Center (Live Showroom)'}</h3>
-            <p>${todayCalls.length > 0 ? 'Prioritized customer queues based on buying score, expected purchase date, and village demos.' : 'Ready for daily dealership operations. Capture leads, issue quotations, and log showroom expenses dynamically.'}</p>
+            <p>${todayCalls.length > 0 ? 'Prioritized customer queues based on buying score, expected purchase date, and village demos.' : 'Ready for daily dealership operations. Capture leads, issue bills & estimates, and log showroom expenses dynamically.'}</p>
           </div>
           <div style="display:flex; gap:10px;">
             <button class="quick-action-btn btn-gold" id="dashStartCallingBtn">
@@ -1564,7 +1564,7 @@
               <div class="metric-icon-wrap gold">${renderIcon('rupee')}</div>
             </div>
             <div class="metric-value">₹${(snapshot.salesRevenue / 100000).toFixed(2)}L</div>
-            <div class="metric-sub">${store.getQuotes().length} Quotations / Deals recorded</div>
+            <div class="metric-sub">${(store.getBills ? store.getBills() : []).length} Showroom Bills & Deals</div>
           </div>
 
           <div class="metric-card success">
@@ -1749,7 +1749,7 @@
             <select id="leadStageFilter" class="form-select" style="width:160px;">
               <option value="ALL">All Stages</option>
               <option value="HOT">🔥 Hot Leads</option>
-              <option value="Quotation Sent">Quotation Sent</option>
+              <option value="Price / Estimate Sent">Price / Estimate Sent</option>
               <option value="Demo Scheduled">Demo Scheduled</option>
               <option value="Negotiation">In Negotiation</option>
               <option value="New Enquiry">New Enquiry</option>
@@ -1855,9 +1855,6 @@
                           <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="WhatsApp">
                             ${renderIcon('whatsapp')}
                           </button>
-                          <button class="quick-action-btn btn-sm btn-outline create-quote-for-lead-btn" data-lead-id="${lead.id}" title="Quote">
-                            ${renderIcon('quote')}
-                          </button>
                           <button class="quick-action-btn btn-sm btn-outline edit-lead-btn" data-lead-id="${lead.id}" title="Edit Lead Details">
                             ${renderIcon('edit')}
                           </button>
@@ -1891,13 +1888,6 @@
       document.querySelectorAll('.delete-lead-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           if (confirm("Delete this customer lead?")) store.deleteLead(btn.dataset.leadId);
-        });
-      });
-
-      document.querySelectorAll('.create-quote-for-lead-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const lead = store.getLeads().find(l => l.id === btn.dataset.leadId);
-          this.openQuotationModal(lead);
         });
       });
 
@@ -2064,8 +2054,8 @@
           </ul>
 
           <div style="display:flex; gap:10px; margin-top:16px;">
-            <button class="quick-action-btn btn-primary" id="recCreateQuoteBestBtn">
-              ${renderIcon('quote')} Generate Quotation
+            <button class="quick-action-btn btn-primary" id="recCreateBillBestBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
+              🧾 + New Bill (माँ दुर्गा डीजल)
             </button>
             <button class="quick-action-btn btn-outline" id="recViewUnitMarginBtn">
               ${renderIcon('rupee')} View Unit Margin
@@ -2081,19 +2071,19 @@
                 <h4 style="font-size:15px; font-weight:800;">${tAlt.brand} ${tAlt.model} (${tAlt.hp} HP)</h4>
                 <p style="font-size:12px; color:var(--text-secondary);">₹${(tAlt.price / 100000).toFixed(2)} Lakh | Higher lift capacity (${tAlt.liftCapacityKg} kg)</p>
               </div>
-              <button class="quick-action-btn btn-sm btn-outline" id="recCreateQuoteAltBtn">
-                Quote Alternative
+              <button class="quick-action-btn btn-sm btn-outline" id="recViewAltMarginBtn">
+                View Margins
               </button>
             </div>
           </div>
         ` : ''}
       `;
 
-      const bestQuoteBtn = document.getElementById('recCreateQuoteBestBtn');
-      if (bestQuoteBtn) bestQuoteBtn.addEventListener('click', () => this.openQuotationModal(null, tBest));
+      const bestBillBtn = document.getElementById('recCreateBillBestBtn');
+      if (bestBillBtn) bestBillBtn.addEventListener('click', () => this.openNewBillModal());
 
-      const altQuoteBtn = document.getElementById('recCreateQuoteAltBtn');
-      if (altQuoteBtn && tAlt) altQuoteBtn.addEventListener('click', () => this.openQuotationModal(null, tAlt));
+      const altMarginBtn = document.getElementById('recViewAltMarginBtn');
+      if (altMarginBtn && tAlt) altMarginBtn.addEventListener('click', () => this.openUnitMarginModal(tAlt.id));
 
       const unitMarginBtn = document.getElementById('recViewUnitMarginBtn');
       if (unitMarginBtn) unitMarginBtn.addEventListener('click', () => this.openUnitMarginModal(tBest.id));
@@ -2168,9 +2158,6 @@
                       ${renderIcon('calculator')} Margin
                     </button>
                   </div>
-                  <button class="quick-action-btn btn-sm btn-primary quote-this-tractor-btn" data-tractor-id="${t.id}" title="Create Formal Dealer Quotation">
-                    ${renderIcon('quote')} Generate Quotation
-                  </button>
                 </div>
               </div>
             `;
@@ -2192,19 +2179,10 @@
       document.querySelectorAll('.view-unit-margin-btn').forEach(btn => {
         btn.addEventListener('click', () => this.openUnitMarginModal(btn.dataset.tractorId));
       });
-      document.querySelectorAll('.quote-this-tractor-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const tractor = store.getTractors().find(t => t.id === btn.dataset.tractorId);
-          this.openQuotationModal(null, tractor);
-        });
-      });
     }
 
-    renderQuotationsHTML() {
-      const quotes = store.getQuotes();
+    renderBillingHTML() {
       const bills = store.getBills ? store.getBills() : [];
-      const filter = this.billingTabFilter || 'all';
-
       const totalBillVolume = bills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0);
       const nextAutoNo = store.getNextBillNumber ? store.getNextBillNumber() : '87';
 
@@ -2339,75 +2317,12 @@
             </table>
           </div>
         </div>
-
-        <!-- Official Tractor Sales Quotations Panel -->
-        <div class="panel-card" style="margin-top:20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px; flex-wrap:wrap; gap:10px;">
-            <div>
-              <div style="font-size:14px; font-weight:800; color:var(--text-primary);">
-                Official Tractor Sales Quotations (${quotes.length})
-              </div>
-              <div style="font-size:11.5px; color:var(--text-secondary); margin-top:2px;">
-                Formal showroom quotation sheets with RTO, insurance, exchange value, and bank EMI schedule
-              </div>
-            </div>
-            <button class="quick-action-btn btn-sm btn-primary" id="openNewQuoteFromPageBtn" onclick="window.app.openQuotationModal()">
-              + New Tractor Quotation
-            </button>
-          </div>
-
-          <div class="table-responsive">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Quote #</th>
-                  <th>Date</th>
-                  <th>Customer Name</th>
-                  <th>Village</th>
-                  <th>Tractor Model</th>
-                  <th>Total On-Road</th>
-                  <th>Down Payment</th>
-                  <th>Monthly EMI</th>
-                  <th style="text-align:right;">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${quotes.length === 0 ? `
-                  <tr>
-                    <td colspan="9" style="text-align:center; padding:32px 16px; color:var(--text-muted);">
-                      No formal tractor quotations generated yet. Click "+ New Tractor Quotation" to create an official quote.
-                    </td>
-                  </tr>
-                ` : quotes.map(q => `
-                  <tr>
-                    <td><strong style="color:var(--primary); font-size:13px;">${q.quoteNumber}</strong></td>
-                    <td>${q.date}</td>
-                    <td><strong>${q.customerName}</strong><br><span style="font-size:11px; color:var(--text-muted);">${q.phone}</span></td>
-                    <td>${q.village}</td>
-                    <td><span style="font-weight:700; color:var(--primary);">${q.tractorName}</span></td>
-                    <td><strong>₹${(q.grandTotal / 100000).toFixed(2)}L</strong></td>
-                    <td>₹${(q.downPayment / 100000).toFixed(2)}L</td>
-                    <td><strong style="color:var(--accent-dark);">₹${q.monthlyEmi ? q.monthlyEmi.toLocaleString('en-IN') : '-'}</strong></td>
-                    <td style="text-align:right;">
-                      <button class="quick-action-btn btn-xs btn-outline print-quote-btn" data-quote-no="${q.quoteNumber}">
-                        Print Quote
-                      </button>
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
       `;
     }
 
-    bindQuotationsEvents() {
+    bindBillingEvents() {
       const newBillBtn = document.getElementById('openNewBillBtn');
       if (newBillBtn) newBillBtn.addEventListener('click', () => this.openNewBillModal());
-
-      const newQuoteBtn = document.getElementById('openNewQuoteFromPageBtn');
-      if (newQuoteBtn) newQuoteBtn.addEventListener('click', () => this.openQuotationModal());
 
       const printBlankBtn = document.getElementById('printBlankBillBtn');
       if (printBlankBtn) printBlankBtn.addEventListener('click', () => this.openBillPreviewModal(null, true));
@@ -2423,14 +2338,8 @@
         btn.addEventListener('click', () => {
           if (confirm('Delete this bill?')) {
             store.deleteBill(btn.dataset.billId);
+            this.renderCurrentView();
           }
-        });
-      });
-
-      document.querySelectorAll('.print-quote-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const quote = store.getQuotes().find(q => q.quoteNumber === btn.dataset.quoteNo);
-          if (quote) this.openPrintQuotationPreview(quote);
         });
       });
     }
@@ -3869,169 +3778,12 @@
       this.openModal('unitMarginModal');
     }
 
-    openQuotationModal(prefillLead = null, prefillTractor = null, prefillExchangeVal = 0) {
-      if (prefillLead) {
-        document.getElementById('nqCustomerName').value = prefillLead.name || '';
-        document.getElementById('nqPhone').value = prefillLead.phone || '';
-        document.getElementById('nqVillage').value = prefillLead.village || '';
-      }
-      const tractorSelect = document.getElementById('nqTractorSelect');
-      if (tractorSelect) {
-        const tractors = store.getTractors();
-        tractorSelect.innerHTML = tractors.map(t => 
-          `<option value="${t.id}">${t.brand} ${t.model} (${t.hp} HP ${t.drive})</option>`
-        ).join('');
-        tractorSelect.onchange = () => {
-          const sel = tractors.find(t => t.id === tractorSelect.value);
-          if (sel) {
-            document.getElementById('nqPrice').value = sel.price;
-          }
-        };
-      }
-
-      if (prefillTractor) {
-        document.getElementById('nqTractorSelect').value = prefillTractor.id;
-        document.getElementById('nqPrice').value = prefillTractor.price;
-      } else if (tractorSelect && store.getTractors()[0]) {
-        document.getElementById('nqPrice').value = store.getTractors()[0].price;
-      }
-      if (prefillExchangeVal > 0) {
-        document.getElementById('nqExchangeVal').value = prefillExchangeVal;
-      }
-      this.openModal('newQuoteModal');
-
-      const form = document.getElementById('newQuoteForm');
-      if (form) {
-        form.onsubmit = (e) => {
-          e.preventDefault();
-          const customerName = document.getElementById('nqCustomerName').value.trim() || 'Farmer Customer';
-          const phone = document.getElementById('nqPhone').value.trim() || '-';
-          const village = document.getElementById('nqVillage').value.trim() || 'Local Area';
-          const tractorId = document.getElementById('nqTractorSelect').value;
-          const tractor = store.getTractors().find(t => t.id === tractorId) || store.getTractors()[0];
-          const exShowroom = Number(document.getElementById('nqPrice').value) || (tractor ? tractor.price : 745000);
-          const rtoInsurance = Number(document.getElementById('nqRto').value) || 40000;
-          const exchangeVal = Number(document.getElementById('nqExchangeVal').value) || 0;
-          const downPayment = Number(document.getElementById('nqDown').value) || 100000;
-
-          const grandTotal = exShowroom + rtoInsurance - exchangeVal;
-          const loanCalc = calculateTractorLoan({ tractorPrice: grandTotal, downPayment, tenureYears: 5, annualInterestRate: 10.5 });
-
-          const createdQuote = store.addQuote({
-            customerName, phone, village,
-            tractorName: tractor ? `${tractor.brand} ${tractor.model}` : 'Tractor',
-            exShowroomPrice: exShowroom,
-            insuranceRTO: rtoInsurance,
-            exchangeDeduction: exchangeVal,
-            grandTotal, downPayment,
-            loanAmount: loanCalc.loanPrincipal,
-            tenureYears: 5,
-            monthlyEmi: loanCalc.monthlyEmi,
-            harvestEmi: loanCalc.biAnnualHarvestEmi,
-            salesman: 'Amit Kumar'
-          });
-
-          this.closeAllModals();
-          this.openPrintQuotationPreview(createdQuote);
-        };
-      }
+    openQuotationModal() {
+      this.openNewBillModal();
     }
 
-    openPrintQuotationPreview(quote) {
-      const previewBox = document.getElementById('quotePrintPreviewBody');
-      if (previewBox) {
-        const info = store.getSettings();
-        previewBox.innerHTML = `
-          <div class="quote-sheet">
-            <div class="quote-header">
-              <div class="quote-brand">
-                <h2>${info.name}</h2>
-                <p>${info.tagline}</p>
-                <p>${info.address}</p>
-                <p>Phone: ${info.phone} | GSTIN: ${info.gstin}</p>
-              </div>
-              <div class="quote-meta">
-                <h3 style="font-size:16px; font-weight:800; color:var(--primary);">DEALER QUOTATION</h3>
-                <p><strong>Quote #:</strong> ${quote.quoteNumber}</p>
-                <p><strong>Date:</strong> ${quote.date}</p>
-                <p><strong>Valid Till:</strong> 15 Days</p>
-              </div>
-            </div>
-
-            <div class="quote-parties">
-              <div>
-                <strong>Customer Information:</strong><br>
-                <span style="font-size:14px; font-weight:700;">${quote.customerName}</span><br>
-                Village / Tehsil: ${quote.village}<br>
-                Phone: ${quote.phone}
-              </div>
-              <div>
-                <strong>Showroom Desk:</strong><br>
-                Salesman: ${quote.salesman || 'Amit Kumar'}<br>
-                State Bank of India Agro Loan Desk Tie-up
-              </div>
-            </div>
-
-            <table class="quote-table">
-              <thead>
-                <tr>
-                  <th>Description</th>
-                  <th>Specifications / Inclusions</th>
-                  <th style="text-align:right;">Amount (₹)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>${quote.tractorName}</strong></td>
-                  <td>Standard Agricultural Tractor with 5-Year OEM Warranty</td>
-                  <td style="text-align:right;">₹${(quote.exShowroomPrice || 0).toLocaleString('en-IN')}</td>
-                </tr>
-                <tr>
-                  <td>RTO Registration & Comprehensive Insurance</td>
-                  <td>1 Year Comprehensive + 5 Year Third Party</td>
-                  <td style="text-align:right;">₹${(quote.insuranceRTO || 0).toLocaleString('en-IN')}</td>
-                </tr>
-                ${quote.exchangeDeduction > 0 ? `
-                  <tr style="color:var(--danger);">
-                    <td><strong>Less: Old Tractor Exchange Value</strong></td>
-                    <td>Trade-in adjustment for used tractor</td>
-                    <td style="text-align:right;">-₹${quote.exchangeDeduction.toLocaleString('en-IN')}</td>
-                  </tr>
-                ` : ''}
-              </tbody>
-            </table>
-
-            <div class="quote-total-box">
-              <div class="quote-row grand">
-                <span>Grand Total On-Road:</span>
-                <span>₹${(quote.grandTotal || 0).toLocaleString('en-IN')}</span>
-              </div>
-              <div class="quote-row" style="margin-top:6px;">
-                <span>Farmer Down Payment:</span>
-                <span>₹${(quote.downPayment || 0).toLocaleString('en-IN')}</span>
-              </div>
-              <div class="quote-row">
-                <span>Proposed Loan Amount:</span>
-                <span>₹${(quote.loanAmount || 0).toLocaleString('en-IN')}</span>
-              </div>
-              <div class="quote-row" style="font-weight:700; color:var(--primary);">
-                <span>Estimated Monthly EMI (5 Yrs):</span>
-                <span>₹${(quote.monthlyEmi || 0).toLocaleString('en-IN')} / Mo</span>
-              </div>
-              <div class="quote-row" style="font-weight:800; color:var(--accent-dark);">
-                <span>🌾 Harvest-Cycle Payment (Bi-Annual):</span>
-                <span>₹${(quote.harvestEmi || 0).toLocaleString('en-IN')} (Twice/Yr)</span>
-              </div>
-            </div>
-
-            <div class="quote-signatures">
-              <div class="sign-line">Customer Signature</div>
-              <div class="sign-line">Authorized Signatory<br><strong>Maa Durga Engineering</strong></div>
-            </div>
-          </div>
-        `;
-      }
-      this.openModal('quotePrintPreviewModal');
+    openPrintQuotationPreview() {
+      this.openBillPreviewModal();
     }
 
     openNewDemoModal() {
@@ -4194,8 +3946,6 @@
         leads: this.lang === 'hi' ? '👥 किसान एवं ग्राहक' : '👥 Customers & Leads',
         inventory: this.lang === 'hi' ? '🚜 स्टॉक एवं मुनाफा' : '🚜 Inventory & Margins',
         billing: this.lang === 'hi' ? '🧾 बिलिंग एवं पर्ची (माँ दुर्गा)' : '🧾 Billing & Bills',
-        quotations: this.lang === 'hi' ? '📄 डीलर कोटेशन' : '📄 Quotations',
-        emi: this.lang === 'hi' ? '🌾 ऋण एवं ईएमआई' : '🌾 EMI & Harvest Calc',
         demos: this.lang === 'hi' ? '🚜 फील्ड डेमो ट्रायल' : '🚜 Field Demos',
         expenses: this.lang === 'hi' ? '💸 शोरूम खर्चे' : '💸 Expenses',
         cashflow: this.lang === 'hi' ? '🏦 रोकड़ एवं बैंक' : '🏦 Cash & Bank',

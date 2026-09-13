@@ -422,6 +422,7 @@ class TractorOSApp {
   }
 
   switchTab(tabName) {
+    if (tabName === 'exchange' || tabName === 'recommend' || tabName === 'emi' || tabName === 'quotations') tabName = 'dashboard';
     this.currentTab = tabName;
     document.querySelectorAll('.nav-item-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === tabName);
@@ -433,11 +434,8 @@ class TractorOSApp {
     const titles = {
       dashboard: { title: "Executive Command Center", sub: "Daily sales calls, today's cash flow & monthly showroom P&L" },
       leads: { title: "Customer & Lead CRM", sub: "Farmer profiles, village mapping & algorithmic buying score" },
-      recommend: { title: "Tractor Recommendation Engine", sub: "Deterministic implement & acreage matching without guesswork" },
       inventory: { title: "Tractor Inventory & Landed Margins", sub: "Live showroom stock, specifications & unit profitability" },
-      quotations: { title: "Billing & Bills Command Center (माँ दुर्गा डीजल)", sub: "Official Maa Durga Diesel bills, estimates & customer receipts" },
-      exchange: { title: "Used Tractor Exchange Valuation", sub: "Inspection checklist, market depreciation & upgrade calculation" },
-
+      billing: { title: "Billing Command Center (माँ दुर्गा डीजल)", sub: "Official Maa Durga Diesel bills, estimates & customer receipts" },
       demos: { title: "Field Demos & Track Testing", sub: "Rotavator/Plough demonstration logs, diesel consumption & feedback" },
       expenses: { title: "Showroom Expenses & Unit Cost Tagging", sub: "Fast entry, approval workflow & per-tractor landed cost" },
       cashflow: { title: "Cash & Bank Ledger", sub: "Cash-in vs Cash-out tracking distinct from accounting profit" },
@@ -505,9 +503,9 @@ class TractorOSApp {
         content.innerHTML = this.renderInventoryHTML();
         this.bindInventoryEvents();
         break;
-      case 'quotations':
-        content.innerHTML = this.renderQuotationsHTML();
-        this.bindQuotationsEvents();
+      case 'billing':
+        content.innerHTML = this.renderBillingHTML();
+        this.bindBillingEvents();
         break;
       case 'exchange':
         content.innerHTML = this.renderExchangeHTML();
@@ -556,7 +554,7 @@ class TractorOSApp {
       <div class="command-banner">
         <div class="command-banner-info">
           <h3>${renderIcon('flame')} Today's Priority: Call ${todayCalls.length} Hot Leads First</h3>
-          <p>The system has prioritized your customer queues based on purchase readiness, quotation recency, and village demos.</p>
+          <p>The system has prioritized your customer queues based on purchase readiness, pricing follow-ups, and village demos.</p>
         </div>
         <div style="display:flex; gap:10px;">
           <button class="quick-action-btn btn-gold" id="dashStartCallingBtn">
@@ -777,7 +775,7 @@ class TractorOSApp {
           <select id="leadStageFilter" class="form-select" style="width:160px;">
             <option value="ALL">All Stages</option>
             <option value="HOT">🔥 Hot Leads</option>
-            <option value="Quotation Sent">Quotation Sent</option>
+            <option value="Price / Estimate Sent">Price / Estimate Sent</option>
             <option value="Demo Scheduled">Demo Scheduled</option>
             <option value="Negotiation">In Negotiation</option>
             <option value="New Enquiry">New Enquiry</option>
@@ -872,9 +870,6 @@ class TractorOSApp {
                         <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="WhatsApp Follow-up">
                           ${renderIcon('whatsapp')}
                         </button>
-                        <button class="quick-action-btn btn-sm btn-outline create-quote-for-lead-btn" data-lead-id="${lead.id}" title="Generate Quote">
-                          ${renderIcon('quote')}
-                        </button>
                         <button class="quick-action-btn btn-sm btn-outline edit-lead-btn" data-lead-id="${lead.id}" title="Edit Lead Details">
                           ${renderIcon('edit')}
                         </button>
@@ -918,14 +913,6 @@ class TractorOSApp {
         if (confirm("Are you sure you want to delete this customer lead?")) {
           store.deleteLead(btn.dataset.leadId);
         }
-      });
-    });
-
-    // Generate quote for lead
-    document.querySelectorAll('.create-quote-for-lead-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const lead = store.getLeads().find(l => l.id === btn.dataset.leadId);
-        this.openQuotationModal(lead);
       });
     });
 
@@ -1117,8 +1104,8 @@ class TractorOSApp {
         </ul>
 
         <div style="display:flex; gap:10px; margin-top:16px;">
-          <button class="quick-action-btn btn-primary" id="recCreateQuoteBestBtn" data-tractor-id="${tBest.id}">
-            ${renderIcon('quote')} Generate Quotation for Customer
+          <button class="quick-action-btn btn-primary" id="recCreateBillBestBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
+            🧾 + New Bill (माँ दुर्गा डीजल)
           </button>
           <button class="quick-action-btn btn-outline" id="recViewUnitMarginBtn" data-tractor-id="${tBest.id}">
             ${renderIcon('rupee')} View Unit Margin
@@ -1135,26 +1122,26 @@ class TractorOSApp {
               <h4 style="font-size:16px; font-weight:800;">${tAlt.brand} ${tAlt.model} (${tAlt.hp} HP)</h4>
               <p style="font-size:12px; color:var(--text-secondary);">₹${(tAlt.price / 100000).toFixed(2)} Lakh | Higher lift capacity (${tAlt.liftCapacityKg} kg) & heavy implements</p>
             </div>
-            <button class="quick-action-btn btn-sm btn-outline" id="recCreateQuoteAltBtn" data-tractor-id="${tAlt.id}">
-              Quote Alternative
+            <button class="quick-action-btn btn-sm btn-outline" id="recViewAltMarginBtn" data-tractor-id="${tAlt.id}">
+              View Margins
             </button>
           </div>
         </div>
       ` : ''}
     `;
 
-    // Bind quote generation buttons
-    const bestQuoteBtn = document.getElementById('recCreateQuoteBestBtn');
-    if (bestQuoteBtn) {
-      bestQuoteBtn.addEventListener('click', () => {
-        this.openQuotationModal(null, tBest);
+    // Bind action buttons
+    const bestBillBtn = document.getElementById('recCreateBillBestBtn');
+    if (bestBillBtn) {
+      bestBillBtn.addEventListener('click', () => {
+        this.openNewBillModal();
       });
     }
 
-    const altQuoteBtn = document.getElementById('recCreateQuoteAltBtn');
-    if (altQuoteBtn && tAlt) {
-      altQuoteBtn.addEventListener('click', () => {
-        this.openQuotationModal(null, tAlt);
+    const altMarginBtn = document.getElementById('recViewAltMarginBtn');
+    if (altMarginBtn && tAlt) {
+      altMarginBtn.addEventListener('click', () => {
+        this.openUnitMarginModal(tAlt.id);
       });
     }
 
@@ -1234,9 +1221,6 @@ class TractorOSApp {
                     ${renderIcon('calculator')} Margin
                   </button>
                 </div>
-                <button class="quick-action-btn btn-sm btn-primary quote-this-tractor-btn" data-tractor-id="${t.id}" title="Create Formal Dealer Quotation">
-                  ${renderIcon('quote')} Generate Quotation
-                </button>
               </div>
             </div>
           `;
@@ -1265,13 +1249,6 @@ class TractorOSApp {
       });
     });
 
-    document.querySelectorAll('.quote-this-tractor-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tractor = store.getTractors().find(t => t.id === btn.dataset.tractorId);
-        this.openQuotationModal(null, tractor);
-      });
-    });
-
     const expBtn = document.getElementById('openFastExpenseForTractorBtn');
     if (expBtn) {
       expBtn.addEventListener('click', () => this.openFastExpenseModal());
@@ -1279,13 +1256,10 @@ class TractorOSApp {
   }
 
   // =========================================================================
-  // 5. BILLING & QUOTATIONS (MAA DURGA DIESEL TEMPLATE)
+  // 5. BILLING & BILLS (MAA DURGA DIESEL TEMPLATE)
   // =========================================================================
-  renderQuotationsHTML() {
-    const quotes = store.getQuotes();
+  renderBillingHTML() {
     const bills = store.getBills ? store.getBills() : [];
-    const filter = this.billingTabFilter || 'all';
-
     const totalBillVolume = bills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0);
     const nextAutoNo = store.getNextBillNumber ? store.getNextBillNumber() : '87';
 
@@ -1423,7 +1397,7 @@ class TractorOSApp {
     `;
   }
 
-  bindQuotationsEvents() {
+  bindBillingEvents() {
     const newBillBtn = document.getElementById('openNewBillBtn');
     if (newBillBtn) newBillBtn.addEventListener('click', () => this.openNewBillModal());
 
@@ -1441,9 +1415,11 @@ class TractorOSApp {
       btn.addEventListener('click', () => {
         if (confirm('Delete this bill?')) {
           store.deleteBill(btn.dataset.billId);
+          this.renderCurrentView();
         }
       });
     });
+  }
 
   // =========================================================================
   // 6. USED TRACTOR EXCHANGE MODULE
@@ -1645,8 +1621,8 @@ class TractorOSApp {
       </div>
 
       <div style="margin-top:16px; display:flex; gap:10px;">
-        <button class="quick-action-btn btn-primary" id="applyExchangeToQuoteBtn">
-          ${renderIcon('quote')} Transfer to New Quotation
+        <button class="quick-action-btn btn-primary" id="applyExchangeToBillBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
+          🧾 Transfer to Showroom Bill
         </button>
         <button class="quick-action-btn btn-whatsapp" id="sendExchangeOnWaBtn">
           ${renderIcon('whatsapp')} Send Offer on WhatsApp
@@ -1654,10 +1630,10 @@ class TractorOSApp {
       </div>
     `;
 
-    const applyQuoteBtn = document.getElementById('applyExchangeToQuoteBtn');
-    if (applyQuoteBtn) {
-      applyQuoteBtn.addEventListener('click', () => {
-        this.openQuotationModal(null, null, evalData.recommendedOffer);
+    const applyBillBtn = document.getElementById('applyExchangeToBillBtn');
+    if (applyBillBtn) {
+      applyBillBtn.addEventListener('click', () => {
+        this.openNewBillModal();
       });
     }
 
@@ -2912,185 +2888,12 @@ class TractorOSApp {
     this.bindLiveSheetEvents();
   }
 
-  openQuotationModal(prefillLead = null, prefillTractor = null, prefillExchangeVal = 0) {
-    const modal = document.getElementById('newQuoteModal');
-    if (!modal) return;
-
-    if (prefillLead) {
-      document.getElementById('nqCustomerName').value = prefillLead.name || '';
-      document.getElementById('nqPhone').value = prefillLead.phone || '';
-      document.getElementById('nqVillage').value = prefillLead.village || '';
-    }
-
-    const tractorSelect = document.getElementById('nqTractorSelect');
-    if (tractorSelect) {
-      const tractors = store.getTractors();
-      tractorSelect.innerHTML = tractors.map(t => 
-        `<option value="${t.id}">${t.brand} ${t.model} (${t.hp} HP ${t.drive})</option>`
-      ).join('');
-      tractorSelect.onchange = () => {
-        const sel = tractors.find(t => t.id === tractorSelect.value);
-        if (sel) {
-          document.getElementById('nqPrice').value = sel.price;
-        }
-      };
-    }
-
-    if (prefillTractor) {
-      document.getElementById('nqTractorSelect').value = prefillTractor.id;
-      document.getElementById('nqPrice').value = prefillTractor.price;
-    } else if (tractorSelect && store.getTractors()[0]) {
-      document.getElementById('nqPrice').value = store.getTractors()[0].price;
-    }
-
-    if (prefillExchangeVal > 0) {
-      document.getElementById('nqExchangeVal').value = prefillExchangeVal;
-    }
-
-    this.openModal('newQuoteModal');
-
-    const form = document.getElementById('newQuoteForm');
-    if (form) {
-      form.onsubmit = (e) => {
-        e.preventDefault();
-        const customerName = document.getElementById('nqCustomerName').value.trim() || 'Farmer Customer';
-        const phone = document.getElementById('nqPhone').value.trim() || '-';
-        const village = document.getElementById('nqVillage').value.trim() || 'Local Area';
-        const tractorId = document.getElementById('nqTractorSelect').value;
-        const tractor = store.getTractors().find(t => t.id === tractorId) || store.getTractors()[0];
-        const exShowroom = Number(document.getElementById('nqPrice').value) || (tractor ? tractor.price : 745000);
-        const rtoInsurance = Number(document.getElementById('nqRto').value) || 40000;
-        const exchangeVal = Number(document.getElementById('nqExchangeVal').value) || 0;
-        const downPayment = Number(document.getElementById('nqDown').value) || 100000;
-
-        const grandTotal = exShowroom + rtoInsurance - exchangeVal;
-        const loanAmt = Math.max(0, grandTotal - downPayment);
-        const loanCalc = calculateTractorLoan({
-          tractorPrice: grandTotal,
-          downPayment,
-          tenureYears: 5,
-          annualInterestRate: 10.5
-        });
-
-        const createdQuote = store.addQuote({
-          customerName,
-          phone,
-          village,
-          tractorName: tractor ? `${tractor.brand} ${tractor.model}` : 'Tractor',
-          exShowroomPrice: exShowroom,
-          insuranceRTO: rtoInsurance,
-          exchangeDeduction: exchangeVal,
-          grandTotal,
-          downPayment,
-          loanAmount: loanAmt,
-          tenureYears: 5,
-          monthlyEmi: loanCalc.monthlyEmi,
-          harvestEmi: loanCalc.biAnnualHarvestEmi,
-          salesman: 'Amit Kumar'
-        });
-
-        this.closeAllModals();
-        this.openPrintQuotationPreview(createdQuote);
-      };
-    }
+  openQuotationModal() {
+    this.openNewBillModal();
   }
 
-  openPrintQuotationPreview(quote) {
-    const previewBox = document.getElementById('quotePrintPreviewBody');
-    if (previewBox) {
-      const info = store.getSettings();
-      previewBox.innerHTML = `
-        <div class="quote-sheet">
-          <div class="quote-header">
-            <div class="quote-brand">
-              <h2>${info.name}</h2>
-              <p>${info.tagline}</p>
-              <p>${info.address}</p>
-              <p>Phone: ${info.phone} | GSTIN: ${info.gstin}</p>
-            </div>
-            <div class="quote-meta">
-              <h3 style="font-size:16px; font-weight:800; color:var(--primary);">DEALER QUOTATION</h3>
-              <p><strong>Quote #:</strong> ${quote.quoteNumber}</p>
-              <p><strong>Date:</strong> ${quote.date}</p>
-              <p><strong>Valid Till:</strong> 15 Days</p>
-            </div>
-          </div>
-
-          <div class="quote-parties">
-            <div>
-              <strong>Customer Information:</strong><br>
-              <span style="font-size:14px; font-weight:700;">${quote.customerName}</span><br>
-              Village / Tehsil: ${quote.village}<br>
-              Phone: ${quote.phone}
-            </div>
-            <div>
-              <strong>Showroom Desk:</strong><br>
-              Salesman: ${quote.salesman || 'Amit Kumar'}<br>
-              State Bank of India Agro Loan Desk Tie-up
-            </div>
-          </div>
-
-          <table class="quote-table">
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th>Specifications / Inclusions</th>
-                <th style="text-align:right;">Amount (₹)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>${quote.tractorName}</strong></td>
-                <td>Standard Agricultural Tractor with 5-Year OEM Warranty</td>
-                <td style="text-align:right;">₹${(quote.exShowroomPrice || 0).toLocaleString('en-IN')}</td>
-              </tr>
-              <tr>
-                <td>RTO Registration & Comprehensive Insurance</td>
-                <td>1 Year Comprehensive + 5 Year Third Party</td>
-                <td style="text-align:right;">₹${(quote.insuranceRTO || 0).toLocaleString('en-IN')}</td>
-              </tr>
-              ${quote.exchangeDeduction > 0 ? `
-                <tr style="color:var(--danger);">
-                  <td><strong>Less: Old Tractor Exchange Value</strong></td>
-                  <td>Trade-in adjustment for used tractor</td>
-                  <td style="text-align:right;">-₹${quote.exchangeDeduction.toLocaleString('en-IN')}</td>
-                </tr>
-              ` : ''}
-            </tbody>
-          </table>
-
-          <div class="quote-total-box">
-            <div class="quote-row grand">
-              <span>Grand Total On-Road:</span>
-              <span>₹${(quote.grandTotal || 0).toLocaleString('en-IN')}</span>
-            </div>
-            <div class="quote-row" style="margin-top:6px;">
-              <span>Farmer Down Payment:</span>
-              <span>₹${(quote.downPayment || 0).toLocaleString('en-IN')}</span>
-            </div>
-            <div class="quote-row">
-              <span>Proposed Loan Amount:</span>
-              <span>₹${(quote.loanAmount || 0).toLocaleString('en-IN')}</span>
-            </div>
-            <div class="quote-row" style="font-weight:700; color:var(--primary);">
-              <span>Estimated Monthly EMI (5 Yrs):</span>
-              <span>₹${(quote.monthlyEmi || 0).toLocaleString('en-IN')} / Mo</span>
-            </div>
-            <div class="quote-row" style="font-weight:800; color:var(--accent-dark);">
-              <span>🌾 Harvest-Cycle Payment (Bi-Annual):</span>
-              <span>₹${(quote.harvestEmi || 0).toLocaleString('en-IN')} (Twice/Yr)</span>
-            </div>
-          </div>
-
-          <div class="quote-signatures">
-            <div class="sign-line">Customer Signature</div>
-            <div class="sign-line">Authorized Signatory<br><strong>Maa Durga Engineering</strong></div>
-          </div>
-        </div>
-      `;
-    }
-
-    this.openModal('quotePrintPreviewModal');
+  openPrintQuotationPreview() {
+    this.openBillPreviewModal();
   }
 
   openNewDemoModal() {

@@ -24,7 +24,7 @@ export function generateFollowUpSequences(lead, tractor = null) {
       day: 7,
       title: "Day 7: Easy Kisan Loan & Low Harvest EMI Scheme",
       subject: "Finance & EMI Details",
-      body: `Namaskar ${customerName} Ji,\n\nGreat news! We have an exclusive festive financing tie-up with State Bank of India & HDFC Bank for the ${tractorName}.\n\n💰 Down payment: Easy minimum token\n🌾 Harvest-Cycle EMI: Pay only after Rabi & Kharif crop sales!\n📄 Simple documentation with 24-hour sanction.\n\nShall we process your loan quotation today?\n\nRegards,\nFinance Desk | Maa Durga Engineering`
+      body: `Namaskar ${customerName} Ji,\n\nGreat news! We have an exclusive festive financing tie-up with State Bank of India & HDFC Bank for the ${tractorName}.\n\n💰 Down payment: Easy minimum token\n🌾 Harvest-Cycle EMI: Pay only after Rabi & Kharif crop sales!\n📄 Simple documentation with 24-hour sanction.\n\nShall we process your loan paperwork & price estimate today?\n\nRegards,\nFinance Desk | Maa Durga Engineering`
     },
     {
       day: 14,
