@@ -1380,20 +1380,26 @@
       this.renderSidebar();
       this.renderCurrentView();
 
-      store.subscribe(() => {
-        this.renderSidebar();
-        this.renderCurrentView();
-      });
+      if (!this._subscribed) {
+        this._subscribed = true;
+        store.subscribe(() => {
+          this.renderSidebar();
+          this.renderCurrentView();
+        });
+      }
     }
 
     bindEvents() {
       const toggleBtn = document.getElementById('mobileMenuBtn');
       const sidebar = document.querySelector('.sidebar');
-      if (toggleBtn && sidebar) {
+      if (toggleBtn && sidebar && !toggleBtn._hasBoundToggle) {
+        toggleBtn._hasBoundToggle = true;
         toggleBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
       }
 
       document.querySelectorAll('.nav-item-btn').forEach(btn => {
+        if (btn._hasBoundNav) return;
+        btn._hasBoundNav = true;
         btn.addEventListener('click', () => {
           const tab = btn.dataset.tab;
           if (tab) {
@@ -1404,6 +1410,8 @@
       });
 
       document.querySelectorAll('.modal-backdrop').forEach(modal => {
+        if (modal._hasBoundModal) return;
+        modal._hasBoundModal = true;
         modal.addEventListener('click', (e) => {
           if (e.target === modal || e.target.closest('.modal-close-btn')) {
             this.closeAllModals();
@@ -1427,6 +1435,7 @@
         recommend: { title: "Tractor Recommendation Engine", sub: "Deterministic implement & acreage matching without guesswork" },
         inventory: { title: "Tractor Inventory & Landed Margins", sub: "Live showroom stock, specifications & unit profitability" },
         quotations: { title: "Billing & Bills Command Center (माँ दुर्गा डीजल)", sub: "Official Maa Durga Diesel bills, estimates & customer receipts" },
+        emi: { title: "Farmer EMI & Harvest-Cycle Calculator", sub: "Calculates monthly and bi-annual harvest payments" },
 
         demos: { title: "Field Demos & Track Testing", sub: "Rotavator/Plough demonstration logs, diesel consumption & feedback" },
         expenses: { title: "Showroom Expenses & Unit Cost Tagging", sub: "Fast entry, approval workflow & per-tractor landed cost" },
@@ -1497,7 +1506,10 @@
           content.innerHTML = this.renderQuotationsHTML();
           this.bindQuotationsEvents();
           break;
-
+        case 'emi':
+          content.innerHTML = this.renderEmiHTML();
+          this.bindEmiEvents();
+          break;
         case 'demos':
           content.innerHTML = this.renderDemosHTML();
           this.bindDemosEvents();
@@ -2740,6 +2752,174 @@
       `;
       tbody.appendChild(tr);
       this.bindLiveSheetEvents();
+    }
+
+    renderEmiHTML() {
+      return `
+        <div class="dashboard-grid-2col" style="grid-template-columns: 1fr 1.3fr;">
+          <div class="panel-card">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">${renderIcon('calculator')} Loan & Harvest EMI Settings</div>
+                <div class="panel-subtitle">Calculates monthly and bi-annual harvest payments</div>
+              </div>
+            </div>
+
+            <form id="emiForm">
+              <div class="form-group">
+                <label class="form-label">Tractor On-Road Price (₹)</label>
+                <input type="number" id="emiTractorPrice" class="form-input" value="840000" step="5000" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Govt Agricultural Subsidy (if applicable)</label>
+                <input type="number" id="emiSubsidy" class="form-input" value="0" step="5000" />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Farmer Down Payment (₹)</label>
+                <input type="number" id="emiDownPayment" class="form-input" value="200000" step="5000" />
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Loan Tenure (Years)</label>
+                  <select id="emiTenure" class="form-select">
+                    <option value="3">3 Years (36 Months)</option>
+                    <option value="5" selected>5 Years (60 Months)</option>
+                    <option value="7">7 Years (84 Months)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Bank Interest Rate (% p.a.)</label>
+                  <input type="number" id="emiRate" class="form-input" value="10.5" step="0.25" />
+                </div>
+              </div>
+
+              <button type="submit" class="quick-action-btn btn-primary" style="width:100%; justify-content:center; padding:12px; margin-top:6px;">
+                ${renderIcon('calculator')} Calculate EMI Schedule
+              </button>
+            </form>
+          </div>
+
+          <div class="panel-card" id="emiResultContainer">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      `;
+    }
+
+    bindEmiEvents() {
+      const form = document.getElementById('emiForm');
+      const runEmi = () => {
+        const price = Number(document.getElementById('emiTractorPrice')?.value) || 840000;
+        const subsidy = Number(document.getElementById('emiSubsidy')?.value) || 0;
+        const downPayment = Number(document.getElementById('emiDownPayment')?.value) || 200000;
+        const tenureYears = Number(document.getElementById('emiTenure')?.value) || 5;
+        const annualInterestRate = Number(document.getElementById('emiRate')?.value) || 10.5;
+
+        const calc = calculateTractorLoan({
+          tractorPrice: price,
+          subsidyAmount: subsidy,
+          downPayment,
+          tenureYears,
+          annualInterestRate
+        });
+
+        this.renderEmiResults(calc);
+      };
+
+      if (form) {
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          runEmi();
+        });
+        runEmi();
+      }
+    }
+
+    renderEmiResults(calc) {
+      const container = document.getElementById('emiResultContainer');
+      if (!container) return;
+
+      container.innerHTML = `
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">${renderIcon('bank')} Repayment Schedule Breakdown</div>
+            <div class="panel-subtitle">Loan Principal: ₹${calc.loanPrincipal.toLocaleString('en-IN')} over ${calc.tenureYears} Years</div>
+          </div>
+        </div>
+
+        <!-- Dual Option Strip: Monthly vs Harvest EMI -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:20px;">
+          <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:16px; text-align:center;">
+            <span style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Standard Monthly EMI</span>
+            <div style="font-size:24px; font-weight:900; color:var(--text-primary); margin:6px 0;">
+              ₹${calc.monthlyEmi.toLocaleString('en-IN')}
+            </div>
+            <span style="font-size:11px; color:var(--text-secondary);">60 equal installments</span>
+          </div>
+
+          <div style="background:var(--primary-light); border:1px solid #bbf7d0; border-radius:var(--radius-md); padding:16px; text-align:center;">
+            <span style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;">🌾 Harvest-Cycle EMI (Bi-Annual)</span>
+            <div style="font-size:24px; font-weight:900; color:var(--primary-dark); margin:6px 0;">
+              ₹${calc.biAnnualHarvestEmi.toLocaleString('en-IN')}
+            </div>
+            <span style="font-size:11px; color:var(--primary);">Paid only after Rabi & Kharif harvest (twice/yr)</span>
+          </div>
+        </div>
+
+        <!-- Summary Sheet -->
+        <div style="display:flex; flex-direction:column; gap:8px; font-size:13px; margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-subtle);">
+            <span>Net Tractor Cost:</span>
+            <span style="font-weight:700;">₹${calc.netTractorCost.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-subtle);">
+            <span>Farmer Down Payment:</span>
+            <span style="font-weight:700; color:var(--accent-dark);">₹${calc.downPayment.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-subtle);">
+            <span>Loan Amount Financed:</span>
+            <span style="font-weight:700;">₹${calc.loanPrincipal.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border-subtle);">
+            <span>Total Interest over ${calc.tenureYears} Yrs:</span>
+            <span style="font-weight:700; color:var(--danger);">₹${calc.totalInterest.toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:15px; font-weight:900; color:var(--primary-dark);">
+            <span>Total Repayment Amount:</span>
+            <span>₹${calc.totalRepayment.toLocaleString('en-IN')}</span>
+          </div>
+        </div>
+
+        <!-- Principal vs Interest Bar -->
+        <div style="margin-bottom:20px;">
+          <div style="display:flex; justify-content:space-between; font-size:11.5px; margin-bottom:4px;">
+            <span>Principal: ${calc.principalPercent}%</span>
+            <span>Interest: ${calc.interestPercent}%</span>
+          </div>
+          <div style="height:10px; border-radius:var(--radius-full); overflow:hidden; display:flex;">
+            <div style="width:${calc.principalPercent}%; background:var(--primary);"></div>
+            <div style="width:${calc.interestPercent}%; background:var(--gold);"></div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button class="quick-action-btn btn-whatsapp" id="shareEmiWhatsAppBtn">
+            ${renderIcon('whatsapp')} Send EMI Plan on WhatsApp
+          </button>
+        </div>
+      `;
+
+      const waBtn = document.getElementById('shareEmiWhatsAppBtn');
+      if (waBtn) {
+        waBtn.addEventListener('click', () => {
+          const msg = `Namaskar Kisan Bhai 🙏\n\nExclusive Tractor Loan Plan from Maa Durga Engineering:\n\n🚜 Tractor Cost: ₹${calc.netTractorCost.toLocaleString('en-IN')}\n💰 Down Payment: ₹${calc.downPayment.toLocaleString('en-IN')}\n📄 Financed Amount: ₹${calc.loanPrincipal.toLocaleString('en-IN')} (${calc.tenureYears} Yrs)\n\n✓ Monthly EMI: ₹${calc.monthlyEmi.toLocaleString('en-IN')}\n🌾 Harvest Season EMI (Twice/Year): ₹${calc.biAnnualHarvestEmi.toLocaleString('en-IN')}\n\nCall our finance desk for 24hr loan sanction!`;
+          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        });
+      }
     }
 
     renderDemosHTML() {
@@ -4041,11 +4221,31 @@
   }
 
   // Initialize application
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+  function initTractorOS() {
+    if (typeof window !== 'undefined') {
+      window.TractorOSApp = TractorOSApp;
       window.app = new TractorOSApp();
-    });
-  } else {
-    window.app = new TractorOSApp();
+      return window.app;
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    window.initTractorOS = initTractorOS;
+    window.TractorOSApp = TractorOSApp;
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        if (!window.app) initTractorOS();
+      });
+    } else {
+      if (!window.app) initTractorOS();
+    }
   }
 })();
+
+export const TractorOSApp = typeof window !== 'undefined' ? window.TractorOSApp : null;
+export function initTractorOS() {
+  if (typeof window !== 'undefined' && window.initTractorOS) {
+    return window.initTractorOS();
+  }
+}
+
