@@ -1,11 +1,14 @@
-// Express Backend Server for Maa Durga Engineering OS
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.resolve(__dirname, '..');
 const PORT = process.env.PORT || 5000;
+
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 
 async function startServer() {
   try {
@@ -41,8 +44,75 @@ async function startServer() {
       res.json({ status: 'ok', time: new Date().toISOString(), server: 'Express.js' });
     });
 
-    app.listen(PORT, '127.0.0.1', () => {
-      console.log(`[Express Server] Maa Durga Engineering API running at: http://127.0.0.1:${PORT}`);
+    // Serve static files if dist exists (production build)
+    const distPath = path.join(ROOT_DIR, 'dist');
+    if (fs.existsSync(distPath)) {
+      app.use(express.static(distPath));
+    }
+
+    // Root UI handler: redirect browser users to frontend UI (port 3000) or serve built client
+    app.get('/', (req, res) => {
+      if (fs.existsSync(path.join(distPath, 'index.html'))) {
+        return res.sendFile(path.join(distPath, 'index.html'));
+      }
+
+      if (req.accepts('html')) {
+        return res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="0; url=${CLIENT_URL}/">
+  <title>Maa Durga Engineering OS - Redirecting...</title>
+  <script>window.location.replace("${CLIENT_URL}/");</script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0b1329; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .card { background: #131f37; padding: 2.5rem; border-radius: 16px; border: 1px solid #1e293b; text-align: center; max-width: 520px; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5); }
+    h1 { font-size: 1.4rem; margin: 0 0 0.5rem; color: #38bdf8; }
+    p { color: #94a3b8; font-size: 0.95rem; line-height: 1.5; margin: 0 0 1.5rem; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: #2563eb; color: #fff; padding: 0.8rem 1.6rem; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
+    .btn:hover { background: #1d4ed8; }
+    .meta { font-size: 0.8rem; color: #64748b; margin-top: 1.25rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🚜 Maa Durga Engineering OS</h1>
+    <p>API Server is running on port ${PORT}.<br>Opening the interactive Web Application UI...</p>
+    <a href="${CLIENT_URL}/" class="btn">Open Web App (${CLIENT_URL})</a>
+    <div class="meta">If your browser doesn't automatically redirect, click the button above.</div>
+  </div>
+</body>
+</html>`);
+      }
+
+      res.json({
+        name: 'Maa Durga Engineering Dealership OS API',
+        status: 'online',
+        clientUrl: CLIENT_URL,
+        health: '/api/health'
+      });
+    });
+
+    // Non-API route fallback
+    app.use((req, res) => {
+      if (req.accepts('html') && !req.path.startsWith('/api')) {
+        return res.redirect(`${CLIENT_URL}${req.originalUrl}`);
+      }
+      res.status(404).json({ success: false, error: 'Endpoint not found', apiDocs: '/api/health' });
+    });
+
+    const serverInstance = app.listen(PORT, '127.0.0.1', () => {
+      console.log(`\n========================================================`);
+      console.log(`[Express Server] Maa Durga Engineering API: http://127.0.0.1:${PORT}`);
+      console.log(`[Express Server] ➜ Web Application UI:     ${CLIENT_URL}/`);
+      console.log(`========================================================\n`);
+    });
+    serverInstance.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`[Express Server] Port ${PORT} is already active, reusing existing API service.`);
+      } else {
+        console.error('[Express Server Error]', err);
+      }
     });
   } catch (err) {
     console.warn("[Server Notice] Express or CORS package not yet loaded, starting fallback HTTP API server...", err.message);
@@ -69,6 +139,12 @@ async function startFallbackHttpServer() {
 
     const url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = url.pathname;
+
+    if (pathname === '/' || (!pathname.startsWith('/api') && req.headers.accept?.includes('text/html'))) {
+      res.writeHead(302, { 'Location': `${CLIENT_URL}/` });
+      res.end();
+      return;
+    }
 
     const sendJson = (statusCode, data) => {
       res.writeHead(statusCode, { 'Content-Type': 'application/json' });

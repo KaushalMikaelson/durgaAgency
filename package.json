@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -p \"[{name}]\" -n \"SERVER,CLIENT\" -c \"yellow.bold,cyan.bold\" \"node server/server.js\" \"vite\"",
+    "start": "node server.js",
     "client": "vite",
     "server": "node server/server.js",
     "build": "vite build",
