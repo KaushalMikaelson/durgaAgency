@@ -8,13 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = 3000;
 
-// Automatically sync the standalone offline UI to index.html
-const commitFile = path.join(__dirname, 'index.commit_20b36fe.html');
-const indexFile = path.join(__dirname, 'index.html');
-if (fs.existsSync(commitFile)) {
-  fs.copyFileSync(commitFile, indexFile);
-  console.log('[Showroom OS] Standalone UI restored to index.html');
-}
+// Static server for local development & review
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -30,8 +24,8 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
   let reqPath = req.url.split('?')[0];
-  if (reqPath === '/' || reqPath === '' || reqPath === '/index.html') {
-    reqPath = fs.existsSync(commitFile) ? '/index.commit_20b36fe.html' : '/index.html';
+  if (reqPath === '/' || reqPath === '') {
+    reqPath = '/index.html';
   }
 
   const filePath = path.join(__dirname, reqPath);

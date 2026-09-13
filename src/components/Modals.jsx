@@ -521,6 +521,110 @@ export function Modals() {
         </div>
       </div>
 
+      {/* Modal 5B: Create New Bill (Maa Durga Diesel) */}
+      <div className="modal-backdrop" id="newBillModal">
+        <div className="modal-box large" style={{ maxWidth: '860px' }}>
+          <div className="modal-header">
+            <div>
+              <h3 style={{ margin: 0 }}>माँ दुर्गा डीजल - नया बिल / पर्ची बनाएं (New Bill)</h3>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                Maa Durga Diesel Estimate & Cash Memo • डीलर बिल बुक रिकॉर्ड
+              </div>
+            </div>
+            <button className="modal-close-btn">&times;</button>
+          </div>
+          <form id="newBillForm">
+            <div className="modal-body">
+              <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                <div className="form-group">
+                  <label className="form-label">बिल नंबर (Bill No.) *</label>
+                  <input type="text" id="nbBillNo" className="form-input" required />
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} id="nbBillNoHint">Auto-incremented</span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">दिनांक (Date) *</label>
+                  <input type="date" id="nbDate" className="form-input" required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">मोबाइल नंबर (Mobile)</label>
+                  <input type="tel" id="nbPhone" className="form-input" placeholder="9839123456" />
+                </div>
+              </div>
+
+              <div className="form-grid" style={{ gridTemplateColumns: '1.2fr 1fr 1fr' }}>
+                <div className="form-group">
+                  <label className="form-label">मेसर्स / ग्राहक का नाम (Customer Name) *</label>
+                  <input type="text" id="nbCustomer" className="form-input" placeholder="e.g. Ramesh Chandra Verma" required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">पता / गाँव (Address / Village)</label>
+                  <input type="text" id="nbAddress" className="form-input" placeholder="e.g. Kalyanpur, Gorakhpur" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">वाहन / ट्रैक्टर नं० (Vehicle / Tractor No.)</label>
+                  <input type="text" id="nbVehicle" className="form-input" placeholder="e.g. UP-53-AZ-1234" />
+                </div>
+              </div>
+
+              {/* Quick Presets */}
+              <div style={{ margin: '14px 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                <label className="form-label" style={{ margin: 0, fontWeight: 800 }}>विवरण व मदें (Items & Particulars):</label>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center' }}>+ Quick Add:</span>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल (हाई स्पीड डीजल - 40 Ltr)', '40 L', 3760, 0)}>+ 40L Diesel</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('इंजन ऑयल Mobil Delvac 15W-40', '1 Can', 2450, 0)}>+ Mobil Oil</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल फिल्टर किट (Bosch)', '2 Pc', 680, 0)}>+ Fuel Filter</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('सर्विस व लेबर चार्ज', '1 Set', 500, 0)}>+ Service</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-primary" onClick={() => window.app?.addBillItemRow()}>+ Add Row</button>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="table-responsive" style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                <table className="data-table" style={{ margin: 0, fontSize: '12.5px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '80px' }}>संख्या (Qty)</th>
+                      <th>विवरण (Description)</th>
+                      <th style={{ width: '120px', textAlign: 'right' }}>रू० (Rupees)</th>
+                      <th style={{ width: '70px', textAlign: 'center' }}>पै० (Paise)</th>
+                      <th style={{ width: '40px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody id="nbItemsBody">
+                    {/* Dynamically populated by JS */}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Summary & Words */}
+              <div style={{ marginTop: '14px', padding: '12px', background: 'var(--bg-main)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>राशि शब्दों में (Amount in Words):</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }} id="nbWordsPreview">Zero Rupees Only</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>कुल राशि (Total Amount):</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a8a', fontFamily: 'monospace, sans-serif' }}>
+                    <span id="nbTotalRupeesDisplay">₹0</span><span id="nbTotalPaiseDisplay" style={{ fontSize: '15px', color: 'var(--text-muted)' }}>.00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="quick-action-btn btn-outline modal-close-btn">Cancel</button>
+              <button type="button" className="quick-action-btn btn-outline" id="nbPreviewOnlyBtn" style={{ borderColor: '#2563eb', color: '#2563eb' }}>
+                🖨️ Preview on Bill Sheet
+              </button>
+              <button type="submit" className="quick-action-btn btn-primary" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)' }}>
+                💾 Save & Print Bill
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       {/* Modal 6: Printable Quotation Sheet Preview */}
       <div className="modal-backdrop" id="quotePrintPreviewModal">
         <div className="modal-box large">

@@ -37,6 +37,20 @@ export function Topbar() {
         <button className="quick-action-btn btn-outline" onClick={() => window.app?.openBackupModal()}>
           💾 Backup
         </button>
+        <button
+          className="quick-action-btn btn-primary"
+          style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)', border: 'none', color: '#fff' }}
+          onClick={() => window.app?.openNewBillModal()}
+          title="Create Maa Durga Diesel Estimate / Cash Memo"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" />
+            <path d="M14 8H8" />
+            <path d="M16 12H8" />
+            <path d="M13 16H8" />
+          </svg>
+          <span>+ Bill</span>
+        </button>
         <button className="quick-action-btn btn-primary" onClick={() => window.app?.openNewLeadModal()}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="12" x2="12" y1="5" y2="19" />

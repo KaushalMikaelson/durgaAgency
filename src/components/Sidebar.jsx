@@ -26,15 +26,15 @@ export function Sidebar() {
           </button>
         </li>
         <li>
-          <button className="nav-item-btn" data-tab="recommend">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"/></svg>
-            <span>Recommendation</span>
-          </button>
-        </li>
-        <li>
           <button className="nav-item-btn" data-tab="inventory">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m10 11 11 .9a1 1 0 0 1 .8 1.1l-.66 5a1 1 0 0 1-1 .9H16"/><path d="M16 18h-5"/><path d="M7 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/><path d="M19 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/><path d="M7 11V4h7v7"/></svg>
             <span>Inventory & Margins</span>
+          </button>
+        </li>
+        <li>
+          <button className="nav-item-btn" data-tab="billing">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z"/><path d="M14 8H8"/><path d="M16 12H8"/><path d="M13 16H8"/></svg>
+            <span>Billing & Bills</span>
           </button>
         </li>
         <li>
