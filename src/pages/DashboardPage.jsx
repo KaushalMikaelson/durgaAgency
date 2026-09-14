@@ -4,6 +4,7 @@ import { useDealership } from '../context/DealershipContext.jsx';
 import { StatCard } from '../components/common/StatCard.jsx';
 import { motion } from '../utils/motion.jsx';
 import { Receipt, Users, Tractor, Wallet, Plus, Printer, Phone, ArrowRight } from 'lucide-react';
+import { formatToDMY } from '../utils/dateUtils.js';
 
 export function DashboardPage() {
   const { bills, leads, tractors, financialSnapshot, openModal, setActiveTab } = useDealership();
@@ -124,7 +125,7 @@ export function DashboardPage() {
                   {recentBills.map((b) => (
                     <tr key={b.id || b.billNumber}>
                       <td><span className="badge-bill">#{b.billNumber}</span></td>
-                      <td>{b.date}</td>
+                      <td><span className="font-mono">{formatToDMY(b.date)}</span></td>
                       <td><strong>{b.customerName}</strong></td>
                       <td className="font-mono font-bold">₹{Number(b.totalRupees || 0).toLocaleString('en-IN')}</td>
                       <td>

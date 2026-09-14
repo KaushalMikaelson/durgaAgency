@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useDealership } from '../context/DealershipContext.jsx';
 import { Receipt, Printer, Edit, Trash2, Plus, Search } from 'lucide-react';
+import { formatToDMY } from '../utils/dateUtils.js';
 
 export function BillingPage() {
   const { bills, openModal, deleteBill } = useDealership();
@@ -94,7 +95,7 @@ export function BillingPage() {
                     <td>
                       <span className="badge-bill-large">#{bill.billNumber}</span>
                     </td>
-                    <td>{bill.date}</td>
+                    <td><span className="font-mono">{formatToDMY(bill.date)}</span></td>
                     <td>
                       <div className="cust-cell">
                         <strong>{bill.customerName}</strong>

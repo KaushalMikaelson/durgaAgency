@@ -99,7 +99,7 @@ export function DealershipProvider({ children }) {
   const deleteBill = async (id) => {
     try {
       await api.bills.delete(id);
-      setBills(prev => prev.filter(b => b.id !== id && String(b.billNumber) !== id));
+      setBills(prev => prev.filter(b => String(b.id) !== String(id) && String(b.billNumber) !== String(id)));
       showToast('बिल हटा दिया गया', 'info', 'बिल हटाया गया');
       refreshAll();
     } catch (e) {

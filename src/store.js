@@ -9,6 +9,7 @@ import {
   DEFAULT_QUOTES,
   DEFAULT_BILLS
 } from './data.js';
+import { formatToDMY } from './utils/dateUtils.js';
 
 const STORAGE_KEYS = {
   TRACTORS: 'mde_tractors_prod_v3',
@@ -175,7 +176,7 @@ class DealershipStore {
         if (cleaned.length !== stored.length) {
           localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(cleaned));
         }
-        return cleaned;
+        return cleaned.map(b => ({ ...b, date: formatToDMY(b.date) }));
       }
       return [];
     } catch {
@@ -368,7 +369,7 @@ class DealershipStore {
     const newBill = {
       id: billData.id || `BILL-${Date.now()}`,
       billNumber: String(billNumber),
-      date: billData.date || new Date().toISOString().split('T')[0],
+      date: formatToDMY(billData.date || new Date()),
       customerName: billData.customerName || 'मेसर्स ग्राहक',
       address: billData.address || '',
       phone: billData.phone || '',
@@ -379,6 +380,7 @@ class DealershipStore {
       amountWords: billData.amountWords || '',
       ...billData
     };
+    newBill.date = formatToDMY(newBill.date);
     const existingIndex = bills.findIndex(b => (newBill.id && b.id === newBill.id) || String(b.billNumber) === String(billNumber));
     if (existingIndex >= 0) {
       bills[existingIndex] = { ...bills[existingIndex], ...newBill };
@@ -391,8 +393,15 @@ class DealershipStore {
   }
 
   deleteBill(billId) {
+    if (!billId) return;
+    const target = String(billId).trim();
     let bills = this.getBills();
-    bills = bills.filter(b => b.id !== billId && b.billNumber !== billId);
+    bills = bills.filter(b => {
+      if (!b) return false;
+      const bId = b.id ? String(b.id).trim() : '';
+      const bNo = (b.billNumber !== undefined && b.billNumber !== null) ? String(b.billNumber).trim() : '';
+      return bId !== target && bNo !== target;
+    });
     localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
     this.notify();
   }

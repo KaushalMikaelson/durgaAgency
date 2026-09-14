@@ -120,11 +120,42 @@ export function getChakraSvg() {
   </svg>`;
 }
 
+export function formatToDMY(dateInput) {
+  if (!dateInput) return '';
+  const str = String(dateInput).trim();
+  if (!str) return '';
+  if (/^\d{2}-\d{2}-\d{4}$/.test(str)) return str;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str.replace(/\//g, '-');
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str)) {
+    const [y, m, d] = str.split('T')[0].split(/[-/]/);
+    return `${String(d).padStart(2, '0')}-${String(m).padStart(2, '0')}-${y}`;
+  }
+  const dateObj = new Date(str);
+  if (!isNaN(dateObj.getTime())) {
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const year = dateObj.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+  return str;
+}
+
+export function toIsoDate(dmyOrIso) {
+  if (!dmyOrIso) return new Date().toISOString().split('T')[0];
+  const str = String(dmyOrIso).trim();
+  if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(str)) {
+    const [d, m, y] = str.split(/[-/]/);
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+  return str.split('T')[0];
+}
+
 export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false) {
   const nextAutoNo = (typeof store !== 'undefined' && store.getNextBillNumber) ? store.getNextBillNumber() : '87';
   const b = bill || {};
   const billNumber = b.billNumber || nextAutoNo;
-  const dateStr = b.date || new Date().toISOString().split('T')[0];
+  const rawDate = b.date || new Date().toISOString().split('T')[0];
+  const dateStr = isPureBlank ? '' : formatToDMY(rawDate);
 
   const items = b.items || [];
   let rowsHtml = '';
@@ -301,7 +332,7 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
         <div class="mdd-date-field">
           <span>दिनांक :</span>
           ${isLive ? `
-            <input type="date" class="mdd-sheet-input" id="mddLiveDate" value="${dateStr}" style="width:130px; text-align:center; font-size:13px; font-weight:700;" />
+            <input type="text" class="mdd-sheet-input" id="mddLiveDate" value="${dateStr}" placeholder="DD-MM-YYYY" style="width:130px; text-align:center; font-size:14px; font-weight:700; border-bottom:1.5px dotted #000000 !important;" />
           ` : `
             <span class="mdd-dots-line" style="min-width:130px; text-align:center;">${dateStr}</span>
           `}
@@ -1440,7 +1471,7 @@ class TractorOSApp {
                 return `
                   <tr>
                     <td><strong style="color:var(--primary); font-size:14px;">No. ${item.billNumber}</strong></td>
-                    <td>${item.date}</td>
+                    <td><span style="font-weight:700; font-family:monospace, sans-serif; font-size:13px; color:#1e293b;">${formatToDMY(item.date)}</span></td>
                     <td>
                       <strong>${item.customerName || 'मेसर्स ग्राहक'}</strong><br>
                       ${item.vehicle ? `<span style="font-size:11.5px; font-weight:700; color:var(--primary);">🚜 ${item.vehicle}</span> • ` : ''}
@@ -1457,15 +1488,15 @@ class TractorOSApp {
                       <strong style="font-size:14px; color:#1e3a8a; font-family:monospace, sans-serif;">₹${(Number(item.totalRupees) || 0).toLocaleString('en-IN')}${item.totalPaise ? '.' + String(item.totalPaise).padStart(2, '0') : ''}</strong>
                     </td>
                     <td style="text-align:right;">
-                      <div style="display:inline-flex; gap:6px;">
+                      <div style="display:inline-flex; gap:6px; align-items:center;">
                         <button class="quick-action-btn btn-xs btn-outline edit-bill-btn" data-bill-id="${item.id || item.billNumber}" onclick="window.app.editBill('${item.id || item.billNumber}')" title="Edit this bill details & bill number">
                           ${renderIcon('edit')} Edit
                         </button>
                         <button class="quick-action-btn btn-xs btn-primary print-bill-btn" data-bill-id="${item.id || item.billNumber}" onclick="window.app.openBillPreviewById('${item.id || item.billNumber}')" title="Print / View in authentic bill book format">
                           ${renderIcon('print')} Print
                         </button>
-                        <button class="quick-action-btn btn-xs btn-outline delete-bill-btn" data-bill-id="${item.id}" title="Delete this bill" style="color:var(--danger);">
-                          &times;
+                        <button class="quick-action-btn btn-xs btn-outline delete-bill-btn" data-bill-id="${item.id || item.billNumber}" onclick="window.app.deleteBill('${item.id || item.billNumber}')" title="Delete this bill" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4); font-weight:700;">
+                          🗑️ Delete
                         </button>
                       </div>
                     </td>
@@ -1494,6 +1525,30 @@ class TractorOSApp {
     }
   }
 
+  deleteBill(billIdentifier) {
+    if (!billIdentifier) return;
+    const target = String(billIdentifier).trim();
+    const bills = store.getBills ? store.getBills() : [];
+    const bill = bills.find(b => b && (
+      (b.id && String(b.id).trim() === target) ||
+      (b.billNumber !== undefined && b.billNumber !== null && String(b.billNumber).trim() === target)
+    ));
+
+    const billDisplayNo = bill?.billNumber || target;
+    const customerDisplay = bill?.customerName ? ` (${bill.customerName})` : '';
+
+    if (window.confirm(`क्या आप बिल क्र. #${billDisplayNo}${customerDisplay} को हमेशा के लिए हटाना चाहते हैं?\nAre you sure you want to delete Bill #${billDisplayNo}${customerDisplay}?`)) {
+      store.deleteBill(target);
+      if (typeof api !== 'undefined' && api.bills && api.bills.delete) {
+        api.bills.delete(target).catch(() => {});
+      }
+      if (typeof showToast === 'function') {
+        showToast(`बिल क्र. #${billDisplayNo} सफलतापूर्वक हटाया गया / Bill #${billDisplayNo} deleted`, 'info', 'Bill Deleted');
+      }
+      this.renderCurrentView();
+    }
+  }
+
   bindBillingEvents() {
     const newBillBtn = document.getElementById('openNewBillBtn');
     if (newBillBtn) newBillBtn.onclick = () => this.openNewBillModal();
@@ -1510,20 +1565,20 @@ class TractorOSApp {
     });
 
     document.querySelectorAll('.print-bill-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         const billId = btn.dataset.billId;
-        const bill = store.getBills().find(b => b.id === billId || String(b.billNumber) === String(billId));
-        if (bill) this.openBillPreviewModal(bill, false);
-      });
+        this.openBillPreviewById(billId);
+      };
     });
 
     document.querySelectorAll('.delete-bill-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (confirm('Delete this bill?')) {
-          store.deleteBill(btn.dataset.billId);
-          this.renderCurrentView();
-        }
-      });
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.deleteBill(btn.dataset.billId);
+      };
     });
   }
 
@@ -2639,7 +2694,7 @@ class TractorOSApp {
     }
 
     const dateInput = document.getElementById('nbDate');
-    if (dateInput) dateInput.value = prefill?.date || new Date().toISOString().split('T')[0];
+    if (dateInput) dateInput.value = toIsoDate(prefill?.date);
 
     const custInput = document.getElementById('nbCustomer');
     if (custInput) custInput.value = prefill?.customerName || '';
@@ -2691,7 +2746,8 @@ class TractorOSApp {
   gatherBillFormData() {
     const nextNo = store.getNextBillNumber();
     const billNumber = document.getElementById('nbBillNo')?.value.trim() || nextNo;
-    const date = document.getElementById('nbDate')?.value || new Date().toISOString().split('T')[0];
+    const rawDate = document.getElementById('nbDate')?.value || new Date().toISOString().split('T')[0];
+    const date = formatToDMY(rawDate);
     const customerName = document.getElementById('nbCustomer')?.value.trim() || 'मेसर्स ग्राहक';
     const address = document.getElementById('nbAddress')?.value.trim() || '';
     const phone = document.getElementById('nbPhone')?.value.trim() || '';
@@ -3034,7 +3090,7 @@ class TractorOSApp {
     if (custInput) bill.customerName = custInput.value.trim() || 'मेसर्स ग्राहक';
     if (addrInput) bill.address = addrInput.value.trim() || '';
     if (vehInput) bill.vehicle = vehInput.value.trim() || '';
-    if (dateInput) bill.date = dateInput.value || new Date().toISOString().split('T')[0];
+    if (dateInput) bill.date = formatToDMY(dateInput.value) || formatToDMY(new Date());
 
     const rows = document.querySelectorAll('#printableMddBill .mdd-live-row');
     const items = [];
@@ -3086,7 +3142,7 @@ class TractorOSApp {
         const dateInput = document.getElementById('mddLiveDate');
         if (custInput) bill.customerName = custInput.value.trim() || 'मेसर्स ग्राहक';
         if (addrInput) bill.address = addrInput.value.trim() || '';
-        if (dateInput) bill.date = dateInput.value || new Date().toISOString().split('T')[0];
+        if (dateInput) bill.date = formatToDMY(dateInput.value) || formatToDMY(new Date());
         bill.totalRupees = totalR;
         bill.totalPaise = totalP;
         bill.amountWords = numberToIndianWords(totalR);

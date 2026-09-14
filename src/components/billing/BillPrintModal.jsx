@@ -2,6 +2,7 @@
 import React from 'react';
 import { Printer, X } from 'lucide-react';
 import { numberToHindiWords } from '../../utils/numberToWords.js';
+import { formatToDMY } from '../../utils/dateUtils.js';
 
 export function BillPrintModal({ bill, onClose }) {
   if (!bill) return null;
@@ -40,7 +41,7 @@ export function BillPrintModal({ bill, onClose }) {
               </div>
               <div className="meta-field flex-1 text-right">
                 <span className="meta-lbl">Date / दिनांक:</span>
-                <span className="dotted-val bold-red">{bill.date}</span>
+                <span className="dotted-val bold-red">{formatToDMY(bill.date)}</span>
               </div>
             </div>
 
