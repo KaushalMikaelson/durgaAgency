@@ -565,7 +565,7 @@
         amountWords: billData.amountWords || '',
         ...billData
       };
-      const existingIndex = bills.findIndex(b => String(b.billNumber) === String(billNumber) || (b.id && b.id === newBill.id));
+      const existingIndex = bills.findIndex(b => (newBill.id && b.id === newBill.id) || String(b.billNumber) === String(billNumber));
       if (existingIndex >= 0) {
         bills[existingIndex] = { ...bills[existingIndex], ...newBill };
       } else {
@@ -1090,38 +1090,11 @@
   }
 
   function getMaaDurgaSvg() {
-    return `<svg viewBox="0 0 120 120" width="76" height="76" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="60" cy="60" r="56" fill="#ffffff" stroke="#000000" stroke-width="2.5"/>
-      <circle cx="60" cy="60" r="51" fill="none" stroke="#000000" stroke-width="1" stroke-dasharray="2.5,2.5"/>
-      <path d="M60 12 L60 22 M40 18 L46 26 M80 18 L74 26 M25 32 L33 37 M95 32 L87 37 M18 50 L27 52 M102 50 L93 52" stroke="#000000" stroke-width="1.5" stroke-linecap="round"/>
-      <path d="M36 50 C36 34, 48 24, 60 20 C72 24, 84 34, 84 50 Z" fill="#ffffff" stroke="#000000" stroke-width="2"/>
-      <path d="M42 46 C48 36, 54 30, 60 28 C66 30, 72 36, 78 46" fill="none" stroke="#000000" stroke-width="1.5"/>
-      <path d="M60 14 L60 24 M56 18 C58 16, 62 16, 64 18" stroke="#000000" stroke-width="2" stroke-linecap="round"/>
-      <circle cx="60" cy="34" r="3.5" fill="#000000"/>
-      <circle cx="50" cy="40" r="2.5" fill="#000000"/>
-      <circle cx="70" cy="40" r="2.5" fill="#000000"/>
-      <path d="M34 50 L86 50" stroke="#000000" stroke-width="2.5"/>
-      <path d="M38 52 C38 76, 48 88, 60 92 C72 88, 82 76, 82 52" fill="#ffffff" stroke="#000000" stroke-width="2"/>
-      <path d="M60 52 C58 55, 58 58, 60 61 C62 58, 62 55, 60 52 Z" fill="#b91c1c" stroke="#b91c1c" stroke-width="0.5"/>
-      <circle cx="60" cy="67" r="2.2" fill="#b91c1c"/>
-      <path d="M44 64 C48 61, 53 61, 56 63" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round"/>
-      <path d="M76 64 C72 61, 67 61, 64 63" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round"/>
-      <path d="M43 68 C47 64, 52 64, 56 68 C52 72, 47 72, 43 68 Z" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
-      <circle cx="49.5" cy="68" r="2.2" fill="#000000"/>
-      <path d="M77 68 C73 64, 68 64, 64 68 C68 72, 73 72, 77 68 Z" fill="#ffffff" stroke="#000000" stroke-width="1.6"/>
-      <circle cx="70.5" cy="68" r="2.2" fill="#000000"/>
-      <path d="M60 65 L60 76 L62 76" fill="none" stroke="#000000" stroke-width="1.5" stroke-linecap="round"/>
-      <circle cx="56.5" cy="77" r="3.2" fill="none" stroke="#000000" stroke-width="1.2"/>
-      <path d="M53.5 77 C48 78, 43 75, 40 70" fill="none" stroke="#000000" stroke-width="0.8" stroke-dasharray="1,1"/>
-      <path d="M53 82 C56 81, 64 81, 67 82 C64 86, 56 86, 53 82 Z" fill="#b91c1c" stroke="#000000" stroke-width="1"/>
-      <line x1="53" y1="82" x2="67" y2="82" stroke="#000000" stroke-width="0.8"/>
-      <circle cx="34" cy="64" r="3" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
-      <circle cx="86" cy="64" r="3" fill="#ffffff" stroke="#000000" stroke-width="1.5"/>
-    </svg>`;
+    return `<img src="/durga-maa-logo.jpg" alt="Maa Durga Logo" class="mdd-durga-logo" style="width:100%; height:100%; object-fit:contain; display:block;" onerror="this.onerror=null; this.src='/data/durga%20maa%20logo.jpg';" />`;
   }
 
   function getChakraSvg() {
-    return `<svg viewBox="0 0 100 100" width="76" height="76" xmlns="http://www.w3.org/2000/svg">
+    return `<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
       <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#000000" stroke-width="3"/>
       <circle cx="50" cy="50" r="42" fill="none" stroke="#000000" stroke-width="1"/>
       <circle cx="50" cy="50" r="7" fill="#000000"/>
@@ -1144,13 +1117,20 @@
       if (items.length > 0) {
         items.forEach((item, idx) => {
           const p = item.paise !== undefined && item.paise !== null && item.paise !== '' ? String(item.paise).padStart(2, '0') : '00';
+          const serialNo = idx + 1;
           rowsHtml += `
             <tr class="mdd-live-row">
-              <td style="width:75px; text-align:center; padding:4px 6px;">
-                <input type="text" class="mdd-sheet-table-input mdd-live-qty" value="${item.qty || ''}" placeholder="${idx + 1}" style="text-align:center; font-weight:700;" title="मात्रा / Quantity" />
+              <td style="width:75px; text-align:center; font-weight:800; font-size:15px; color:#334155; padding:6px 4px;">
+                ${serialNo}
               </td>
               <td style="padding:4px 8px;">
-                <input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${item.desc || ''}" placeholder="विवरण (Item / Service / Diesel)" style="font-weight:600;" />
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                  <input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${item.desc || ''}" placeholder="विवरण (Item / Service / Diesel)" style="font-weight:600; flex:1;" />
+                  <div style="display:flex; align-items:center; gap:2px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:1px 6px;" title="मात्रा / Quantity">
+                    <span style="font-size:12px; font-weight:800; color:#64748b;">x</span>
+                    <input type="number" class="mdd-sheet-table-input mdd-live-qty" value="${item.qty || ''}" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13.5px; color:#1e3a8a;" />
+                  </div>
+                </div>
               </td>
               <td style="width:100px; text-align:right; padding:4px 8px;">
                 <input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${item.rupees !== undefined ? item.rupees : ''}" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" />
@@ -1164,11 +1144,17 @@
       } else {
         rowsHtml += `
           <tr class="mdd-live-row">
-            <td style="width:75px; text-align:center; padding:4px 6px;">
-              <input type="text" class="mdd-sheet-table-input mdd-live-qty" placeholder="1" style="text-align:center; font-weight:700;" />
+            <td style="width:75px; text-align:center; font-weight:800; font-size:15px; color:#334155; padding:6px 4px;">
+              1
             </td>
             <td style="padding:4px 8px;">
-              <input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)..." style="font-weight:600;" />
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)..." style="font-weight:600; flex:1;" />
+                <div style="display:flex; align-items:center; gap:2px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:1px 6px;" title="मात्रा / Quantity">
+                  <span style="font-size:12px; font-weight:800; color:#64748b;">x</span>
+                  <input type="number" class="mdd-sheet-table-input mdd-live-qty" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13.5px; color:#1e3a8a;" />
+                </div>
+              </div>
             </td>
             <td style="width:100px; text-align:right; padding:4px 8px;">
               <input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" />
@@ -1202,14 +1188,41 @@
       // Official / Print view: render only entered items, then open plain sheet below to Total
       items.forEach((item, idx) => {
         const p = item.paise !== undefined && item.paise !== null && item.paise !== '' ? String(item.paise).padStart(2, '0') : '00';
-        const unitSuffix = item.unit && item.unit !== 'None' ? ` ${item.unit}` : '';
-        const qtyDisplay = (item.qty !== undefined && item.qty !== null && item.qty !== '') ? `${item.qty}${unitSuffix}` : `${idx + 1}`;
-        const rateNote = (item.rate && Number(item.rate) > 0) ? ` <span style="font-size:12.5px; color:#475569; font-weight:500;">(@ ₹${Number(item.rate).toLocaleString('en-IN')}${unitSuffix ? '/' + item.unit : ''})</span>` : '';
+        const serialNo = idx + 1;
+        
+        const isCount = !item.unit || item.unit === 'None' || item.unit === 'Pcs' || item.unit === 'Nos';
+        const unitSuffix = isCount ? '' : ` ${item.unit}`;
+        
+        let qtyTag = '';
+        if (item.qty !== undefined && item.qty !== null && String(item.qty).trim() !== '') {
+          const rawQty = String(item.qty).trim();
+          const cleanQty = rawQty.replace(/^x\s*/i, '');
+          qtyTag = `x${cleanQty}${unitSuffix}`;
+        }
+
+        const rateNote = (item.rate && Number(item.rate) > 0)
+          ? ` <span style="font-size:12px; color:#475569; font-weight:500;">(@ ₹${Number(item.rate).toLocaleString('en-IN')}${isCount ? '' : '/' + item.unit})</span>`
+          : '';
+
+        let rowRupees = item.rupees;
+        if ((rowRupees === undefined || rowRupees === null || rowRupees === '' || rowRupees === 0) && item.qty && item.rate) {
+          const qVal = parseFloat(item.qty);
+          const rVal = parseFloat(item.rate);
+          if (!isNaN(qVal) && !isNaN(rVal) && qVal > 0 && rVal > 0) {
+            rowRupees = Math.round(qVal * rVal);
+          }
+        }
+
         rowsHtml += `
           <tr class="mdd-item-row">
-            <td style="width:75px; text-align:center; font-weight:700; font-size:14.5px;">${qtyDisplay}</td>
-            <td style="font-weight:600; font-size:14.5px;">${item.desc || ''}${rateNote}</td>
-            <td style="width:100px; text-align:right; font-weight:800; font-family:monospace, sans-serif; font-size:16px;">${item.rupees ? Number(item.rupees).toLocaleString('en-IN') : '-'}</td>
+            <td style="width:75px; text-align:center; font-weight:800; font-size:15px;">${serialNo}</td>
+            <td style="font-weight:600; font-size:14.5px; padding:7px 12px;">
+              <div class="mdd-item-row-content" style="display:flex; justify-content:space-between; align-items:baseline; width:100%;">
+                <span class="mdd-item-desc">${item.desc || ''}${rateNote}</span>
+                ${qtyTag ? `<span class="mdd-item-qty-tag" style="font-weight:800; font-family:monospace, sans-serif; font-size:14px; color:#0f172a; margin-left:14px; white-space:nowrap; letter-spacing:0.5px;">${qtyTag}</span>` : ''}
+              </div>
+            </td>
+            <td style="width:100px; text-align:right; font-weight:800; font-family:monospace, sans-serif; font-size:16px;">${rowRupees ? Number(rowRupees).toLocaleString('en-IN') : '-'}</td>
             <td style="width:50px; text-align:center; font-family:monospace, sans-serif; font-size:14px;">${p}</td>
           </tr>
         `;
@@ -1238,7 +1251,7 @@
           <div class="mdd-top-phone">Mob.: ${b.phone || '9931227178'}</div>
         </div>
 
-        <!-- Header: Durga Logo | Center Shop Name & Address | Chakra Logo -->
+        <!-- Header: Durga Logo (Left) | Center Shop Name & Address | Chakra Logo (Right) -->
         <div class="mdd-header-main">
           <div class="mdd-emblem-left">
             ${getMaaDurgaSvg()}
@@ -1259,8 +1272,15 @@
         <div class="mdd-meta-grid">
           <div class="mdd-bill-no-label">
             <span>नं० :</span>
-            <span class="mdd-bill-no-val" id="mddLiveBillNoVal">${billNumber}</span>
-            <span class="badge badge-success no-print" style="font-size:10px; margin-left:6px; padding:2px 6px;">⚡ Auto</span>
+            ${isLive ? `
+              <input type="text" class="mdd-sheet-input mdd-bill-no-val" id="mddLiveBillNo" value="${billNumber}" title="बिल नंबर बदलें / Edit Bill Number" style="width:105px; font-size:22px; font-weight:900; font-family:monospace, sans-serif; color:#000000; letter-spacing:1px; border-bottom:1.5px dotted #000000 !important;" />
+              <span class="badge badge-success no-print" style="font-size:10px; margin-left:6px; padding:2px 6px;">✏️ Edit No.</span>
+            ` : `
+              <span class="mdd-bill-no-val" id="mddLiveBillNoVal">${billNumber}</span>
+              <button type="button" class="no-print" id="mddEditBillNoBtn" title="बिल नंबर बदलें / Edit Bill Number" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:4px; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer; margin-left:6px; display:inline-flex; align-items:center; gap:3px;">
+                ✏️ Edit #
+              </button>
+            `}
           </div>
           <div class="mdd-date-field">
             <span>दिनांक :</span>
@@ -1272,26 +1292,39 @@
           </div>
         </div>
 
-        <!-- Customer Row: M/s -->
+        <!-- Customer Row: M/s, Address & Vehicle No. -->
         <div class="mdd-customer-section">
           <div class="mdd-cust-row">
-            <span>मेसर्स</span>
+            <span style="font-weight:800; min-width:55px;">मेसर्स</span>
             ${isLive ? `
-              <input type="text" class="mdd-sheet-input" id="mddLiveCustomer" placeholder="ग्राहक का नाम / फर्म का नाम (e.g. Ramesh Chandra)..." value="${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}" style="font-size:15px; font-weight:800; color:#1e3a8a;" />
+              <input type="text" class="mdd-sheet-input" id="mddLiveCustomer" placeholder="ग्राहक का नाम / फर्म का नाम (e.g. Ramesh Chandra)..." value="${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}" style="font-size:15px; font-weight:800; color:#1e3a8a; flex:1;" />
             ` : (isPureBlank ? `
-              <span class="mdd-dots-line"></span>
+              <span class="mdd-dots-line" style="flex:1;"></span>
             ` : `
-              <span class="mdd-dots-line">${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}</span>
+              <span class="mdd-dots-line" style="flex:1;">${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}</span>
             `)}
           </div>
-          <div class="mdd-cust-row">
-            ${isLive ? `
-              <input type="text" class="mdd-sheet-input" id="mddLiveAddress" placeholder="पता / गांव व जिला / गाड़ी विवरण (e.g. Kalyanpur, Gorakhpur)..." value="${b.address || ''}" style="font-size:13px;" />
-            ` : (isPureBlank ? `
-              <span class="mdd-dots-line" style="width:100%;"></span>
-            ` : `
-              <span class="mdd-dots-line" style="width:100%;">${b.address || ''}</span>
-            `)}
+          <div class="mdd-cust-row mdd-cust-split">
+            <div class="mdd-cust-col" style="flex:1.4; display:flex; align-items:baseline; gap:6px;">
+              <span style="font-weight:700; white-space:nowrap;">पता :</span>
+              ${isLive ? `
+                <input type="text" class="mdd-sheet-input" id="mddLiveAddress" placeholder="पता / गांव व जिला (e.g. Kalyanpur, Gorakhpur)..." value="${b.address || ''}" style="font-size:13.5px; flex:1;" />
+              ` : (isPureBlank ? `
+                <span class="mdd-dots-line" style="flex:1;"></span>
+              ` : `
+                <span class="mdd-dots-line" style="flex:1;">${b.address || ''}</span>
+              `)}
+            </div>
+            <div class="mdd-cust-col" style="flex:1; display:flex; align-items:baseline; gap:6px;">
+              <span style="font-weight:700; white-space:nowrap;">गाड़ी नं० :</span>
+              ${isLive ? `
+                <input type="text" class="mdd-sheet-input" id="mddLiveVehicle" placeholder="गाड़ी / ट्रैक्टर नं० (e.g. UP-53-AZ-1234)..." value="${b.vehicle || ''}" style="font-size:13.5px; font-weight:800; flex:1;" />
+              ` : (isPureBlank ? `
+                <span class="mdd-dots-line" style="flex:1;"></span>
+              ` : `
+                <span class="mdd-dots-line" style="flex:1; font-weight:800; letter-spacing:0.5px;">${b.vehicle || ''}</span>
+              `)}
+            </div>
           </div>
         </div>
 
@@ -1408,7 +1441,8 @@
         if (modal._hasBoundModal) return;
         modal._hasBoundModal = true;
         modal.addEventListener('click', (e) => {
-          if (e.target === modal || e.target.closest('.modal-close-btn')) {
+          const closeBtn = e.target.closest('.modal-close-btn');
+          if (e.target === modal || (closeBtn && !closeBtn.closest('table, tbody, tr, td'))) {
             this.closeAllModals();
           }
         });
@@ -2318,6 +2352,7 @@
                       <td>${item.date}</td>
                       <td>
                         <strong>${item.customerName || 'मेसर्स ग्राहक'}</strong><br>
+                        ${item.vehicle ? `<span style="font-size:11.5px; font-weight:700; color:var(--primary);">🚜 ${item.vehicle}</span> • ` : ''}
                         <span style="font-size:11px; color:var(--text-muted);">${item.phone || ''}</span>
                       </td>
                       <td>
@@ -2332,6 +2367,9 @@
                       </td>
                       <td style="text-align:right;">
                         <div style="display:inline-flex; gap:6px;">
+                          <button class="quick-action-btn btn-xs btn-outline edit-bill-btn" data-bill-id="${item.id || item.billNumber}" onclick="window.app.editBill('${item.id || item.billNumber}')" title="Edit this bill details & bill number">
+                            ${renderIcon('edit')} Edit
+                          </button>
                           <button class="quick-action-btn btn-xs btn-primary print-bill-btn" data-bill-id="${item.id || item.billNumber}" onclick="window.app.openBillPreviewById('${item.id || item.billNumber}')" title="Print / View in authentic bill book format">
                             ${renderIcon('print')} Print
                           </button>
@@ -2357,12 +2395,28 @@
       this.openBillPreviewModal(bill || null, false);
     }
 
+    editBill(billId) {
+      const bills = store.getBills ? store.getBills() : [];
+      const bill = bills.find(b => b && (b.id === billId || String(b.id) === String(billId) || String(b.billNumber) === String(billId)));
+      if (bill) {
+        this.openNewBillModal(bill);
+      }
+    }
+
     bindBillingEvents() {
       const newBillBtn = document.getElementById('openNewBillBtn');
       if (newBillBtn) newBillBtn.onclick = () => this.openNewBillModal();
 
       const printBlankBtn = document.getElementById('printBlankBillBtn');
       if (printBlankBtn) printBlankBtn.onclick = () => this.openBillPreviewModal(null, true);
+
+      document.querySelectorAll('.edit-bill-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.editBill(btn.dataset.billId);
+        };
+      });
 
       document.querySelectorAll('.print-bill-btn').forEach(btn => {
         btn.onclick = (e) => {
@@ -2386,6 +2440,7 @@
     }
 
     openNewBillModal(prefill = null) {
+      this.editingBillId = prefill?.id || null;
       this.openModal('newBillModal');
       const nextNo = store.getNextBillNumber();
       const bills = store.getBills();
@@ -2395,7 +2450,17 @@
       if (billNoInput) billNoInput.value = prefill?.billNumber || nextNo;
 
       const hint = document.getElementById('nbBillNoHint');
-      if (hint) hint.textContent = `Auto-incremented based on previous bills (Prev: #${highestPrev})`;
+      if (hint) {
+        hint.innerHTML = `Auto-incremented (Prev: #${highestPrev}) • <a href="javascript:void(0)" id="nbResetAutoBtn" style="color:#2563eb; font-weight:700; text-decoration:underline;">Auto No (#${nextNo})</a>`;
+        const resetBtn = document.getElementById('nbResetAutoBtn');
+        if (resetBtn && billNoInput) {
+          resetBtn.onclick = (e) => {
+            e.preventDefault();
+            billNoInput.value = nextNo;
+            showToast(`Bill number reset to #${nextNo}`, 'info', 'Auto Number');
+          };
+        }
+      }
       
       const dateInput = document.getElementById('nbDate');
       if (dateInput) dateInput.value = prefill?.date || new Date().toISOString().split('T')[0];
@@ -2441,7 +2506,7 @@
           const newBill = store.addBill(billData);
 
           this.closeAllModals();
-          showToast(`Bill #${newBill.billNumber} for ${newBill.customerName} created!`, 'success', 'Bill Saved');
+          showToast(`Bill #${newBill.billNumber} for ${newBill.customerName} saved!`, 'success', 'Bill Saved');
           this.openBillPreviewModal(newBill, false, 'filled');
         };
       }
@@ -2475,6 +2540,7 @@
       const amountWords = numberToIndianWords(totalRupees);
 
       return {
+        id: this.editingBillId || undefined,
         billNumber,
         date,
         customerName,
@@ -2539,10 +2605,50 @@
           <input type="number" class="form-input nb-paise" style="padding:5px 4px; font-size:12.5px; text-align:center;" placeholder="00" min="0" max="99" value="${paiseVal}" />
         </td>
         <td style="text-align:center;">
-          <button type="button" class="modal-close-btn" style="color:var(--danger); font-size:16px;" onclick="this.closest('tr').remove(); window.app.reindexBillRows(); window.app.recalcBillForm();" title="Remove item">&times;</button>
+          <button type="button" class="nb-remove-row-btn" style="background:transparent; border:none; color:#ef4444; font-size:18px; font-weight:700; cursor:pointer; line-height:1; padding:2px 6px; border-radius:4px;" title="Remove item">&times;</button>
         </td>
       `;
       tbody.appendChild(tr);
+
+      const removeBtn = tr.querySelector('.nb-remove-row-btn');
+      if (removeBtn) {
+        removeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const allRows = tbody.querySelectorAll('tr');
+          if (allRows.length <= 1) {
+            tr.remove();
+            this.addBillItemRow('', '', 'Ltr', '', '', '');
+          } else {
+            tr.remove();
+          }
+          this.reindexBillRows();
+          this.recalcBillForm();
+        });
+      }
+
+      if (!tbody._hasBoundRowDelete) {
+        tbody._hasBoundRowDelete = true;
+        tbody.addEventListener('click', (e) => {
+          const btn = e.target.closest('.nb-remove-row-btn');
+          if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const targetTr = btn.closest('tr');
+            if (targetTr) {
+              const allRows = tbody.querySelectorAll('tr');
+              if (allRows.length <= 1) {
+                targetTr.remove();
+                this.addBillItemRow('', '', 'Ltr', '', '', '');
+              } else {
+                targetTr.remove();
+              }
+              this.reindexBillRows();
+              this.recalcBillForm();
+            }
+          }
+        });
+      }
 
       const qtyInput = tr.querySelector('.nb-qty');
       const unitSelect = tr.querySelector('.nb-unit');
@@ -2644,11 +2750,12 @@
             </div>
 
             <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-              <span class="badge badge-success" style="font-size:11px; padding:4px 9px;">
-                ⚡ Auto Bill No: ${currentBill.billNumber || nextAutoNo}
-              </span>
+              <div style="display:flex; align-items:center; gap:5px; background:#f8fafc; padding:3px 8px; border-radius:6px; border:1px solid #cbd5e1;" title="Type to change Bill Number">
+                <span style="font-size:11.5px; font-weight:800; color:#334155;">नं० (Bill #):</span>
+                <input type="text" id="tsbBillNoInput" value="${currentBill.billNumber || nextAutoNo}" style="width:75px; font-size:13.5px; font-weight:900; font-family:monospace, sans-serif; padding:2px 6px; border:1px solid #94a3b8; border-radius:4px; text-align:center; color:#1e3a8a; background:#ffffff;" placeholder="No." />
+              </div>
               <button class="quick-action-btn btn-sm btn-primary" id="tsbSaveBillBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
-                💾 Save Bill to System
+                💾 Save Bill
               </button>
               <button class="quick-action-btn btn-sm btn-outline" id="tsbPrintBillBtn" style="background:#ffffff; color:#1e3a8a; border-color:#2563eb; font-weight:700;">
                 🖨️ Print Official Bill
@@ -2665,6 +2772,45 @@
         const filledBtn = document.getElementById('tsbFilledBtn');
         const saveBillBtn = document.getElementById('tsbSaveBillBtn');
         const printBtn = document.getElementById('tsbPrintBillBtn');
+        const tsbBillNoInput = document.getElementById('tsbBillNoInput');
+
+        if (tsbBillNoInput) {
+          tsbBillNoInput.oninput = () => {
+            const val = tsbBillNoInput.value.trim();
+            if (val) {
+              currentBill.billNumber = val;
+              const liveVal = document.getElementById('mddLiveBillNoVal');
+              if (liveVal) liveVal.textContent = val;
+              const liveInp = document.getElementById('mddLiveBillNo');
+              if (liveInp) liveInp.value = val;
+            }
+          };
+        }
+
+        const editNoBtn = document.getElementById('mddEditBillNoBtn');
+        if (editNoBtn) {
+          editNoBtn.onclick = () => {
+            const currentVal = currentBill.billNumber || nextAutoNo;
+            const newVal = prompt('बिल नंबर बदलें (Enter custom Bill Number):', currentVal);
+            if (newVal !== null && newVal.trim() !== '') {
+              currentBill.billNumber = newVal.trim();
+              if (tsbBillNoInput) tsbBillNoInput.value = currentBill.billNumber;
+              renderView(activeMode);
+              showToast(`Bill number changed to #${currentBill.billNumber}`, 'info', 'Bill No. Updated');
+            }
+          };
+        }
+
+        const liveNoInput = document.getElementById('mddLiveBillNo');
+        if (liveNoInput) {
+          liveNoInput.oninput = () => {
+            const val = liveNoInput.value.trim();
+            if (val) {
+              currentBill.billNumber = val;
+              if (tsbBillNoInput) tsbBillNoInput.value = val;
+            }
+          };
+        }
 
         if (liveBtn) liveBtn.onclick = () => renderView('live');
         if (blankBtn) blankBtn.onclick = () => renderView('pure_blank');
@@ -2703,11 +2849,15 @@
     }
 
     syncLiveSheetDataToCurrent(bill) {
+      const billNoInput = document.getElementById('mddLiveBillNo') || document.getElementById('tsbBillNoInput');
       const custInput = document.getElementById('mddLiveCustomer');
       const addrInput = document.getElementById('mddLiveAddress');
+      const vehInput = document.getElementById('mddLiveVehicle');
       const dateInput = document.getElementById('mddLiveDate');
+      if (billNoInput && billNoInput.value.trim()) bill.billNumber = billNoInput.value.trim();
       if (custInput) bill.customerName = custInput.value.trim() || 'मेसर्स ग्राहक';
       if (addrInput) bill.address = addrInput.value.trim() || '';
+      if (vehInput) bill.vehicle = vehInput.value.trim() || '';
       if (dateInput) bill.date = dateInput.value || new Date().toISOString().split('T')[0];
 
       const rows = document.querySelectorAll('#printableMddBill .mdd-live-row');
@@ -2794,8 +2944,16 @@
         targetRow.className = 'mdd-live-row';
         const idx = rows.length + 1;
         targetRow.innerHTML = `
-          <td style="width:75px; text-align:center; padding:4px 6px;"><input type="text" class="mdd-sheet-table-input mdd-live-qty" value="${qty || idx}" style="text-align:center; font-weight:700;" /></td>
-          <td style="padding:4px 8px;"><input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${desc}" style="font-weight:600;" /></td>
+          <td style="width:75px; text-align:center; font-weight:800; font-size:15px; color:#334155; padding:6px 4px;">${idx}</td>
+          <td style="padding:4px 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${desc}" style="font-weight:600; flex:1;" />
+              <div style="display:flex; align-items:center; gap:2px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:1px 6px;" title="मात्रा / Quantity">
+                <span style="font-size:12px; font-weight:800; color:#64748b;">x</span>
+                <input type="number" class="mdd-sheet-table-input mdd-live-qty" value="${qty || ''}" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13.5px; color:#1e3a8a;" />
+              </div>
+            </div>
+          </td>
           <td style="width:100px; text-align:right; padding:4px 8px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${rupees}" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
           <td style="width:50px; text-align:center; padding:4px 4px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${paise || '00'}" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
         `;
@@ -2806,7 +2964,8 @@
           tbody.appendChild(targetRow);
         }
       } else {
-        targetRow.querySelector('.mdd-live-qty').value = qty || (Array.from(rows).indexOf(targetRow) + 1);
+        const qtyInp = targetRow.querySelector('.mdd-live-qty');
+        if (qtyInp) qtyInp.value = qty || '';
         targetRow.querySelector('.mdd-live-desc').value = desc;
         targetRow.querySelector('.mdd-live-rupees').value = rupees;
         targetRow.querySelector('.mdd-live-paise').value = paise !== undefined ? paise : '00';
@@ -2826,8 +2985,16 @@
       const tr = document.createElement('tr');
       tr.className = 'mdd-live-row';
       tr.innerHTML = `
-        <td style="width:75px; text-align:center; padding:4px 6px;"><input type="text" class="mdd-sheet-table-input mdd-live-qty" placeholder="${idx}" style="text-align:center; font-weight:700;" /></td>
-        <td style="padding:4px 8px;"><input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)" style="font-weight:600;" /></td>
+        <td style="width:75px; text-align:center; font-weight:800; font-size:15px; color:#334155; padding:6px 4px;">${idx}</td>
+        <td style="padding:4px 8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)" style="font-weight:600; flex:1;" />
+            <div style="display:flex; align-items:center; gap:2px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:1px 6px;" title="मात्रा / Quantity">
+              <span style="font-size:12px; font-weight:800; color:#64748b;">x</span>
+              <input type="number" class="mdd-sheet-table-input mdd-live-qty" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13.5px; color:#1e3a8a;" />
+            </div>
+          </div>
+        </td>
         <td style="width:100px; text-align:right; padding:4px 8px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
         <td style="width:50px; text-align:center; padding:4px 4px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
       `;

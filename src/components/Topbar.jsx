@@ -28,15 +28,6 @@ export function Topbar() {
         <button className="quick-action-btn btn-outline" id="themeToggleBtn" onClick={toggleTheme}>
           🌓 Theme
         </button>
-        <button className="quick-action-btn btn-outline" onClick={() => window.app?.openLoanDocsModal()}>
-          📄 Loan Files
-        </button>
-        <button className="quick-action-btn btn-outline" onClick={() => window.app?.openGatePassModal()}>
-          🚚 Gate Pass
-        </button>
-        <button className="quick-action-btn btn-outline" onClick={() => window.app?.openBackupModal()}>
-          💾 Backup
-        </button>
         <button
           className="quick-action-btn btn-primary"
           style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)', border: 'none', color: '#fff' }}

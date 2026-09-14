@@ -797,6 +797,30 @@ body {
   color: var(--danger);
 }
 
+.nb-remove-row-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  min-height: 26px;
+}
+
+.nb-remove-row-btn:hover {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  transform: scale(1.1);
+}
+
 .modal-body {
   padding: 20px 22px;
   overflow-y: auto;
@@ -1238,7 +1262,7 @@ body {
    MAA DURGA DIESEL / ESTIMATE BILL BOOK TEMPLATE (data/New Doc template)
    ========================================================================== */
 .mdd-bill-sheet {
-  background: #fffdfa;
+  background: #ffffff;
   color: #000000;
   padding: 24px 28px;
   border-radius: 4px;
@@ -1291,22 +1315,42 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   gap: 12px;
   padding: 2px 0 8px 0;
 }
 
-.mdd-emblem-left, .mdd-emblem-right {
-  width: 78px;
-  height: 78px;
-  min-width: 78px;
+.mdd-emblem-left {
+  width: 115px;
+  height: 115px;
+  min-width: 115px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.mdd-emblem-right {
+  width: 95px;
+  height: 95px;
+  min-width: 95px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.mdd-emblem-left svg, .mdd-emblem-right svg {
+.mdd-emblem-left svg, .mdd-emblem-right svg,
+.mdd-emblem-left img, .mdd-emblem-right img,
+.mdd-durga-logo {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.mdd-durga-logo {
+  transform: scale(1.2);
+  transform-origin: center center;
 }
 
 .mdd-title-center {
@@ -1315,13 +1359,14 @@ body {
 }
 
 .mdd-shop-name {
-  font-size: 38px;
+  font-size: 42px;
   font-weight: 900;
   color: #000000;
   line-height: 1.1;
   letter-spacing: 1.5px;
   font-family: 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', 'Mangal', 'Georgia', serif;
   text-shadow: 0.5px 0.5px 0 #334155;
+  white-space: nowrap;
 }
 
 .mdd-address-lines {
@@ -1331,6 +1376,7 @@ body {
   margin-top: 4px;
   line-height: 1.35;
   font-family: 'Noto Sans Devanagari', sans-serif;
+  text-align: center;
 }
 
 .mdd-meta-grid {
@@ -1396,6 +1442,19 @@ body {
   min-height: 20px;
 }
 
+.mdd-cust-split {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+}
+
+.mdd-cust-col {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
 /* Authentic Bill Table - Plain Sheet Inside (No Boxes) */
 .mdd-table-wrapper {
   border: 2px solid #000000;
@@ -1448,6 +1507,27 @@ body {
   vertical-align: top;
   color: #000000;
   box-sizing: border-box;
+}
+
+.mdd-item-row-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+}
+
+.mdd-item-desc {
+  flex: 1;
+}
+
+.mdd-item-qty-tag {
+  font-weight: 800;
+  font-family: monospace, sans-serif;
+  font-size: 14px;
+  color: #000000;
+  margin-left: 14px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
 }
 
 .mdd-table tbody tr td:last-child {
@@ -1792,27 +1872,56 @@ body {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
+    width: 100% !important;
     gap: 10px !important;
     padding: 2px 0 6px 0 !important;
   }
 
-  .mdd-emblem-left, .mdd-emblem-right {
-    width: 72px !important;
-    height: 72px !important;
-    min-width: 72px !important;
+  .mdd-emblem-left {
+    display: flex !important;
+    width: 105px !important;
+    height: 105px !important;
+    min-width: 105px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
   }
 
-  .mdd-emblem-left svg, .mdd-emblem-right svg {
+  .mdd-emblem-right {
+    display: flex !important;
+    width: 88px !important;
+    height: 88px !important;
+    min-width: 88px !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .mdd-emblem-left svg, .mdd-emblem-right svg,
+  .mdd-emblem-left img, .mdd-emblem-right img,
+  .mdd-durga-logo {
     width: 100% !important;
     height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+  }
+
+  .mdd-durga-logo {
+    transform: scale(1.2) !important;
+    transform-origin: center center !important;
+  }
+
+  .mdd-title-center {
+    text-align: center !important;
+    flex: 1 !important;
   }
 
   .mdd-shop-name {
-    font-size: 36px !important;
+    font-size: 38px !important;
     color: #000000 !important;
     text-shadow: none !important;
-    letter-spacing: 1px !important;
+    letter-spacing: 1.5px !important;
     line-height: 1.1 !important;
+    white-space: nowrap !important;
   }
 
   .mdd-address-lines {
@@ -1820,6 +1929,7 @@ body {
     color: #000000 !important;
     line-height: 1.3 !important;
     margin-top: 3px !important;
+    text-align: center !important;
   }
 
   .mdd-meta-grid {
@@ -1855,6 +1965,19 @@ body {
     align-items: baseline !important;
     gap: 8px !important;
     font-size: 14.5px !important;
+  }
+
+  .mdd-cust-split {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    gap: 14px !important;
+  }
+
+  .mdd-cust-col {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 6px !important;
   }
 
   /* Table structure and borders: PLANE SHEET INSIDE (NO BOXES) */
@@ -1916,6 +2039,27 @@ body {
     padding: 7px 10px !important;
     font-size: 14.5px !important;
     vertical-align: top !important;
+  }
+
+  .mdd-item-row-content {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: baseline !important;
+    width: 100% !important;
+  }
+
+  .mdd-item-desc {
+    flex: 1 !important;
+  }
+
+  .mdd-item-qty-tag {
+    font-weight: 800 !important;
+    font-family: monospace, sans-serif !important;
+    font-size: 14px !important;
+    color: #000000 !important;
+    margin-left: 14px !important;
+    white-space: nowrap !important;
+    letter-spacing: 0.5px !important;
   }
 
   .mdd-table tbody tr td:last-child {

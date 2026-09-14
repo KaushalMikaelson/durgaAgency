@@ -379,7 +379,7 @@ class DealershipStore {
       amountWords: billData.amountWords || '',
       ...billData
     };
-    const existingIndex = bills.findIndex(b => String(b.billNumber) === String(billNumber) || (b.id && b.id === newBill.id));
+    const existingIndex = bills.findIndex(b => (newBill.id && b.id === newBill.id) || String(b.billNumber) === String(billNumber));
     if (existingIndex >= 0) {
       bills[existingIndex] = { ...bills[existingIndex], ...newBill };
     } else {
