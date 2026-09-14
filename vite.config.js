@@ -30,6 +30,7 @@ export default DURGA_MAA_LOGO;
 
 // https://vite.dev/config/
 export default defineConfig({
+  envPrefix: ['VITE_', 'SUPABASE_'],
   plugins: [
     react(),
     {
