@@ -167,25 +167,7 @@
   const DEFAULT_DEMOS = [];
   const DEFAULT_QUOTES = [];
 
-  const DEFAULT_BILLS = [
-    {
-      id: "BILL-086",
-      billNumber: "86",
-      date: "2026-09-12",
-      customerName: "किसान एग्रो सर्विस",
-      address: "बाईपास, करमलीचक, पटना",
-      phone: "9931227178",
-      items: [
-        { qty: "40 L", desc: "डीजल (हाई स्पीड डीजल - ट्रैक्टर व पम्पसेट)", rupees: 3760, paise: 0 },
-        { qty: "1 Can", desc: "इंजन ऑयल (Mobil Delvac 15W-40 7.5L)", rupees: 2450, paise: 0 },
-        { qty: "2 Pc", desc: "डीजल फिल्टर किट (माइक्रो बॉश)", rupees: 680, paise: 0 },
-        { qty: "1 Set", desc: "फिल्टर व सर्विस लेबर चार्ज", rupees: 350, paise: 0 }
-      ],
-      totalRupees: 7240,
-      totalPaise: 0,
-      amountWords: "Seven Thousand Two Hundred Forty Rupees Only"
-    }
-  ];
+  const DEFAULT_BILLS = [];
 
   // --- 2. VECTOR ICONS ---
   const icons = {
@@ -402,9 +384,15 @@
     getBills() {
       try {
         const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.BILLS));
-        if (stored && Array.isArray(stored) && stored.length > 0) return stored;
-        return DEFAULT_BILLS;
-      } catch { return DEFAULT_BILLS; }
+        if (stored && Array.isArray(stored)) {
+          const cleaned = stored.filter(b => b.id !== 'BILL-086' && b.customerName !== 'किसान एग्रो सर्विस');
+          if (cleaned.length !== stored.length) {
+            localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(cleaned));
+          }
+          return cleaned;
+        }
+        return [];
+      } catch { return []; }
     }
     getSettings() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS)) || SHOWROOM_INFO; } catch { return SHOWROOM_INFO; }
@@ -1150,85 +1138,92 @@
     const dateStr = b.date || new Date().toISOString().split('T')[0];
 
     const items = b.items || [];
-    const minRows = 10;
-    const filledCount = items.length;
-    const emptyRowsCount = Math.max(0, minRows - filledCount);
-
     let rowsHtml = '';
-    if (isLive) {
-      items.forEach((item, idx) => {
-        const p = item.paise !== undefined && item.paise !== null && item.paise !== '' ? String(item.paise).padStart(2, '0') : '00';
-        rowsHtml += `
-          <tr class="mdd-live-row">
-            <td style="width:70px; text-align:center; padding:2px;">
-              <input type="text" class="mdd-sheet-table-input mdd-live-qty" value="${item.qty || (idx + 1)}" placeholder="${idx + 1}" style="text-align:center; font-weight:700;" />
-            </td>
-            <td style="padding:2px;">
-              <input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${item.desc || ''}" placeholder="विवरण (Item / Service / Diesel)" style="font-weight:600;" />
-            </td>
-            <td style="width:90px; text-align:right; padding:2px;">
-              <input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${item.rupees !== undefined ? item.rupees : ''}" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" />
-            </td>
-            <td style="width:45px; text-align:center; padding:2px;">
-              <input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${p}" placeholder="00" min="0" max="99" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" />
-            </td>
-          </tr>
-        `;
-      });
 
-      for (let i = 0; i < emptyRowsCount; i++) {
-        const rowNum = filledCount + i + 1;
+    if (isLive) {
+      if (items.length > 0) {
+        items.forEach((item, idx) => {
+          const p = item.paise !== undefined && item.paise !== null && item.paise !== '' ? String(item.paise).padStart(2, '0') : '00';
+          rowsHtml += `
+            <tr class="mdd-live-row">
+              <td style="width:75px; text-align:center; padding:4px 6px;">
+                <input type="text" class="mdd-sheet-table-input mdd-live-qty" value="${item.qty || ''}" placeholder="${idx + 1}" style="text-align:center; font-weight:700;" title="मात्रा / Quantity" />
+              </td>
+              <td style="padding:4px 8px;">
+                <input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${item.desc || ''}" placeholder="विवरण (Item / Service / Diesel)" style="font-weight:600;" />
+              </td>
+              <td style="width:100px; text-align:right; padding:4px 8px;">
+                <input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${item.rupees !== undefined ? item.rupees : ''}" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" />
+              </td>
+              <td style="width:50px; text-align:center; padding:4px 4px;">
+                <input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${p}" placeholder="00" min="0" max="99" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" />
+              </td>
+            </tr>
+          `;
+        });
+      } else {
         rowsHtml += `
           <tr class="mdd-live-row">
-            <td style="width:70px; text-align:center; padding:2px;">
-              <input type="text" class="mdd-sheet-table-input mdd-live-qty" placeholder="${rowNum}" style="text-align:center; font-weight:700;" />
+            <td style="width:75px; text-align:center; padding:4px 6px;">
+              <input type="text" class="mdd-sheet-table-input mdd-live-qty" placeholder="1" style="text-align:center; font-weight:700;" />
             </td>
-            <td style="padding:2px;">
-              <input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण..." style="font-weight:600;" />
+            <td style="padding:4px 8px;">
+              <input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)..." style="font-weight:600;" />
             </td>
-            <td style="width:90px; text-align:right; padding:2px;">
+            <td style="width:100px; text-align:right; padding:4px 8px;">
               <input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" />
             </td>
-            <td style="width:45px; text-align:center; padding:2px;">
+            <td style="width:50px; text-align:center; padding:4px 4px;">
               <input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" min="0" max="99" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" />
             </td>
           </tr>
         `;
       }
+      // Single plain spacer row to absorb remaining vertical height without drawing horizontal boxes
+      rowsHtml += `
+        <tr class="mdd-plane-spacer-row">
+          <td style="width:75px;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td style="width:100px;">&nbsp;</td>
+          <td style="width:50px;">&nbsp;</td>
+        </tr>
+      `;
     } else if (isPureBlank) {
-      for (let i = 0; i < minRows; i++) {
-        rowsHtml += `
-          <tr class="empty-row">
-            <td style="width:70px;">&nbsp;</td>
-            <td>&nbsp;</td>
-            <td style="width:90px;">&nbsp;</td>
-            <td style="width:45px;">&nbsp;</td>
-          </tr>
-        `;
-      }
+      // Pure blank plane sheet inside - clean vertical columns, no horizontal boxes
+      rowsHtml += `
+        <tr class="mdd-plane-spacer-row">
+          <td style="width:75px;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td style="width:100px;">&nbsp;</td>
+          <td style="width:50px;">&nbsp;</td>
+        </tr>
+      `;
     } else {
+      // Official / Print view: render only entered items, then open plain sheet below to Total
       items.forEach((item, idx) => {
         const p = item.paise !== undefined && item.paise !== null && item.paise !== '' ? String(item.paise).padStart(2, '0') : '00';
+        const unitSuffix = item.unit && item.unit !== 'None' ? ` ${item.unit}` : '';
+        const qtyDisplay = (item.qty !== undefined && item.qty !== null && item.qty !== '') ? `${item.qty}${unitSuffix}` : `${idx + 1}`;
+        const rateNote = (item.rate && Number(item.rate) > 0) ? ` <span style="font-size:12.5px; color:#475569; font-weight:500;">(@ ₹${Number(item.rate).toLocaleString('en-IN')}${unitSuffix ? '/' + item.unit : ''})</span>` : '';
         rowsHtml += `
-          <tr>
-            <td style="width:70px; text-align:center; font-weight:700;">${item.qty || (idx + 1)}</td>
-            <td style="font-weight:600;">${item.desc || ''}</td>
-            <td style="width:90px; text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;">${item.rupees ? Number(item.rupees).toLocaleString('en-IN') : ''}</td>
-            <td style="width:45px; text-align:center; font-family:monospace, sans-serif; font-size:14px;">${p}</td>
+          <tr class="mdd-item-row">
+            <td style="width:75px; text-align:center; font-weight:700; font-size:14.5px;">${qtyDisplay}</td>
+            <td style="font-weight:600; font-size:14.5px;">${item.desc || ''}${rateNote}</td>
+            <td style="width:100px; text-align:right; font-weight:800; font-family:monospace, sans-serif; font-size:16px;">${item.rupees ? Number(item.rupees).toLocaleString('en-IN') : '-'}</td>
+            <td style="width:50px; text-align:center; font-family:monospace, sans-serif; font-size:14px;">${p}</td>
           </tr>
         `;
       });
 
-      for (let i = 0; i < emptyRowsCount; i++) {
-        rowsHtml += `
-          <tr class="empty-row">
-            <td style="width:70px;">&nbsp;</td>
-            <td>&nbsp;</td>
-            <td style="width:90px;">&nbsp;</td>
-            <td style="width:45px;">&nbsp;</td>
-          </tr>
-        `;
-      }
+      // Single plain spacer row extending cleanly to bottom Total row - NO EMPTY BOXES
+      rowsHtml += `
+        <tr class="mdd-plane-spacer-row">
+          <td style="width:75px;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td style="width:100px;">&nbsp;</td>
+          <td style="width:50px;">&nbsp;</td>
+        </tr>
+      `;
     }
 
     const totalR = isPureBlank ? '' : (b.totalRupees !== undefined ? Number(b.totalRupees).toLocaleString('en-IN') : '0');
@@ -1300,18 +1295,18 @@
           </div>
         </div>
 
-        <!-- Items Table Grid -->
+        <!-- Items Table Grid - Plain Sheet Inside -->
         <div class="mdd-table-wrapper">
           <table class="mdd-table">
             <thead>
               <tr>
-                <th rowspan="2" style="width:70px; vertical-align:middle;">संख्या</th>
+                <th rowspan="2" style="width:75px; vertical-align:middle;">संख्या</th>
                 <th rowspan="2" style="vertical-align:middle;">विवरण</th>
-                <th colspan="2" class="dam-header" style="width:135px;">दाम</th>
+                <th colspan="2" class="dam-header" style="width:150px;">दाम</th>
               </tr>
               <tr>
-                <th class="mdd-sub-th" style="width:90px;">रू०</th>
-                <th class="mdd-sub-th" style="width:45px;">पै०</th>
+                <th class="mdd-sub-th" style="width:100px;">रू०</th>
+                <th class="mdd-sub-th" style="width:50px;">पै०</th>
               </tr>
             </thead>
             <tbody>
@@ -1322,10 +1317,10 @@
                 <td colspan="2" style="text-align:right;">
                   <span class="mdd-total-badge">Total</span>
                 </td>
-                <td style="width:90px; text-align:right; font-size:16px; font-weight:900; font-family:monospace, sans-serif;">
+                <td style="width:100px; text-align:right; font-size:16px; font-weight:900; font-family:monospace, sans-serif;">
                   <span id="mddLiveTotalRupees">${totalR}</span>
                 </td>
-                <td style="width:45px; text-align:center; font-size:14px; font-weight:800; font-family:monospace, sans-serif;">
+                <td style="width:50px; text-align:center; font-size:14px; font-weight:800; font-family:monospace, sans-serif;">
                   <span id="mddLiveTotalPaise">${totalP}</span>
                 </td>
               </tr>
@@ -1418,6 +1413,19 @@
           }
         });
       });
+
+      if (!window._hasBoundPrintEvents) {
+        window._hasBoundPrintEvents = true;
+        window.addEventListener('beforeprint', () => {
+          const billModal = document.getElementById('billPreviewModal');
+          if (billModal && (billModal.classList.contains('active') || billModal.style.display === 'flex' || billModal.style.display === 'block')) {
+            document.body.classList.add('is-printing-bill', 'bill-modal-active', 'modal-open');
+          }
+        });
+        window.addEventListener('afterprint', () => {
+          document.body.classList.remove('is-printing-bill');
+        });
+      }
     }
 
     switchTab(tabName) {
@@ -1454,13 +1462,35 @@
     }
 
     closeAllModals() {
-      document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('active'));
+      document.body.classList.remove('modal-open', 'bill-modal-active', 'is-printing-bill');
+      document.querySelectorAll('.modal-backdrop').forEach(m => {
+        m.classList.remove('active');
+        m.style.display = 'none';
+      });
+    }
+
+    closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+      }
+      if (!document.querySelector('.modal-backdrop.active')) {
+        document.body.classList.remove('modal-open', 'bill-modal-active', 'is-printing-bill');
+      }
     }
 
     openModal(modalId) {
       this.closeAllModals();
       const modal = document.getElementById(modalId);
-      if (modal) modal.classList.add('active');
+      if (modal) {
+        modal.classList.add('active');
+        modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+        if (modalId === 'billPreviewModal') {
+          document.body.classList.add('bill-modal-active');
+        }
+      }
     }
 
     renderSidebar() {
@@ -2302,7 +2332,7 @@
                       </td>
                       <td style="text-align:right;">
                         <div style="display:inline-flex; gap:6px;">
-                          <button class="quick-action-btn btn-xs btn-primary print-bill-btn" data-bill-id="${item.id}" title="Print / View in authentic bill book format">
+                          <button class="quick-action-btn btn-xs btn-primary print-bill-btn" data-bill-id="${item.id || item.billNumber}" onclick="window.app.openBillPreviewById('${item.id || item.billNumber}')" title="Print / View in authentic bill book format">
                             ${renderIcon('print')} Print
                           </button>
                           <button class="quick-action-btn btn-xs btn-outline delete-bill-btn" data-bill-id="${item.id}" title="Delete this bill" style="color:var(--danger);">
@@ -2320,27 +2350,38 @@
       `;
     }
 
+    openBillPreviewById(billId) {
+      const bills = store.getBills ? store.getBills() : [];
+      let bill = bills.find(b => b && (b.id === billId || String(b.id) === String(billId) || String(b.billNumber) === String(billId)));
+      if (!bill && bills.length > 0) bill = bills[0];
+      this.openBillPreviewModal(bill || null, false);
+    }
+
     bindBillingEvents() {
       const newBillBtn = document.getElementById('openNewBillBtn');
-      if (newBillBtn) newBillBtn.addEventListener('click', () => this.openNewBillModal());
+      if (newBillBtn) newBillBtn.onclick = () => this.openNewBillModal();
 
       const printBlankBtn = document.getElementById('printBlankBillBtn');
-      if (printBlankBtn) printBlankBtn.addEventListener('click', () => this.openBillPreviewModal(null, true));
+      if (printBlankBtn) printBlankBtn.onclick = () => this.openBillPreviewModal(null, true);
 
       document.querySelectorAll('.print-bill-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const bill = store.getBills().find(b => b.id === btn.dataset.billId);
-          if (bill) this.openBillPreviewModal(bill, false);
-        });
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const billId = btn.dataset.billId;
+          this.openBillPreviewById(billId);
+        };
       });
 
       document.querySelectorAll('.delete-bill-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           if (confirm('Delete this bill?')) {
             store.deleteBill(btn.dataset.billId);
             this.renderCurrentView();
           }
-        });
+        };
       });
     }
 
@@ -2369,17 +2410,15 @@
       if (vehicleInput) vehicleInput.value = prefill?.vehicle || '';
 
       const phoneInput = document.getElementById('nbPhone');
-      if (phoneInput) phoneInput.value = prefill?.phone || '9931227178';
+      if (phoneInput) phoneInput.value = prefill?.phone || '';
 
       const tbody = document.getElementById('nbItemsBody');
       if (tbody) {
         tbody.innerHTML = '';
         if (prefill?.items && prefill.items.length > 0) {
-          prefill.items.forEach(it => this.addBillItemRow(it.desc, it.qty, it.rupees, it.paise));
+          prefill.items.forEach(it => this.addBillItemRow(it.desc, it.qty, it.unit || 'Ltr', it.rate, it.rupees, it.paise));
         } else {
-          this.addBillItemRow('डीजल (हाई स्पीड डीजल - 40 Ltr)', '40 L', 3760, 0);
-          this.addBillItemRow('इंजन ऑयल Mobil Delvac 15W-40', '1 Can', 2450, 0);
-          this.addBillItemRow('डीजल फिल्टर किट (Bosch)', '2 Pc', 680, 0);
+          this.addBillItemRow('', '', 'Ltr', '', '', '');
         }
       }
 
@@ -2414,18 +2453,20 @@
       const date = document.getElementById('nbDate')?.value || new Date().toISOString().split('T')[0];
       const customerName = document.getElementById('nbCustomer')?.value.trim() || 'मेसर्स ग्राहक';
       const address = document.getElementById('nbAddress')?.value.trim() || '';
-      const phone = document.getElementById('nbPhone')?.value.trim() || '9931227178';
+      const phone = document.getElementById('nbPhone')?.value.trim() || '';
       const vehicle = document.getElementById('nbVehicle')?.value.trim() || '';
 
       const rows = document.querySelectorAll('#nbItemsBody tr');
       const items = [];
       rows.forEach(tr => {
         const qty = tr.querySelector('.nb-qty')?.value.trim() || '';
+        const unit = tr.querySelector('.nb-unit')?.value.trim() || '';
         const desc = tr.querySelector('.nb-desc')?.value.trim() || '';
+        const rate = Number(tr.querySelector('.nb-rate')?.value) || 0;
         const rupees = Number(tr.querySelector('.nb-rupees')?.value) || 0;
         const paise = Number(tr.querySelector('.nb-paise')?.value) || 0;
-        if (desc || rupees > 0) {
-          items.push({ qty, desc, rupees, paise });
+        if (desc || rupees > 0 || qty) {
+          items.push({ qty, unit, desc, rate, rupees, paise });
         }
       });
 
@@ -2447,31 +2488,93 @@
       };
     }
 
-    addBillItemRow(desc = '', qty = '', rupees = '', paise = '00') {
+    reindexBillRows() {
+      const rows = document.querySelectorAll('#nbItemsBody tr');
+      rows.forEach((tr, idx) => {
+        const idxEl = tr.querySelector('.nb-row-idx');
+        if (idxEl) idxEl.textContent = `#${idx + 1}`;
+      });
+    }
+
+    addBillItemRow(desc = '', qty = '', unit = 'Ltr', rate = '', rupees = '', paise = '') {
       const tbody = document.getElementById('nbItemsBody');
       if (!tbody) return;
       const tr = document.createElement('tr');
       const rowIdx = tbody.children.length + 1;
+      const descVal = (desc !== undefined && desc !== null) ? desc : '';
+      const qtyVal = (qty !== undefined && qty !== null && qty !== '') ? qty : '';
+      const unitVal = unit || 'Ltr';
+      const rateVal = (rate !== undefined && rate !== null && rate !== 0 && rate !== '') ? rate : '';
+      const rupeesVal = (rupees !== undefined && rupees !== null && rupees !== 0 && rupees !== '') ? rupees : '';
+      const paiseVal = (paise !== undefined && paise !== null && paise !== 0 && paise !== '00') ? paise : '';
+
       tr.innerHTML = `
-        <td><input type="text" class="form-input nb-qty" style="padding:4px 6px; font-size:12.5px;" placeholder="e.g. 1" value="${qty || rowIdx}" /></td>
-        <td><input type="text" class="form-input nb-desc" style="padding:4px 6px; font-size:12.5px;" placeholder="विवरण (Item / Service / Diesel)" value="${desc}" required /></td>
-        <td><input type="number" class="form-input nb-rupees" style="padding:4px 6px; font-size:12.5px; text-align:right;" placeholder="0" min="0" value="${rupees}" /></td>
-        <td><input type="number" class="form-input nb-paise" style="padding:4px 6px; font-size:12.5px; text-align:center;" placeholder="00" min="0" max="99" value="${paise || '00'}" /></td>
+        <td style="text-align:center; font-weight:700; color:var(--text-muted); font-size:12px;" class="nb-row-idx">#${rowIdx}</td>
+        <td>
+          <input type="text" class="form-input nb-desc" style="padding:5px 8px; font-size:12.5px;" placeholder="विवरण (e.g. डीजल / इंजन ऑयल / फिल्टर)" value="${descVal}" required />
+        </td>
+        <td>
+          <input type="number" class="form-input nb-qty" style="padding:5px 6px; font-size:12.5px; text-align:center; font-weight:700;" placeholder="1" min="0" step="any" value="${qtyVal}" />
+        </td>
+        <td>
+          <select class="form-select nb-unit" style="padding:5px 4px; font-size:11.5px;">
+            <option value="Ltr" ${unitVal === 'Ltr' ? 'selected' : ''}>Ltr (ली.)</option>
+            <option value="Pcs" ${unitVal === 'Pcs' ? 'selected' : ''}>Pcs (नग)</option>
+            <option value="Can" ${unitVal === 'Can' ? 'selected' : ''}>Can (कैन)</option>
+            <option value="Bags" ${unitVal === 'Bags' ? 'selected' : ''}>Bags (बोरी)</option>
+            <option value="Kg" ${unitVal === 'Kg' ? 'selected' : ''}>Kg (किलो)</option>
+            <option value="Set" ${unitVal === 'Set' ? 'selected' : ''}>Set (सेट)</option>
+            <option value="Hrs" ${unitVal === 'Hrs' ? 'selected' : ''}>Hrs (घंटा)</option>
+            <option value="Nos" ${unitVal === 'Nos' ? 'selected' : ''}>Nos (नं०)</option>
+            <option value="" ${!unitVal || unitVal === 'None' ? 'selected' : ''}>- None -</option>
+          </select>
+        </td>
+        <td>
+          <input type="number" class="form-input nb-rate" style="padding:5px 6px; font-size:12.5px; text-align:right;" placeholder="दर ₹" min="0" step="any" value="${rateVal}" />
+        </td>
+        <td>
+          <input type="number" class="form-input nb-rupees" style="padding:5px 6px; font-size:12.5px; text-align:right; font-weight:700; color:#1e3a8a;" placeholder="0" min="0" value="${rupeesVal}" />
+        </td>
+        <td>
+          <input type="number" class="form-input nb-paise" style="padding:5px 4px; font-size:12.5px; text-align:center;" placeholder="00" min="0" max="99" value="${paiseVal}" />
+        </td>
         <td style="text-align:center;">
-          <button type="button" class="modal-close-btn" style="color:var(--danger); font-size:16px;" onclick="this.closest('tr').remove(); window.app.recalcBillForm();">&times;</button>
+          <button type="button" class="modal-close-btn" style="color:var(--danger); font-size:16px;" onclick="this.closest('tr').remove(); window.app.reindexBillRows(); window.app.recalcBillForm();" title="Remove item">&times;</button>
         </td>
       `;
       tbody.appendChild(tr);
 
-      tr.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', () => this.recalcBillForm());
-      });
+      const qtyInput = tr.querySelector('.nb-qty');
+      const unitSelect = tr.querySelector('.nb-unit');
+      const rateInput = tr.querySelector('.nb-rate');
+      const rupeesInput = tr.querySelector('.nb-rupees');
+      const paiseInput = tr.querySelector('.nb-paise');
+
+      const onQtyRateChange = () => {
+        const q = parseFloat(qtyInput.value);
+        const r = parseFloat(rateInput.value);
+        if (!isNaN(q) && !isNaN(r) && q > 0 && r >= 0) {
+          const product = q * r;
+          const whole = Math.floor(product);
+          const pFrac = Math.round((product - whole) * 100);
+          rupeesInput.value = whole;
+          paiseInput.value = pFrac > 0 ? (pFrac < 10 ? '0' + pFrac : pFrac) : '00';
+        }
+        this.recalcBillForm();
+      };
+
+      qtyInput.addEventListener('input', onQtyRateChange);
+      rateInput.addEventListener('input', onQtyRateChange);
+      unitSelect.addEventListener('change', () => this.recalcBillForm());
+      rupeesInput.addEventListener('input', () => this.recalcBillForm());
+      paiseInput.addEventListener('input', () => this.recalcBillForm());
 
       this.recalcBillForm();
     }
 
-    addBillPresetItem(desc, qty, rupees, paise = 0) {
-      this.addBillItemRow(desc, qty, rupees, paise);
+    addBillPresetItem(desc, qty, unit, rate) {
+      const rupees = (qty && rate) ? Math.round(Number(qty) * Number(rate)) : '';
+      this.addBillItemRow(desc, qty, unit, rate, rupees, 0);
     }
 
     recalcBillForm() {
@@ -2499,7 +2602,7 @@
     }
 
     openBillPreviewModal(bill, isBlank = false, startMode = null) {
-      const previewBox = document.getElementById('quotePrintPreviewBody');
+      const previewBox = document.getElementById('billPreviewBody') || document.getElementById('quotePrintPreviewBody');
       if (!previewBox) return;
 
       const nextAutoNo = store.getNextBillNumber();
@@ -2508,15 +2611,11 @@
         date: new Date().toISOString().split('T')[0],
         customerName: '',
         address: '',
-        phone: '9931227178',
-        items: [
-          { qty: '40 L', desc: 'डीजल (हाई स्पीड डीजल - 40 Ltr)', rupees: 3760, paise: 0 },
-          { qty: '1 Can', desc: 'इंजन ऑयल Mobil Delvac 15W-40', rupees: 2450, paise: 0 },
-          { qty: '2 Pc', desc: 'डीजल फिल्टर किट (Bosch)', rupees: 680, paise: 0 }
-        ],
-        totalRupees: 6890,
+        phone: '',
+        items: [],
+        totalRupees: 0,
         totalPaise: 0,
-        amountWords: numberToIndianWords(6890)
+        amountWords: 'Zero Rupees Only'
       };
 
       let activeMode = startMode || (isBlank ? 'live' : 'filled');
@@ -2551,7 +2650,7 @@
               <button class="quick-action-btn btn-sm btn-primary" id="tsbSaveBillBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
                 💾 Save Bill to System
               </button>
-              <button class="quick-action-btn btn-sm btn-outline" onclick="window.print()" style="background:#ffffff; color:#1e3a8a; border-color:#2563eb; font-weight:700;">
+              <button class="quick-action-btn btn-sm btn-outline" id="tsbPrintBillBtn" style="background:#ffffff; color:#1e3a8a; border-color:#2563eb; font-weight:700;">
                 🖨️ Print Official Bill
               </button>
             </div>
@@ -2565,14 +2664,22 @@
         const blankBtn = document.getElementById('tsbBlankBtn');
         const filledBtn = document.getElementById('tsbFilledBtn');
         const saveBillBtn = document.getElementById('tsbSaveBillBtn');
+        const printBtn = document.getElementById('tsbPrintBillBtn');
 
         if (liveBtn) liveBtn.onclick = () => renderView('live');
         if (blankBtn) blankBtn.onclick = () => renderView('pure_blank');
         if (filledBtn) filledBtn.onclick = () => renderView('filled');
+        if (printBtn) {
+          printBtn.onclick = () => {
+            if (isLive) this.syncLiveSheetDataToCurrent(currentBill);
+            document.body.classList.add('is-printing-bill', 'bill-modal-active', 'modal-open');
+            window.print();
+          };
+        }
         if (openFormBtn) {
           openFormBtn.onclick = () => {
             if (isLive) this.syncLiveSheetDataToCurrent(currentBill);
-            this.closeModal('quotePrintPreviewModal');
+            this.closeModal('billPreviewModal');
             this.openNewBillModal(currentBill);
           };
         }
@@ -2592,7 +2699,7 @@
       };
 
       renderView(activeMode);
-      this.openModal('quotePrintPreviewModal');
+      this.openModal('billPreviewModal');
     }
 
     syncLiveSheetDataToCurrent(bill) {
@@ -2687,12 +2794,17 @@
         targetRow.className = 'mdd-live-row';
         const idx = rows.length + 1;
         targetRow.innerHTML = `
-          <td style="width:70px; text-align:center; padding:2px;"><input type="text" class="mdd-sheet-table-input mdd-live-qty" value="${qty || idx}" style="text-align:center; font-weight:700;" /></td>
-          <td style="padding:2px;"><input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${desc}" style="font-weight:600;" /></td>
-          <td style="width:90px; text-align:right; padding:2px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${rupees}" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
-          <td style="width:45px; text-align:center; padding:2px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${paise || '00'}" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
+          <td style="width:75px; text-align:center; padding:4px 6px;"><input type="text" class="mdd-sheet-table-input mdd-live-qty" value="${qty || idx}" style="text-align:center; font-weight:700;" /></td>
+          <td style="padding:4px 8px;"><input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${desc}" style="font-weight:600;" /></td>
+          <td style="width:100px; text-align:right; padding:4px 8px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${rupees}" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
+          <td style="width:50px; text-align:center; padding:4px 4px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${paise || '00'}" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
         `;
-        tbody.appendChild(targetRow);
+        const spacer = tbody.querySelector('.mdd-plane-spacer-row');
+        if (spacer) {
+          tbody.insertBefore(targetRow, spacer);
+        } else {
+          tbody.appendChild(targetRow);
+        }
       } else {
         targetRow.querySelector('.mdd-live-qty').value = qty || (Array.from(rows).indexOf(targetRow) + 1);
         targetRow.querySelector('.mdd-live-desc').value = desc;
@@ -2714,12 +2826,17 @@
       const tr = document.createElement('tr');
       tr.className = 'mdd-live-row';
       tr.innerHTML = `
-        <td style="width:70px; text-align:center; padding:2px;"><input type="text" class="mdd-sheet-table-input mdd-live-qty" placeholder="${idx}" style="text-align:center; font-weight:700;" /></td>
-        <td style="padding:2px;"><input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)" style="font-weight:600;" /></td>
-        <td style="width:90px; text-align:right; padding:2px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
-        <td style="width:45px; text-align:center; padding:2px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
+        <td style="width:75px; text-align:center; padding:4px 6px;"><input type="text" class="mdd-sheet-table-input mdd-live-qty" placeholder="${idx}" style="text-align:center; font-weight:700;" /></td>
+        <td style="padding:4px 8px;"><input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)" style="font-weight:600;" /></td>
+        <td style="width:100px; text-align:right; padding:4px 8px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
+        <td style="width:50px; text-align:center; padding:4px 4px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
       `;
-      tbody.appendChild(tr);
+      const spacer = tbody.querySelector('.mdd-plane-spacer-row');
+      if (spacer) {
+        tbody.insertBefore(tr, spacer);
+      } else {
+        tbody.appendChild(tr);
+      }
       this.bindLiveSheetEvents();
     }
 
@@ -3829,7 +3946,7 @@
           const bank = document.getElementById('gpBank').value.trim() || 'Cash / Self';
 
           this.closeAllModals();
-          const previewBox = document.getElementById('quotePrintPreviewBody');
+          const previewBox = document.getElementById('quotePrintPreviewBody') || document.getElementById('billPreviewBody');
           if (previewBox) {
             const info = store.getSettings();
             previewBox.innerHTML = `
@@ -3891,7 +4008,7 @@
               </div>
             `;
           }
-          this.openModal('quotePrintPreviewModal');
+          this.openModal('billPreviewModal');
         };
       }
     }

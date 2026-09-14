@@ -497,29 +497,30 @@ export function Modals() {
                 </div>
               </div>
 
-              {/* Quick Presets */}
+              {/* Items Header & Add Row */}
               <div style={{ margin: '14px 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                 <label className="form-label" style={{ margin: 0, fontWeight: 800 }}>विवरण व मदें (Items & Particulars):</label>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center' }}>+ Quick Add:</span>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल (हाई स्पीड डीजल - 40 Ltr)', '40 L', 3760, 0)}>+ 40L Diesel</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('इंजन ऑयल Mobil Delvac 15W-40', '1 Can', 2450, 0)}>+ Mobil Oil</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल फिल्टर किट (Bosch)', '2 Pc', 680, 0)}>+ Fuel Filter</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('सर्विस व लेबर चार्ज', '1 Set', 500, 0)}>+ Service</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल (High Speed Diesel)', 40, 'Ltr', 94)}>+ 40L Diesel</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('इंजन ऑयल Mobil Delvac 1', 1, 'Can', 2450)}>+ Mobil Delvac</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल फिल्टर किट (Bosch)', 2, 'Pcs', 340)}>+ Diesel Filter</button>
                   <button type="button" className="quick-action-btn btn-xs btn-primary" onClick={() => window.app?.addBillItemRow()}>+ Add Row</button>
                 </div>
               </div>
 
               {/* Items Table */}
-              <div className="table-responsive" style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+              <div className="table-responsive" style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
                 <table className="data-table" style={{ margin: 0, fontSize: '12.5px' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '80px' }}>संख्या (Qty)</th>
-                      <th>विवरण (Description)</th>
-                      <th style={{ width: '120px', textAlign: 'right' }}>रू० (Rupees)</th>
-                      <th style={{ width: '70px', textAlign: 'center' }}>पै० (Paise)</th>
-                      <th style={{ width: '40px' }}></th>
+                      <th style={{ width: '45px', textAlign: 'center' }}>क्र० (#)</th>
+                      <th>विवरण (Item Description)</th>
+                      <th style={{ width: '85px', textAlign: 'center' }}>मात्रा (Qty)</th>
+                      <th style={{ width: '85px' }}>इकाई (Unit)</th>
+                      <th style={{ width: '95px', textAlign: 'right' }}>दर (Rate ₹)</th>
+                      <th style={{ width: '110px', textAlign: 'right' }}>रू० (Rupees)</th>
+                      <th style={{ width: '55px', textAlign: 'center' }}>पै०</th>
+                      <th style={{ width: '36px' }}></th>
                     </tr>
                   </thead>
                   <tbody id="nbItemsBody">
@@ -555,10 +556,31 @@ export function Modals() {
           </form>
         </div>
       </div>
-
-
-
-      {/* Modal 7: Schedule Field Demo */}
+      {/* Modal 6: Printable Bill Sheet & Cash Memo Preview (Maa Durga Diesel) */}
+      <div className="modal-backdrop" id="billPreviewModal">
+        <div className="modal-box large" style={{ maxWidth: '900px' }}>
+          <div className="modal-header no-print">
+            <div>
+              <h3 style={{ margin: 0 }}>माँ दुर्गा डीजल पर्ची - बिल प्रीव्यू (Bill Preview)</h3>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                Maa Durga Diesel Estimate & Cash Memo
+              </div>
+            </div>
+            <button className="modal-close-btn">&times;</button>
+          </div>
+          <div className="modal-body" id="billPreviewBody" style={{ padding: '4px' }}>
+          </div>
+          <div className="modal-footer no-print" style={{ justifyContent: 'space-between' }}>
+            <button type="button" className="quick-action-btn btn-outline modal-close-btn">Close</button>
+            <button type="button" className="quick-action-btn btn-primary" onClick={() => {
+              document.body.classList.add('is-printing-bill', 'bill-modal-active', 'modal-open');
+              window.print();
+            }} style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)' }}>
+              🖨️ Print Bill (प्रिंट करें)
+            </button>
+          </div>
+        </div>
+      </div>      {/* Modal 7: Schedule Field Demo */}
       <div className="modal-backdrop" id="newDemoModal">
         <div className="modal-box">
           <div className="modal-header">

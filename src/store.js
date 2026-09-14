@@ -170,10 +170,16 @@ class DealershipStore {
   getBills() {
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.BILLS));
-      if (stored && Array.isArray(stored) && stored.length > 0) return stored;
-      return DEFAULT_BILLS;
+      if (stored && Array.isArray(stored)) {
+        const cleaned = stored.filter(b => b.id !== 'BILL-086' && b.customerName !== 'किसान एग्रो सर्विस');
+        if (cleaned.length !== stored.length) {
+          localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(cleaned));
+        }
+        return cleaned;
+      }
+      return [];
     } catch {
-      return DEFAULT_BILLS;
+      return [];
     }
   }
 
