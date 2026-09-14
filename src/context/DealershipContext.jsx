@@ -1,7 +1,7 @@
-// Central Dealership State Management Context for Maa Durga Engineering OS
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api.js';
 import { DEFAULT_TRACTORS, SHOWROOM_INFO } from '../data.js';
+import { supabase } from '../lib/supabase.js';
 
 const DealershipContext = createContext(null);
 
@@ -71,6 +71,18 @@ export function DealershipProvider({ children }) {
 
   useEffect(() => {
     refreshAll();
+
+    const channel = supabase?.channel?.('dealership-context-realtime')
+      ?.on('postgres_changes', { event: '*', schema: 'public' }, () => {
+        refreshAll();
+      })
+      ?.subscribe?.();
+
+    return () => {
+      if (channel && supabase?.removeChannel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [refreshAll]);
 
   // Operations

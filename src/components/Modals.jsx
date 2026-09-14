@@ -542,6 +542,28 @@ export function Modals() {
                   </div>
                 </div>
               </div>
+
+              {/* Payment Settlement: Paid / Due / Partial */}
+              <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-md)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px', alignItems: 'center' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>भुगतान स्थिति (Payment Status)</label>
+                    <select id="nbPaymentStatus" className="form-select" defaultValue="Paid" style={{ fontWeight: 700 }}>
+                      <option value="Paid">✓ Paid (पूर्ण भुगतान)</option>
+                      <option value="Partial">⏳ Partial (आंशिक भुगतान)</option>
+                      <option value="Due">⚠️ Due (पूर्ण बकाया)</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>जमा राशि (Paid Amount ₹)</label>
+                    <input type="number" id="nbPaidAmount" className="form-input" placeholder="0" min="0" style={{ fontWeight: 700, color: '#059669' }} />
+                  </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>बकाया राशि (Due Amount ₹)</label>
+                    <div id="nbDueAmountDisplay" style={{ fontSize: '16px', fontWeight: 800, color: '#dc2626', padding: '7px 10px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: 'var(--radius-sm)' }}>₹0</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="modal-footer">

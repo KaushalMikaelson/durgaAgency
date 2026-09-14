@@ -295,7 +295,7 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
       <!-- Top Bar with ESTIMATE and Phone -->
       <div class="mdd-top-bar">
         <div class="mdd-estimate-pill">ESTIMATE</div>
-        <div class="mdd-top-phone">Mob.: ${b.phone || '9931227178'}</div>
+        <div class="mdd-top-phone">Mob.: 9931227178</div>
       </div>
 
       <!-- Header: Durga Logo (Left) | Center Shop Name & Address | Chakra Logo (Right) -->
@@ -339,23 +339,35 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
         </div>
       </div>
 
-      <!-- Customer Row: M/s, Address & Vehicle No. -->
+      <!-- Customer Row: M/s, Mobile, Address & Vehicle No. -->
       <div class="mdd-customer-section">
-        <div class="mdd-cust-row">
-          <span style="font-weight:800; min-width:55px;">मेसर्स</span>
-          ${isLive ? `
-            <input type="text" class="mdd-sheet-input" id="mddLiveCustomer" placeholder="ग्राहक का नाम / फर्म का नाम (e.g. Ramesh Chandra)..." value="${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}" style="font-size:15px; font-weight:800; color:#1e3a8a; flex:1;" />
-          ` : (isPureBlank ? `
-            <span class="mdd-dots-line" style="flex:1;"></span>
-          ` : `
-            <span class="mdd-dots-line" style="flex:1;">${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}</span>
-          `)}
+        <div class="mdd-cust-row mdd-cust-split">
+          <div class="mdd-cust-col" style="flex:1.8; display:flex; align-items:baseline; gap:6px;">
+            <span style="font-weight:800; min-width:55px;">मेसर्स :</span>
+            ${isLive ? `
+              <input type="text" class="mdd-sheet-input" id="mddLiveCustomer" placeholder="ग्राहक का नाम / फर्म का नाम..." value="${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}" style="font-size:15px; font-weight:800; color:#1e3a8a; flex:1;" />
+            ` : (isPureBlank ? `
+              <span class="mdd-dots-line" style="flex:1;"></span>
+            ` : `
+              <span class="mdd-dots-line" style="flex:1;">${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}</span>
+            `)}
+          </div>
+          <div class="mdd-cust-col" style="flex:1.2; display:flex; align-items:baseline; gap:6px;">
+            <span style="font-weight:700; white-space:nowrap;">मो० नं० :</span>
+            ${isLive ? `
+              <input type="tel" class="mdd-sheet-input" id="mddLivePhone" placeholder="ग्राहक का मो० नं०..." value="${b.phone || ''}" style="font-size:13.5px; font-weight:700; flex:1;" />
+            ` : (isPureBlank ? `
+              <span class="mdd-dots-line" style="flex:1;"></span>
+            ` : `
+              <span class="mdd-dots-line" style="flex:1; font-weight:700; letter-spacing:0.5px;">${b.phone || ''}</span>
+            `)}
+          </div>
         </div>
         <div class="mdd-cust-row mdd-cust-split">
           <div class="mdd-cust-col" style="flex:1.4; display:flex; align-items:baseline; gap:6px;">
             <span style="font-weight:700; white-space:nowrap;">पता :</span>
             ${isLive ? `
-              <input type="text" class="mdd-sheet-input" id="mddLiveAddress" placeholder="पता / गांव व जिला (e.g. Kalyanpur, Gorakhpur)..." value="${b.address || ''}" style="font-size:13.5px; flex:1;" />
+              <input type="text" class="mdd-sheet-input" id="mddLiveAddress" placeholder="पता / गांव व जिला..." value="${b.address || ''}" style="font-size:13.5px; flex:1;" />
             ` : (isPureBlank ? `
               <span class="mdd-dots-line" style="flex:1;"></span>
             ` : `
@@ -365,7 +377,7 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
           <div class="mdd-cust-col" style="flex:1; display:flex; align-items:baseline; gap:6px;">
             <span style="font-weight:700; white-space:nowrap;">गाड़ी नं० :</span>
             ${isLive ? `
-              <input type="text" class="mdd-sheet-input" id="mddLiveVehicle" placeholder="गाड़ी / ट्रैक्टर नं० (e.g. UP-53-AZ-1234)..." value="${b.vehicle || ''}" style="font-size:13.5px; font-weight:800; flex:1;" />
+              <input type="text" class="mdd-sheet-input" id="mddLiveVehicle" placeholder="गाड़ी / ट्रैक्टर नं०..." value="${b.vehicle || ''}" style="font-size:13.5px; font-weight:800; flex:1;" />
             ` : (isPureBlank ? `
               <span class="mdd-dots-line" style="flex:1;"></span>
             ` : `
@@ -1368,8 +1380,32 @@ class TractorOSApp {
   // 5. BILLING & BILLS (MAA DURGA DIESEL TEMPLATE)
   // =========================================================================
   renderBillingHTML() {
-    const bills = store.getBills ? store.getBills() : [];
-    const totalBillVolume = bills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0);
+    let totalBilled = 0;
+    let totalPaid = 0;
+    let totalDue = 0;
+    let paidCount = 0;
+    let dueCount = 0;
+
+    bills.forEach(b => {
+      const total = Number(b.totalRupees || 0);
+      totalBilled += total;
+      let paid = total;
+      if (b.paymentStatus === 'Due') {
+        paid = 0;
+      } else if (b.paymentStatus === 'Partial' && b.paidAmount !== undefined) {
+        paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+      } else if (b.paidAmount !== undefined && b.paidAmount !== null && b.paidAmount !== '') {
+        paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+      }
+      const due = Math.max(0, total - paid);
+      totalPaid += paid;
+      totalDue += due;
+      if (due <= 0 && total > 0) {
+        paidCount++;
+      } else if (due > 0) {
+        dueCount++;
+      }
+    });
     const nextAutoNo = store.getNextBillNumber ? store.getNextBillNumber() : '87';
 
     return `
@@ -1377,7 +1413,7 @@ class TractorOSApp {
         <div>
           <h3 style="margin:0; font-size:18px; font-weight:800; color:var(--text-primary);">Billing Command Center (माँ दुर्गा डीजल)</h3>
           <div style="font-size:12.5px; color:var(--text-secondary); margin-top:3px;">
-            Issue and print authentic <strong>माँ दुर्गा डीजल</strong> estimates, customer bills, and receipts
+            Issue and print authentic <strong>माँ दुर्गा डीजल</strong> estimates, customer bills, and track Paid & Due dues
           </div>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -1390,33 +1426,50 @@ class TractorOSApp {
         </div>
       </div>
 
-      <!-- Metric KPI Cards -->
-      <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom:20px;">
-        <div class="metric-card">
+      <!-- Metric KPI Cards: Paid, Due, Total Invoiced, Next Auto Bill No. -->
+      <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:20px;">
+        <div class="metric-card" style="border-top: 4px solid #10b981;">
           <div class="metric-card-header">
-            <span class="label">Total Bills Issued</span>
-            <div class="metric-icon">🧾</div>
+            <span class="label" style="font-weight:700; color:#059669;">Total Paid (जमा राशि)</span>
+            <div class="metric-icon" style="background:rgba(16, 185, 129, 0.12); color:#059669; font-weight:800;">₹</div>
           </div>
-          <div class="metric-value">${bills.length}</div>
-          <div class="metric-change positive">माँ दुर्गा डीजल Estimates</div>
+          <div class="metric-value" style="color:#059669; font-family:monospace, sans-serif;">₹${totalPaid.toLocaleString('en-IN')}</div>
+          <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
+            <span>✅ ${paidCount} Bills Fully Paid</span>
+          </div>
         </div>
 
-        <div class="metric-card">
+        <div class="metric-card" style="border-top: 4px solid #ef4444;">
           <div class="metric-card-header">
-            <span class="label">Total Invoiced Volume</span>
-            <div class="metric-icon">₹</div>
+            <span class="label" style="font-weight:700; color:#dc2626;">Total Due (बकाया राशि)</span>
+            <div class="metric-icon" style="background:rgba(239, 68, 68, 0.12); color:#dc2626; font-weight:800;">⏳</div>
           </div>
-          <div class="metric-value">₹${totalBillVolume.toLocaleString('en-IN')}</div>
-          <div class="metric-change positive">Diesel, Spares & Services</div>
+          <div class="metric-value" style="color:#dc2626; font-family:monospace, sans-serif;">₹${totalDue.toLocaleString('en-IN')}</div>
+          <div class="metric-change" style="color:${dueCount > 0 ? '#dc2626' : '#10b981'}; display:flex; align-items:center; gap:4px; font-weight:600;">
+            <span>${dueCount > 0 ? `⚠️ ${dueCount} Bills Pending / Due` : '✨ No Pending Dues'}</span>
+          </div>
         </div>
 
-        <div class="metric-card">
+        <div class="metric-card" style="border-top: 4px solid #2563eb;">
           <div class="metric-card-header">
-            <span class="label">Next Auto Bill No.</span>
-            <div class="metric-icon">⚡</div>
+            <span class="label" style="font-weight:700; color:#1d4ed8;">Total Invoiced (कुल बिल)</span>
+            <div class="metric-icon" style="background:rgba(37, 99, 235, 0.12); color:#2563eb; font-weight:800;">🧾</div>
           </div>
-          <div class="metric-value">No. ${nextAutoNo}</div>
-          <div class="metric-change positive">Auto-Generated Sequence</div>
+          <div class="metric-value" style="color:#1d4ed8; font-family:monospace, sans-serif;">₹${totalBilled.toLocaleString('en-IN')}</div>
+          <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
+            <span>📋 ${bills.length} Total Bills Issued</span>
+          </div>
+        </div>
+
+        <div class="metric-card" style="border-top: 4px solid #f59e0b;">
+          <div class="metric-card-header">
+            <span class="label" style="font-weight:700; color:#d97706;">Next Auto Bill No.</span>
+            <div class="metric-icon" style="background:rgba(245, 158, 11, 0.12); color:#d97706; font-weight:800;">⚡</div>
+          </div>
+          <div class="metric-value" style="color:#b45309; font-family:monospace, sans-serif;">No. ${nextAutoNo}</div>
+          <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
+            <span>Auto-Generated Sequence</span>
+          </div>
         </div>
       </div>
 
@@ -1439,19 +1492,20 @@ class TractorOSApp {
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width:110px;">Bill # (नं०)</th>
-                <th style="width:110px;">Date (दिनांक)</th>
+                <th style="width:105px;">Bill # (नं०)</th>
+                <th style="width:105px;">Date (दिनांक)</th>
                 <th>Customer / M/s (मेसर्स)</th>
                 <th>Village / Address (पता)</th>
                 <th>Particulars / Summary (विवरण)</th>
                 <th style="text-align:right;">Total Amount (कुल दाम)</th>
+                <th style="text-align:center; width:120px;">Payment Status (भुगतान)</th>
                 <th style="text-align:right; width:170px;">Actions</th>
               </tr>
             </thead>
             <tbody>
               ${bills.length === 0 ? `
                 <tr>
-                  <td colspan="7" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+                  <td colspan="8" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
                     <div style="font-size:36px; margin-bottom:10px;">🧾</div>
                     <div style="font-weight:700; font-size:16px; color:var(--text-secondary);">No bills issued yet</div>
                     <div style="font-size:12.5px; margin-top:4px;">Click "+ Create Bill" to generate a bill in the authentic माँ दुर्गा डीजल template.</div>
@@ -1468,10 +1522,31 @@ class TractorOSApp {
               ` : bills.map(item => {
                 const itemCount = (item.items || []).length;
                 const summary = (item.items || []).map(i => i.desc).filter(Boolean).slice(0, 2).join(', ');
+                const billKey = item.id || String(item.billNumber);
+                const total = Number(item.totalRupees || 0);
+                let paid = total;
+                if (item.paymentStatus === 'Due') {
+                  paid = 0;
+                } else if (item.paymentStatus === 'Partial' && item.paidAmount !== undefined) {
+                  paid = Math.min(total, Math.max(0, Number(item.paidAmount) || 0));
+                } else if (item.paidAmount !== undefined && item.paidAmount !== null && item.paidAmount !== '') {
+                  paid = Math.min(total, Math.max(0, Number(item.paidAmount) || 0));
+                }
+                const due = Math.max(0, total - paid);
+                let statusBadge = '';
+                if (due <= 0 && total > 0) {
+                  statusBadge = `<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;">✓ Paid</span>`;
+                } else if (paid > 0 && due > 0) {
+                  statusBadge = `<span style="background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;" title="Paid: ₹${paid.toLocaleString('en-IN')}">⏳ Due: ₹${due.toLocaleString('en-IN')}</span>`;
+                } else if (total > 0) {
+                  statusBadge = `<span style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;">⚠️ Due</span>`;
+                } else {
+                  statusBadge = `<span style="background:#f1f5f9; color:#475569; border-radius:12px; padding:3px 8px; font-size:11px;">-</span>`;
+                }
                 return `
                   <tr>
                     <td><strong style="color:var(--primary); font-size:14px;">No. ${item.billNumber}</strong></td>
-                    <td><span style="font-weight:700; font-family:monospace, sans-serif; font-size:13px; color:#1e293b;">${formatToDMY(item.date)}</span></td>
+                    <td><span style="font-family:monospace, sans-serif; font-weight:600;">${formatToDMY(item.date)}</span></td>
                     <td>
                       <strong>${item.customerName || 'मेसर्स ग्राहक'}</strong><br>
                       ${item.vehicle ? `<span style="font-size:11.5px; font-weight:700; color:var(--primary);">🚜 ${item.vehicle}</span> • ` : ''}
@@ -1485,17 +1560,20 @@ class TractorOSApp {
                       ${itemCount > 2 ? `<span style="font-size:11px; color:var(--text-muted);"> (+${itemCount - 2} more)</span>` : ''}
                     </td>
                     <td style="text-align:right;">
-                      <strong style="font-size:14px; color:#1e3a8a; font-family:monospace, sans-serif;">₹${(Number(item.totalRupees) || 0).toLocaleString('en-IN')}${item.totalPaise ? '.' + String(item.totalPaise).padStart(2, '0') : ''}</strong>
+                      <strong style="font-size:14px; color:#1e3a8a; font-family:monospace, sans-serif;">₹${total.toLocaleString('en-IN')}${item.totalPaise ? '.' + String(item.totalPaise).padStart(2, '0') : ''}</strong>
+                    </td>
+                    <td style="text-align:center;">
+                      ${statusBadge}
                     </td>
                     <td style="text-align:right;">
                       <div style="display:inline-flex; gap:6px; align-items:center;">
-                        <button class="quick-action-btn btn-xs btn-outline edit-bill-btn" data-bill-id="${item.id || item.billNumber}" onclick="window.app.editBill('${item.id || item.billNumber}')" title="Edit this bill details & bill number">
+                        <button class="quick-action-btn btn-xs btn-outline edit-bill-btn" data-bill-id="${billKey}" onclick="window.app.editBill('${billKey}')" title="Edit this bill details & bill number">
                           ${renderIcon('edit')} Edit
                         </button>
-                        <button class="quick-action-btn btn-xs btn-primary print-bill-btn" data-bill-id="${item.id || item.billNumber}" onclick="window.app.openBillPreviewById('${item.id || item.billNumber}')" title="Print / View in authentic bill book format">
+                        <button class="quick-action-btn btn-xs btn-primary print-bill-btn" data-bill-id="${billKey}" onclick="window.app.openBillPreviewById('${billKey}')" title="Print / View in authentic bill book format">
                           ${renderIcon('print')} Print
                         </button>
-                        <button class="quick-action-btn btn-xs btn-outline delete-bill-btn" data-bill-id="${item.id || item.billNumber}" onclick="window.app.deleteBill('${item.id || item.billNumber}')" title="Delete this bill" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4); font-weight:700;">
+                        <button class="quick-action-btn btn-xs btn-outline delete-bill-btn" data-bill-id="${billKey}" onclick="window.app.deleteBill('${billKey}')" title="Delete this bill" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4); font-weight:700;">
                           🗑️ Delete
                         </button>
                       </div>
@@ -2708,6 +2786,33 @@ class TractorOSApp {
     const phoneInput = document.getElementById('nbPhone');
     if (phoneInput) phoneInput.value = prefill?.phone || '';
 
+    const statusSelect = document.getElementById('nbPaymentStatus');
+    const paidInput = document.getElementById('nbPaidAmount');
+    if (paidInput) {
+      paidInput._userEdited = false;
+      paidInput.value = (prefill?.paidAmount !== undefined && prefill?.paidAmount !== null)
+        ? prefill.paidAmount
+        : (prefill?.totalRupees !== undefined ? prefill.totalRupees : '');
+    }
+    if (statusSelect) {
+      statusSelect.value = prefill?.paymentStatus || (Number(prefill?.dueAmount) > 0 ? 'Partial' : 'Paid');
+      statusSelect.onchange = () => {
+        const totalVal = parseFloat(document.getElementById('nbTotalRupeesDisplay')?.textContent?.replace(/[^0-9.]/g, '')) || 0;
+        if (statusSelect.value === 'Paid') {
+          if (paidInput) paidInput.value = totalVal;
+        } else if (statusSelect.value === 'Due') {
+          if (paidInput) paidInput.value = 0;
+        }
+        this.recalcBillForm();
+      };
+    }
+    if (paidInput) {
+      paidInput.oninput = () => {
+        paidInput._userEdited = true;
+        this.recalcBillForm();
+      };
+    }
+
     const tbody = document.getElementById('nbItemsBody');
     if (tbody) {
       tbody.innerHTML = '';
@@ -2771,6 +2876,13 @@ class TractorOSApp {
     const totalPaise = items.reduce((s, it) => s + (Number(it.paise) || 0), 0);
     const amountWords = numberToIndianWords(totalRupees);
 
+    const paymentStatus = document.getElementById('nbPaymentStatus')?.value || 'Paid';
+    const rawPaid = document.getElementById('nbPaidAmount')?.value;
+    const paidAmount = (rawPaid !== '' && rawPaid !== undefined && !isNaN(Number(rawPaid)))
+      ? Math.min(totalRupees, Math.max(0, Number(rawPaid)))
+      : (paymentStatus === 'Due' ? 0 : totalRupees);
+    const dueAmount = Math.max(0, totalRupees - paidAmount);
+
     return {
       id: this.editingBillId || undefined,
       billNumber,
@@ -2782,7 +2894,10 @@ class TractorOSApp {
       items,
       totalRupees,
       totalPaise,
-      amountWords
+      amountWords,
+      paymentStatus,
+      paidAmount,
+      dueAmount
     };
   }
 
@@ -2937,6 +3052,23 @@ class TractorOSApp {
 
     const wordsPreview = document.getElementById('nbWordsPreview');
     if (wordsPreview) wordsPreview.textContent = numberToIndianWords(totalR);
+
+    const statusSelect = document.getElementById('nbPaymentStatus');
+    const paidInput = document.getElementById('nbPaidAmount');
+    const dueDisplay = document.getElementById('nbDueAmountDisplay');
+    if (statusSelect && paidInput && dueDisplay) {
+      if (statusSelect.value === 'Paid') {
+        if (!paidInput._userEdited || paidInput.value === '' || Number(paidInput.value) === 0) {
+          paidInput.value = totalR;
+        }
+      } else if (statusSelect.value === 'Due') {
+        paidInput.value = 0;
+      }
+      const pVal = paidInput.value !== '' ? Number(paidInput.value) : (statusSelect.value === 'Due' ? 0 : totalR);
+      const dVal = Math.max(0, totalR - (isNaN(pVal) ? 0 : pVal));
+      dueDisplay.textContent = `₹${dVal.toLocaleString('en-IN')}`;
+      dueDisplay.style.color = dVal > 0 ? '#dc2626' : '#059669';
+    }
   }
 
   openBillPreviewModal(bill, isBlank = false, startMode = null) {

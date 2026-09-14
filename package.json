@@ -13,10 +13,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "framer-motion": "^12.4.7",
     "lucide-react": "^0.475.0",
+    "pg": "^8.23.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

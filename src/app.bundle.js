@@ -1,3 +1,6 @@
+import { supabaseApi } from './services/supabaseApi.js';
+import { supabase } from './lib/supabase.js';
+
 // Maa Durga Engineering - Unified Self-Contained Bundle
 // Works seamlessly in both HTTP and local file:// browser modes without CORS limitations
 
@@ -308,6 +311,8 @@
     constructor() {
       this.subscribers = new Set();
       this.init();
+      this.syncWithSupabase();
+      this.setupRealtime();
     }
 
     init() {
@@ -361,6 +366,14 @@
             console.warn("Lead sanitize error", err);
           }
         }
+        // --- One-time migration: purge old seeded/fake data ---
+        if (!localStorage.getItem('mde_seed_purge_v1')) {
+          localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify([]));
+          localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify([]));
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
+          localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify([]));
+          localStorage.setItem('mde_seed_purge_v1', 'done');
+        }
         if (!localStorage.getItem(STORAGE_KEYS.EXPENSES)) {
           localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(DEFAULT_EXPENSES));
         }
@@ -379,6 +392,89 @@
         }
       } catch (e) {
         console.warn("Storage fallback to memory mode", e);
+      }
+    }
+
+    async syncWithSupabase() {
+      try {
+        if (typeof supabaseApi === 'undefined' || !supabaseApi) return;
+        const [bills, leads, tractors, expenses, cashTxns, demos, quotes, settings] = await Promise.all([
+          supabaseApi.bills.getAll(),
+          supabaseApi.leads.getAll(),
+          supabaseApi.tractors.getAll(),
+          supabaseApi.expenses.getAll(),
+          supabaseApi.cashflow.getAll(),
+          supabaseApi.demos.getAll(),
+          supabaseApi.quotes.getAll(),
+          supabaseApi.settings.get()
+        ]);
+
+        let updated = false;
+        if (bills && bills.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
+          updated = true;
+        } else {
+          const localBills = this.getBills();
+          if (localBills && localBills.length > 0) {
+            for (const b of localBills) {
+              await supabaseApi.bills.save(b).catch(e => console.warn(e));
+            }
+          }
+        }
+
+        if (leads && leads.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+          updated = true;
+        }
+
+        if (tractors && tractors.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
+          updated = true;
+        }
+
+        if (expenses && expenses.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+          updated = true;
+        }
+
+        if (cashTxns && cashTxns.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(cashTxns));
+          updated = true;
+        }
+
+        if (demos && demos.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
+          updated = true;
+        }
+
+        if (quotes && quotes.length > 0) {
+          localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify(quotes));
+          updated = true;
+        }
+
+        if (settings) {
+          localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+          updated = true;
+        }
+
+        if (updated) {
+          this.notify();
+        }
+      } catch (err) {
+        console.warn('Sync with Supabase notice:', err);
+      }
+    }
+
+    setupRealtime() {
+      try {
+        if (typeof supabase === 'undefined' || !supabase || typeof supabase.channel !== 'function') return;
+        supabase.channel('supabase-bundle-realtime')
+          .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+            this.syncWithSupabase();
+          })
+          .subscribe();
+      } catch (e) {
+        console.warn('Realtime subscription notice:', e);
       }
     }
 
@@ -431,13 +527,16 @@
     addLead(leadData) {
       const leads = this.getLeads();
       const newLead = {
-        id: `LEAD-${100 + leads.length + 1}`,
+        id: leadData.id || `LEAD-${100 + leads.length + 1}`,
         lastContactDate: new Date().toISOString().split('T')[0],
         ...leadData
       };
       leads.unshift(newLead);
       localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.leads) {
+        supabaseApi.leads.create(newLead).catch(e => console.warn('Supabase lead create failed:', e));
+      }
       return newLead;
     }
 
@@ -448,6 +547,9 @@
         leads[index] = { ...leads[index], ...updatedData };
         localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
         this.notify();
+        if (typeof supabaseApi !== 'undefined' && supabaseApi?.leads) {
+          supabaseApi.leads.update(id, updatedData).catch(e => console.warn('Supabase lead update failed:', e));
+        }
         return leads[index];
       }
       return null;
@@ -457,13 +559,16 @@
       const leads = this.getLeads().filter(l => l.id !== id);
       localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.leads) {
+        supabaseApi.leads.delete(id).catch(e => console.warn('Supabase lead delete failed:', e));
+      }
     }
 
     addExpense(expenseData) {
       const expenses = this.getExpenses();
-      const isAutoApproved = expenseData.amount < 5000;
+      const isAutoApproved = Number(expenseData.amount) < 5000;
       const newExpense = {
-        id: `EXP-${800 + expenses.length + 1}`,
+        id: expenseData.id || `EXP-${800 + expenses.length + 1}`,
         date: expenseData.date || new Date().toISOString().split('T')[0],
         status: isAutoApproved ? 'Approved' : 'Pending Approval',
         approvedBy: isAutoApproved ? 'System (< ₹5,000)' : null,
@@ -484,6 +589,9 @@
         });
       }
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.expenses) {
+        supabaseApi.expenses.create(newExpense).catch(e => console.warn('Supabase expense create failed:', e));
+      }
       return newExpense;
     }
 
@@ -504,6 +612,9 @@
           ref: item.id
         });
         this.notify();
+        if (typeof supabaseApi !== 'undefined' && supabaseApi?.expenses) {
+          supabaseApi.expenses.create(item).catch(e => console.warn('Supabase expense approve failed:', e));
+        }
       }
     }
 
@@ -511,31 +622,42 @@
       const expenses = this.getExpenses().filter(e => e.id !== id);
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.expenses) {
+        supabaseApi.expenses.delete(id).catch(e => console.warn('Supabase expense delete failed:', e));
+      }
     }
 
     addCashTransaction(txnData) {
       const txns = this.getCashTransactions();
+      const newId = txnData.id || `TXN-${300 + txns.length + 1}`;
       const newTxn = {
-        id: `TXN-${300 + txns.length + 1}`,
+        id: newId,
         date: txnData.date || new Date().toISOString().split('T')[0],
         ...txnData
       };
       txns.unshift(newTxn);
       localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(txns));
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.cashflow) {
+        supabaseApi.cashflow.create(newTxn).catch(e => console.warn('Supabase cashflow create failed:', e));
+      }
       return newTxn;
     }
 
     addDemo(demoData) {
       const demos = this.getDemos();
+      const newId = demoData.id || `DEMO-${String(demos.length + 1).padStart(2, '0')}`;
       const newDemo = {
-        id: `DEMO-${String(demos.length + 1).padStart(2, '0')}`,
+        id: newId,
         status: 'Scheduled',
         ...demoData
       };
       demos.unshift(newDemo);
       localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.demos) {
+        supabaseApi.demos.create(newDemo).catch(e => console.warn('Supabase demo create failed:', e));
+      }
       return newDemo;
     }
 
@@ -546,12 +668,15 @@
         demos[idx] = { ...demos[idx], ...fields };
         localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
         this.notify();
+        if (typeof supabaseApi !== 'undefined' && supabaseApi?.demos) {
+          supabaseApi.demos.update(id, fields).catch(e => console.warn('Supabase demo update failed:', e));
+        }
       }
     }
 
     addQuote(quoteData) {
       const quotes = this.getQuotes();
-      const quoteNumber = `MDE/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/Q-${100 + quotes.length + 1}`;
+      const quoteNumber = quoteData.quoteNumber || `MDE/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/Q-${100 + quotes.length + 1}`;
       const newQuote = {
         quoteNumber,
         date: new Date().toISOString().split('T')[0],
@@ -560,6 +685,9 @@
       quotes.unshift(newQuote);
       localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify(quotes));
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.quotes) {
+        supabaseApi.quotes.save(newQuote).catch(e => console.warn('Supabase quote save failed:', e));
+      }
       return newQuote;
     }
 
@@ -604,6 +732,9 @@
       }
       localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.bills) {
+        supabaseApi.bills.save(newBill).catch(e => console.warn('Supabase bill save failed:', e));
+      }
       return newBill;
     }
 
@@ -619,11 +750,14 @@
       });
       localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.bills) {
+        supabaseApi.bills.delete(target).catch(e => console.warn('Supabase bill delete failed:', e));
+      }
     }
 
     addTractor(tractorData) {
       const tractors = this.getTractors();
-      const newId = `TRAC-${String(tractors.length + 1).padStart(3, '0')}`;
+      const newId = tractorData.id || `TRAC-${String(tractors.length + 1).padStart(3, '0')}`;
       const newTractor = {
         id: newId,
         status: Number(tractorData.stockCount) > 0 ? 'In Stock' : 'Available to Order',
@@ -633,6 +767,9 @@
       tractors.push(newTractor);
       localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
       this.notify();
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.tractors) {
+        supabaseApi.tractors.add(newTractor).catch(e => console.warn('Supabase tractor add failed:', e));
+      }
       return newTractor;
     }
 
@@ -646,6 +783,9 @@
         }
         localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
         this.notify();
+        if (typeof supabaseApi !== 'undefined' && supabaseApi?.tractors) {
+          supabaseApi.tractors.update(tractorId, updatedFields).catch(e => console.warn('Supabase tractor update failed:', e));
+        }
         return tractors[index];
       }
       return null;
@@ -663,6 +803,13 @@
         }
         localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
         this.notify();
+        if (typeof supabaseApi !== 'undefined' && supabaseApi?.tractors) {
+          supabaseApi.tractors.update(tractorId, {
+            stockCount: t.stockCount,
+            chassisList: t.chassisList,
+            status: t.status
+          }).catch(e => console.warn('Supabase tractor stock update failed:', e));
+        }
       }
     }
 
@@ -1287,7 +1434,7 @@
         <!-- Top Bar with ESTIMATE and Phone -->
         <div class="mdd-top-bar">
           <div class="mdd-estimate-pill">ESTIMATE</div>
-          <div class="mdd-top-phone">Mob.: ${b.phone || '9931227178'}</div>
+          <div class="mdd-top-phone">Mob.: 9931227178</div>
         </div>
 
         <!-- Header: Durga Logo (Left) | Center Shop Name & Address | Chakra Logo (Right) -->
@@ -1331,23 +1478,35 @@
           </div>
         </div>
 
-        <!-- Customer Row: M/s, Address & Vehicle No. -->
+        <!-- Customer Row: M/s, Mobile, Address & Vehicle No. -->
         <div class="mdd-customer-section">
-          <div class="mdd-cust-row">
-            <span style="font-weight:800; min-width:55px;">मेसर्स</span>
-            ${isLive ? `
-              <input type="text" class="mdd-sheet-input" id="mddLiveCustomer" placeholder="ग्राहक का नाम / फर्म का नाम (e.g. Ramesh Chandra)..." value="${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}" style="font-size:15px; font-weight:800; color:#1e3a8a; flex:1;" />
-            ` : (isPureBlank ? `
-              <span class="mdd-dots-line" style="flex:1;"></span>
-            ` : `
-              <span class="mdd-dots-line" style="flex:1;">${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}</span>
-            `)}
+          <div class="mdd-cust-row mdd-cust-split">
+            <div class="mdd-cust-col" style="flex:1.8; display:flex; align-items:baseline; gap:6px;">
+              <span style="font-weight:800; min-width:55px;">मेसर्स :</span>
+              ${isLive ? `
+                <input type="text" class="mdd-sheet-input" id="mddLiveCustomer" placeholder="ग्राहक का नाम / फर्म का नाम..." value="${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}" style="font-size:15px; font-weight:800; color:#1e3a8a; flex:1;" />
+              ` : (isPureBlank ? `
+                <span class="mdd-dots-line" style="flex:1;"></span>
+              ` : `
+                <span class="mdd-dots-line" style="flex:1;">${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}</span>
+              `)}
+            </div>
+            <div class="mdd-cust-col" style="flex:1.2; display:flex; align-items:baseline; gap:6px;">
+              <span style="font-weight:700; white-space:nowrap;">मो० नं० :</span>
+              ${isLive ? `
+                <input type="tel" class="mdd-sheet-input" id="mddLivePhone" placeholder="ग्राहक का मो० नं०..." value="${b.phone || ''}" style="font-size:13.5px; font-weight:700; flex:1;" />
+              ` : (isPureBlank ? `
+                <span class="mdd-dots-line" style="flex:1;"></span>
+              ` : `
+                <span class="mdd-dots-line" style="flex:1; font-weight:700; letter-spacing:0.5px;">${b.phone || ''}</span>
+              `)}
+            </div>
           </div>
           <div class="mdd-cust-row mdd-cust-split">
             <div class="mdd-cust-col" style="flex:1.4; display:flex; align-items:baseline; gap:6px;">
               <span style="font-weight:700; white-space:nowrap;">पता :</span>
               ${isLive ? `
-                <input type="text" class="mdd-sheet-input" id="mddLiveAddress" placeholder="पता / गांव व जिला (e.g. Kalyanpur, Gorakhpur)..." value="${b.address || ''}" style="font-size:13.5px; flex:1;" />
+                <input type="text" class="mdd-sheet-input" id="mddLiveAddress" placeholder="पता / गांव व जिला..." value="${b.address || ''}" style="font-size:13.5px; flex:1;" />
               ` : (isPureBlank ? `
                 <span class="mdd-dots-line" style="flex:1;"></span>
               ` : `
@@ -1357,7 +1516,7 @@
             <div class="mdd-cust-col" style="flex:1; display:flex; align-items:baseline; gap:6px;">
               <span style="font-weight:700; white-space:nowrap;">गाड़ी नं० :</span>
               ${isLive ? `
-                <input type="text" class="mdd-sheet-input" id="mddLiveVehicle" placeholder="गाड़ी / ट्रैक्टर नं० (e.g. UP-53-AZ-1234)..." value="${b.vehicle || ''}" style="font-size:13.5px; font-weight:800; flex:1;" />
+                <input type="text" class="mdd-sheet-input" id="mddLiveVehicle" placeholder="गाड़ी / ट्रैक्टर नं०..." value="${b.vehicle || ''}" style="font-size:13.5px; font-weight:800; flex:1;" />
               ` : (isPureBlank ? `
                 <span class="mdd-dots-line" style="flex:1;"></span>
               ` : `
@@ -2286,7 +2445,32 @@
 
     renderBillingHTML() {
       const bills = store.getBills ? store.getBills() : [];
-      const totalBillVolume = bills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0);
+      let totalBilled = 0;
+      let totalPaid = 0;
+      let totalDue = 0;
+      let paidCount = 0;
+      let dueCount = 0;
+
+      bills.forEach(b => {
+        const total = Number(b.totalRupees || 0);
+        totalBilled += total;
+        let paid = total;
+        if (b.paymentStatus === 'Due') {
+          paid = 0;
+        } else if (b.paymentStatus === 'Partial' && b.paidAmount !== undefined) {
+          paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+        } else if (b.paidAmount !== undefined && b.paidAmount !== null && b.paidAmount !== '') {
+          paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+        }
+        const due = Math.max(0, total - paid);
+        totalPaid += paid;
+        totalDue += due;
+        if (due <= 0 && total > 0) {
+          paidCount++;
+        } else if (due > 0) {
+          dueCount++;
+        }
+      });
       const nextAutoNo = store.getNextBillNumber ? store.getNextBillNumber() : '87';
 
       return `
@@ -2294,7 +2478,7 @@
           <div>
             <h3 style="margin:0; font-size:18px; font-weight:800; color:var(--text-primary);">Billing Command Center (माँ दुर्गा डीजल)</h3>
             <div style="font-size:12.5px; color:var(--text-secondary); margin-top:3px;">
-              Issue and print authentic <strong>माँ दुर्गा डीजल</strong> estimates, customer bills, and receipts
+              Issue and print authentic <strong>माँ दुर्गा डीजल</strong> estimates, customer bills, and track Paid & Due dues
             </div>
           </div>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -2307,33 +2491,50 @@
           </div>
         </div>
 
-        <!-- Metric KPI Cards -->
-        <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom:20px;">
-          <div class="metric-card">
+        <!-- Metric KPI Cards: Paid, Due, Total Invoiced, Next Auto Bill No. -->
+        <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:20px;">
+          <div class="metric-card" style="border-top: 4px solid #10b981;">
             <div class="metric-card-header">
-              <span class="label">Total Bills Issued</span>
-              <div class="metric-icon">🧾</div>
+              <span class="label" style="font-weight:700; color:#059669;">Total Paid (जमा राशि)</span>
+              <div class="metric-icon" style="background:rgba(16, 185, 129, 0.12); color:#059669; font-weight:800;">₹</div>
             </div>
-            <div class="metric-value">${bills.length}</div>
-            <div class="metric-change positive">माँ दुर्गा डीजल Estimates</div>
+            <div class="metric-value" style="color:#059669; font-family:monospace, sans-serif;">₹${totalPaid.toLocaleString('en-IN')}</div>
+            <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
+              <span>✅ ${paidCount} Bills Fully Paid</span>
+            </div>
           </div>
 
-          <div class="metric-card">
+          <div class="metric-card" style="border-top: 4px solid #ef4444;">
             <div class="metric-card-header">
-              <span class="label">Total Invoiced Volume</span>
-              <div class="metric-icon">₹</div>
+              <span class="label" style="font-weight:700; color:#dc2626;">Total Due (बकाया राशि)</span>
+              <div class="metric-icon" style="background:rgba(239, 68, 68, 0.12); color:#dc2626; font-weight:800;">⏳</div>
             </div>
-            <div class="metric-value">₹${totalBillVolume.toLocaleString('en-IN')}</div>
-            <div class="metric-change positive">Diesel, Spares & Services</div>
+            <div class="metric-value" style="color:#dc2626; font-family:monospace, sans-serif;">₹${totalDue.toLocaleString('en-IN')}</div>
+            <div class="metric-change" style="color:${dueCount > 0 ? '#dc2626' : '#10b981'}; display:flex; align-items:center; gap:4px; font-weight:600;">
+              <span>${dueCount > 0 ? `⚠️ ${dueCount} Bills Pending / Due` : '✨ No Pending Dues'}</span>
+            </div>
           </div>
 
-          <div class="metric-card">
+          <div class="metric-card" style="border-top: 4px solid #2563eb;">
             <div class="metric-card-header">
-              <span class="label">Next Auto Bill No.</span>
-              <div class="metric-icon">⚡</div>
+              <span class="label" style="font-weight:700; color:#1d4ed8;">Total Invoiced (कुल बिल)</span>
+              <div class="metric-icon" style="background:rgba(37, 99, 235, 0.12); color:#2563eb; font-weight:800;">🧾</div>
             </div>
-            <div class="metric-value">No. ${nextAutoNo}</div>
-            <div class="metric-change positive">Auto-Generated Sequence</div>
+            <div class="metric-value" style="color:#1d4ed8; font-family:monospace, sans-serif;">₹${totalBilled.toLocaleString('en-IN')}</div>
+            <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
+              <span>📋 ${bills.length} Total Bills Issued</span>
+            </div>
+          </div>
+
+          <div class="metric-card" style="border-top: 4px solid #f59e0b;">
+            <div class="metric-card-header">
+              <span class="label" style="font-weight:700; color:#d97706;">Next Auto Bill No.</span>
+              <div class="metric-icon" style="background:rgba(245, 158, 11, 0.12); color:#d97706; font-weight:800;">⚡</div>
+            </div>
+            <div class="metric-value" style="color:#b45309; font-family:monospace, sans-serif;">No. ${nextAutoNo}</div>
+            <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
+              <span>Auto-Generated Sequence</span>
+            </div>
           </div>
         </div>
 
@@ -2356,19 +2557,20 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th style="width:110px;">Bill # (नं०)</th>
-                  <th style="width:110px;">Date (दिनांक)</th>
+                  <th style="width:105px;">Bill # (नं०)</th>
+                  <th style="width:105px;">Date (दिनांक)</th>
                   <th>Customer / M/s (मेसर्स)</th>
                   <th>Village / Address (पता)</th>
                   <th>Particulars / Summary (विवरण)</th>
                   <th style="text-align:right;">Total Amount (कुल दाम)</th>
+                  <th style="text-align:center; width:130px;">Payment Status</th>
                   <th style="text-align:right; width:195px;">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 ${bills.length === 0 ? `
                   <tr>
-                    <td colspan="7" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+                    <td colspan="8" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
                       <div style="font-size:36px; margin-bottom:10px;">🧾</div>
                       <div style="font-weight:700; font-size:16px; color:var(--text-secondary);">No bills issued yet</div>
                       <div style="font-size:12.5px; margin-top:4px;">Click "+ Create Bill" to generate a bill in the authentic माँ दुर्गा डीजल template.</div>
@@ -2386,6 +2588,26 @@
                   const itemCount = (item.items || []).length;
                   const summary = (item.items || []).map(i => i.desc).filter(Boolean).slice(0, 2).join(', ');
                   const billKey = item.id || String(item.billNumber);
+                  const total = Number(item.totalRupees || 0);
+                  let paid = total;
+                  if (item.paymentStatus === 'Due') {
+                    paid = 0;
+                  } else if (item.paymentStatus === 'Partial' && item.paidAmount !== undefined) {
+                    paid = Math.min(total, Math.max(0, Number(item.paidAmount) || 0));
+                  } else if (item.paidAmount !== undefined && item.paidAmount !== null && item.paidAmount !== '') {
+                    paid = Math.min(total, Math.max(0, Number(item.paidAmount) || 0));
+                  }
+                  const due = Math.max(0, total - paid);
+                  let statusBadge = '';
+                  if (due <= 0 && total > 0) {
+                    statusBadge = `<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;">✓ Paid</span>`;
+                  } else if (paid > 0 && due > 0) {
+                    statusBadge = `<span style="background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;" title="Paid: ₹${paid.toLocaleString('en-IN')}">⏳ Due: ₹${due.toLocaleString('en-IN')}</span>`;
+                  } else if (total > 0) {
+                    statusBadge = `<span style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;">⚠️ Due</span>`;
+                  } else {
+                    statusBadge = `<span style="background:#f1f5f9; color:#475569; border-radius:12px; padding:3px 8px; font-size:11px;">-</span>`;
+                  }
                   return `
                     <tr>
                       <td><strong style="color:var(--primary); font-size:14px;">No. ${item.billNumber}</strong></td>
@@ -2403,7 +2625,10 @@
                         ${itemCount > 2 ? `<span style="font-size:11px; color:var(--text-muted);"> (+${itemCount - 2} more)</span>` : ''}
                       </td>
                       <td style="text-align:right;">
-                        <strong style="font-size:14px; color:#1e3a8a; font-family:monospace, sans-serif;">₹${(Number(item.totalRupees) || 0).toLocaleString('en-IN')}${item.totalPaise ? '.' + String(item.totalPaise).padStart(2, '0') : ''}</strong>
+                        <strong style="font-size:14px; color:#1e3a8a; font-family:monospace, sans-serif;">₹${total.toLocaleString('en-IN')}${item.totalPaise ? '.' + String(item.totalPaise).padStart(2, '0') : ''}</strong>
+                      </td>
+                      <td style="text-align:center;">
+                        ${statusBadge}
                       </td>
                       <td style="text-align:right;">
                         <div style="display:inline-flex; gap:6px; align-items:center;">
@@ -2536,6 +2761,33 @@
       const phoneInput = document.getElementById('nbPhone');
       if (phoneInput) phoneInput.value = prefill?.phone || '';
 
+      const statusSelect = document.getElementById('nbPaymentStatus');
+      const paidInput = document.getElementById('nbPaidAmount');
+      if (paidInput) {
+        paidInput._userEdited = false;
+        paidInput.value = (prefill?.paidAmount !== undefined && prefill?.paidAmount !== null)
+          ? prefill.paidAmount
+          : (prefill?.totalRupees !== undefined ? prefill.totalRupees : '');
+      }
+      if (statusSelect) {
+        statusSelect.value = prefill?.paymentStatus || (Number(prefill?.dueAmount) > 0 ? 'Partial' : 'Paid');
+        statusSelect.onchange = () => {
+          const totalVal = parseFloat(document.getElementById('nbTotalRupeesDisplay')?.textContent?.replace(/[^0-9.]/g, '')) || 0;
+          if (statusSelect.value === 'Paid') {
+            if (paidInput) paidInput.value = totalVal;
+          } else if (statusSelect.value === 'Due') {
+            if (paidInput) paidInput.value = 0;
+          }
+          this.recalcBillForm();
+        };
+      }
+      if (paidInput) {
+        paidInput.oninput = () => {
+          paidInput._userEdited = true;
+          this.recalcBillForm();
+        };
+      }
+
       const tbody = document.getElementById('nbItemsBody');
       if (tbody) {
         tbody.innerHTML = '';
@@ -2599,6 +2851,13 @@
       const totalPaise = items.reduce((s, it) => s + (Number(it.paise) || 0), 0);
       const amountWords = numberToIndianWords(totalRupees);
 
+      const paymentStatus = document.getElementById('nbPaymentStatus')?.value || 'Paid';
+      const rawPaid = document.getElementById('nbPaidAmount')?.value;
+      const paidAmount = (rawPaid !== '' && rawPaid !== undefined && !isNaN(Number(rawPaid)))
+        ? Math.min(totalRupees, Math.max(0, Number(rawPaid)))
+        : (paymentStatus === 'Due' ? 0 : totalRupees);
+      const dueAmount = Math.max(0, totalRupees - paidAmount);
+
       return {
         id: this.editingBillId || undefined,
         billNumber,
@@ -2610,7 +2869,10 @@
         items,
         totalRupees,
         totalPaise,
-        amountWords
+        amountWords,
+        paymentStatus,
+        paidAmount,
+        dueAmount
       };
     }
 
@@ -2765,6 +3027,23 @@
 
       const wordsPreview = document.getElementById('nbWordsPreview');
       if (wordsPreview) wordsPreview.textContent = numberToIndianWords(totalR);
+
+      const statusSelect = document.getElementById('nbPaymentStatus');
+      const paidInput = document.getElementById('nbPaidAmount');
+      const dueDisplay = document.getElementById('nbDueAmountDisplay');
+      if (statusSelect && paidInput && dueDisplay) {
+        if (statusSelect.value === 'Paid') {
+          if (!paidInput._userEdited || paidInput.value === '' || Number(paidInput.value) === 0) {
+            paidInput.value = totalR;
+          }
+        } else if (statusSelect.value === 'Due') {
+          paidInput.value = 0;
+        }
+        const pVal = paidInput.value !== '' ? Number(paidInput.value) : (statusSelect.value === 'Due' ? 0 : totalR);
+        const dVal = Math.max(0, totalR - (isNaN(pVal) ? 0 : pVal));
+        dueDisplay.textContent = `₹${dVal.toLocaleString('en-IN')}`;
+        dueDisplay.style.color = dVal > 0 ? '#dc2626' : '#059669';
+      }
     }
 
     openBillPreviewModal(bill, isBlank = false, startMode = null) {
@@ -2914,8 +3193,10 @@
       const addrInput = document.getElementById('mddLiveAddress');
       const vehInput = document.getElementById('mddLiveVehicle');
       const dateInput = document.getElementById('mddLiveDate');
+      const phoneInput = document.getElementById('mddLivePhone');
       if (billNoInput && billNoInput.value.trim()) bill.billNumber = billNoInput.value.trim();
       if (custInput) bill.customerName = custInput.value.trim() || 'मेसर्स ग्राहक';
+      if (phoneInput) bill.phone = phoneInput.value.trim();
       if (addrInput) bill.address = addrInput.value.trim() || '';
       if (vehInput) bill.vehicle = vehInput.value.trim() || '';
       if (dateInput) bill.date = dateInput.value ? formatToDMY(dateInput.value) : formatToDMY(new Date());
@@ -2966,10 +3247,14 @@
 
         if (bill) {
           const custInput = document.getElementById('mddLiveCustomer');
+          const phoneInput = document.getElementById('mddLivePhone');
           const addrInput = document.getElementById('mddLiveAddress');
+          const vehInput = document.getElementById('mddLiveVehicle');
           const dateInput = document.getElementById('mddLiveDate');
           if (custInput) bill.customerName = custInput.value.trim() || 'मेसर्स ग्राहक';
+          if (phoneInput) bill.phone = phoneInput.value.trim();
           if (addrInput) bill.address = addrInput.value.trim() || '';
+          if (vehInput) bill.vehicle = vehInput.value.trim() || '';
           if (dateInput) bill.date = dateInput.value ? formatToDMY(dateInput.value) : formatToDMY(new Date());
           bill.totalRupees = totalR;
           bill.totalPaise = totalP;

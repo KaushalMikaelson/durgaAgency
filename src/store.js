@@ -1,4 +1,5 @@
-// LocalStorage Data Store & State Management for Maa Durga Engineering OS
+// Cloud-Synced Data Store & State Management for Maa Durga Engineering OS
+// Backed by Supabase PostgreSQL with local instant caching
 import {
   SHOWROOM_INFO,
   DEFAULT_TRACTORS,
@@ -6,10 +7,11 @@ import {
   DEFAULT_EXPENSES,
   DEFAULT_CASH_TRANSACTIONS,
   DEFAULT_DEMOS,
-  DEFAULT_QUOTES,
-  DEFAULT_BILLS
+  DEFAULT_QUOTES
 } from './data.js';
 import { formatToDMY } from './utils/dateUtils.js';
+import { supabaseApi } from './services/supabaseApi.js';
+import { supabase } from './lib/supabase.js';
 
 const STORAGE_KEYS = {
   TRACTORS: 'mde_tractors_prod_v3',
@@ -26,16 +28,16 @@ class DealershipStore {
   constructor() {
     this.subscribers = new Set();
     this.init();
+    this.syncWithSupabase();
+    this.setupRealtime();
   }
 
   init() {
     try {
-      // Purge old pre-production keys so browser gets 100% clean slate
       const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('mde_') && !k.includes('_prod_v2') && !k.includes('_prod_v3'));
       for (const k of oldKeys) {
         localStorage.removeItem(k);
       }
-      // Purge previous v2 tractor key if present to upgrade immediately to VST Zetor
       if (localStorage.getItem('mde_tractors_prod_v2')) {
         localStorage.removeItem('mde_tractors_prod_v2');
       }
@@ -45,7 +47,6 @@ class DealershipStore {
 
     try {
       const storedTractors = localStorage.getItem(STORAGE_KEYS.TRACTORS);
-      // Auto-migrate if empty or if storing legacy non-VST models
       if (!storedTractors || !storedTractors.includes('VST Zetor')) {
         localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(DEFAULT_TRACTORS));
       }
@@ -55,31 +56,14 @@ class DealershipStore {
 
     if (!localStorage.getItem(STORAGE_KEYS.LEADS)) {
       localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(DEFAULT_LEADS));
-    } else {
-      // Clean up any legacy accidental mock fallbacks on leads created previously
-      try {
-        const storedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADS) || '[]');
-        let changed = false;
-        storedLeads.forEach(l => {
-          if (l.village === 'Local Area') { l.village = ''; changed = true; }
-          if (l.phone === '-') { l.phone = ''; changed = true; }
-          if (l.crops && l.crops.length === 2 && l.crops[0] === 'Wheat' && l.crops[1] === 'Paddy' && l.landAcres === 5 && l.budgetMax === 750000 && !l.soilType) {
-            l.crops = [];
-            l.landAcres = null;
-            l.budgetMax = null;
-            changed = true;
-          }
-          if (l.nextAction === 'Send WhatsApp implement video & personalized EMI calculation.' && !l.interestedModelId) {
-            l.nextAction = '';
-            changed = true;
-          }
-        });
-        if (changed) {
-          localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(storedLeads));
-        }
-      } catch (e) {
-        console.warn("Lead sanitize notice:", e);
-      }
+    }
+
+    if (!localStorage.getItem('mde_seed_purge_v1')) {
+      localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify([]));
+      localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify([]));
+      localStorage.setItem('mde_seed_purge_v1', 'done');
     }
     if (!localStorage.getItem(STORAGE_KEYS.EXPENSES)) {
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(DEFAULT_EXPENSES));
@@ -101,6 +85,90 @@ class DealershipStore {
       }
     } catch (e) {
       console.warn("Settings storage notice:", e);
+    }
+  }
+
+  async syncWithSupabase() {
+    try {
+      if (!supabaseApi) return;
+      const [bills, leads, tractors, expenses, cashTxns, demos, quotes, settings] = await Promise.all([
+        supabaseApi.bills.getAll(),
+        supabaseApi.leads.getAll(),
+        supabaseApi.tractors.getAll(),
+        supabaseApi.expenses.getAll(),
+        supabaseApi.cashflow.getAll(),
+        supabaseApi.demos.getAll(),
+        supabaseApi.quotes.getAll(),
+        supabaseApi.settings.get()
+      ]);
+
+      let updated = false;
+      if (bills && bills.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
+        updated = true;
+      } else {
+        // If Supabase table is empty but we have local bills, sync them to cloud
+        const localBills = this.getBills();
+        if (localBills && localBills.length > 0) {
+          for (const b of localBills) {
+            await supabaseApi.bills.save(b).catch(e => console.warn(e));
+          }
+        }
+      }
+
+      if (leads && leads.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+        updated = true;
+      }
+
+      if (tractors && tractors.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
+        updated = true;
+      }
+
+      if (expenses && expenses.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+        updated = true;
+      }
+
+      if (cashTxns && cashTxns.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(cashTxns));
+        updated = true;
+      }
+
+      if (demos && demos.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
+        updated = true;
+      }
+
+      if (quotes && quotes.length > 0) {
+        localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify(quotes));
+        updated = true;
+      }
+
+      if (settings) {
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+        updated = true;
+      }
+
+      if (updated) {
+        this.notify();
+      }
+    } catch (err) {
+      console.warn('Sync with Supabase notice:', err);
+    }
+  }
+
+  setupRealtime() {
+    try {
+      if (!supabase || typeof supabase.channel !== 'function') return;
+      supabase.channel('supabase-store-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+          this.syncWithSupabase();
+        })
+        .subscribe();
+    } catch (e) {
+      console.warn('Realtime subscription notice:', e);
     }
   }
 
@@ -195,7 +263,7 @@ class DealershipStore {
   // --- Lead Operations ---
   addLead(leadData) {
     const leads = this.getLeads();
-    const newId = `LEAD-${100 + leads.length + 1}`;
+    const newId = leadData.id || `LEAD-${100 + leads.length + 1}`;
     const newLead = {
       id: newId,
       lastContactDate: new Date().toISOString().split('T')[0],
@@ -204,6 +272,9 @@ class DealershipStore {
     leads.unshift(newLead);
     localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
     this.notify();
+    if (supabaseApi?.leads) {
+      supabaseApi.leads.create(newLead).catch(e => console.warn('Supabase lead create failed:', e));
+    }
     return newLead;
   }
 
@@ -214,6 +285,9 @@ class DealershipStore {
       leads[index] = { ...leads[index], ...updatedFields };
       localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
       this.notify();
+      if (supabaseApi?.leads) {
+        supabaseApi.leads.update(leadId, updatedFields).catch(e => console.warn('Supabase lead update failed:', e));
+      }
       return leads[index];
     }
     return null;
@@ -224,15 +298,16 @@ class DealershipStore {
     leads = leads.filter(l => l.id !== leadId);
     localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
     this.notify();
+    if (supabaseApi?.leads) {
+      supabaseApi.leads.delete(leadId).catch(e => console.warn('Supabase lead delete failed:', e));
+    }
   }
 
   // --- Expense Operations ---
   addExpense(expenseData) {
     const expenses = this.getExpenses();
-    const newId = `EXP-${800 + expenses.length + 1}`;
-    
-    // Auto-approval logic: Expenses < ₹5000 auto-approved; >= ₹5000 marked pending manager approval
-    const isAutoApproved = expenseData.amount < 5000;
+    const newId = expenseData.id || `EXP-${800 + expenses.length + 1}`;
+    const isAutoApproved = Number(expenseData.amount) < 5000;
     const newExpense = {
       id: newId,
       date: expenseData.date || new Date().toISOString().split('T')[0],
@@ -243,7 +318,6 @@ class DealershipStore {
     expenses.unshift(newExpense);
     localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
 
-    // Also record in Cash Flow out if approved immediately
     if (isAutoApproved) {
       this.addCashTransaction({
         date: newExpense.date,
@@ -257,6 +331,9 @@ class DealershipStore {
     }
 
     this.notify();
+    if (supabaseApi?.expenses) {
+      supabaseApi.expenses.create(newExpense).catch(e => console.warn('Supabase expense create failed:', e));
+    }
     return newExpense;
   }
 
@@ -268,7 +345,6 @@ class DealershipStore {
       item.approvedBy = approverName;
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
       
-      // Post to cash out
       this.addCashTransaction({
         date: new Date().toISOString().split('T')[0],
         type: 'OUT',
@@ -280,6 +356,9 @@ class DealershipStore {
       });
 
       this.notify();
+      if (supabaseApi?.expenses) {
+        supabaseApi.expenses.create(item).catch(e => console.warn('Supabase expense approve failed:', e));
+      }
     }
   }
 
@@ -288,12 +367,15 @@ class DealershipStore {
     expenses = expenses.filter(e => e.id !== expenseId);
     localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
     this.notify();
+    if (supabaseApi?.expenses) {
+      supabaseApi.expenses.delete(expenseId).catch(e => console.warn('Supabase expense delete failed:', e));
+    }
   }
 
   // --- Cash Transactions ---
   addCashTransaction(txnData) {
     const txns = this.getCashTransactions();
-    const newId = `TXN-${300 + txns.length + 1}`;
+    const newId = txnData.id || `TXN-${300 + txns.length + 1}`;
     const newTxn = {
       id: newId,
       date: txnData.date || new Date().toISOString().split('T')[0],
@@ -302,13 +384,16 @@ class DealershipStore {
     txns.unshift(newTxn);
     localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(txns));
     this.notify();
+    if (supabaseApi?.cashflow) {
+      supabaseApi.cashflow.create(newTxn).catch(e => console.warn('Supabase cashflow sync failed:', e));
+    }
     return newTxn;
   }
 
   // --- Demo Operations ---
   addDemo(demoData) {
     const demos = this.getDemos();
-    const newId = `DEMO-${String(demos.length + 1).padStart(2, '0')}`;
+    const newId = demoData.id || `DEMO-${String(demos.length + 1).padStart(2, '0')}`;
     const newDemo = {
       id: newId,
       status: 'Scheduled',
@@ -317,6 +402,9 @@ class DealershipStore {
     demos.unshift(newDemo);
     localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
     this.notify();
+    if (supabaseApi?.demos) {
+      supabaseApi.demos.create(newDemo).catch(e => console.warn('Supabase demo create failed:', e));
+    }
     return newDemo;
   }
 
@@ -327,6 +415,9 @@ class DealershipStore {
       demos[idx] = { ...demos[idx], ...updatedFields };
       localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
       this.notify();
+      if (supabaseApi?.demos) {
+        supabaseApi.demos.update(demoId, updatedFields).catch(e => console.warn('Supabase demo update failed:', e));
+      }
       return demos[idx];
     }
     return null;
@@ -335,7 +426,7 @@ class DealershipStore {
   // --- Quote Operations ---
   addQuote(quoteData) {
     const quotes = this.getQuotes();
-    const quoteNumber = `MDE/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/Q-${100 + quotes.length + 1}`;
+    const quoteNumber = quoteData.quoteNumber || `MDE/${new Date().getFullYear()}/${String(new Date().getMonth() + 1).padStart(2, '0')}/Q-${100 + quotes.length + 1}`;
     const newQuote = {
       quoteNumber,
       date: new Date().toISOString().split('T')[0],
@@ -344,6 +435,9 @@ class DealershipStore {
     quotes.unshift(newQuote);
     localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify(quotes));
     this.notify();
+    if (supabaseApi?.quotes) {
+      supabaseApi.quotes.save(newQuote).catch(e => console.warn('Supabase quote sync failed:', e));
+    }
     return newQuote;
   }
 
@@ -359,7 +453,7 @@ class DealershipStore {
     return String(maxNo + 1);
   }
 
-  // --- Bill Operations (Maa Durga Diesel Template) ---
+  // --- Bill Operations ---
   addBill(billData) {
     const bills = this.getBills();
     const nextNo = this.getNextBillNumber();
@@ -389,6 +483,9 @@ class DealershipStore {
     }
     localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
     this.notify();
+    if (supabaseApi?.bills) {
+      supabaseApi.bills.save(newBill).catch(e => console.warn('Supabase bill sync failed:', e));
+    }
     return newBill;
   }
 
@@ -404,6 +501,9 @@ class DealershipStore {
     });
     localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
     this.notify();
+    if (supabaseApi?.bills) {
+      supabaseApi.bills.delete(target).catch(e => console.warn('Supabase bill delete failed:', e));
+    }
   }
 
   // --- Unit Economics & Tractor Profitability ---
@@ -413,8 +513,6 @@ class DealershipStore {
     if (!tractor) return null;
 
     const expenses = this.getExpenses().filter(e => e.status === 'Approved');
-    
-    // Find expenses tagged directly to this model or specific chassis
     const matchedExpenses = expenses.filter(e => {
       if (!e.chassisTag) return false;
       if (chassisNo && e.chassisTag === chassisNo) return true;
@@ -444,7 +542,7 @@ class DealershipStore {
   // --- Tractor Inventory Operations ---
   addTractor(tractorData) {
     const tractors = this.getTractors();
-    const newId = `TRAC-${String(tractors.length + 1).padStart(3, '0')}`;
+    const newId = tractorData.id || `TRAC-${String(tractors.length + 1).padStart(3, '0')}`;
     const newTractor = {
       id: newId,
       status: Number(tractorData.stockCount) > 0 ? 'In Stock' : 'Available to Order',
@@ -454,6 +552,9 @@ class DealershipStore {
     tractors.push(newTractor);
     localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
     this.notify();
+    if (supabaseApi?.tractors) {
+      supabaseApi.tractors.add(newTractor).catch(e => console.warn('Supabase tractor add failed:', e));
+    }
     return newTractor;
   }
 
@@ -467,6 +568,9 @@ class DealershipStore {
       }
       localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
       this.notify();
+      if (supabaseApi?.tractors) {
+        supabaseApi.tractors.update(tractorId, updatedFields).catch(e => console.warn('Supabase tractor update failed:', e));
+      }
       return tractors[index];
     }
     return null;
@@ -484,24 +588,29 @@ class DealershipStore {
       }
       localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
       this.notify();
+      if (supabaseApi?.tractors) {
+        supabaseApi.tractors.update(tractorId, {
+          stockCount: t.stockCount,
+          chassisList: t.chassisList,
+          status: t.status
+        }).catch(e => console.warn('Supabase tractor stock sync failed:', e));
+      }
     }
   }
 
-  // --- Showroom P&L & Cash Flow Aggregations (100% Dynamic) ---
+  // --- Showroom P&L & Cash Flow Aggregations ---
   getFinancialSnapshot() {
     const quotes = this.getQuotes();
     const expenses = this.getExpenses().filter(e => e.status === 'Approved');
     const cashTxns = this.getCashTransactions();
     const tractors = this.getTractors();
 
-    // Dynamic Sales Revenue: sum of quotes grand totals or cash "IN" from tractor sales/advance
     const quoteRevenue = quotes.reduce((sum, q) => sum + Number(q.grandTotal || 0), 0);
     const cashSalesRevenue = cashTxns
       .filter(t => t.type === 'IN' && (t.category === 'Tractor Sale' || t.category === 'Customer Advance'))
       .reduce((sum, t) => sum + Number(t.amount || 0), 0);
     const salesRevenue = Math.max(quoteRevenue, cashSalesRevenue);
 
-    // Cost of goods sold: tractor purchase costs for quoted units
     let costOfGoodsSold = 0;
     for (const q of quotes) {
       const tr = tractors.find(t => t.id === q.tractorId || t.model === q.tractorModel || (q.tractorName && q.tractorName.includes(t.model)));
@@ -512,7 +621,6 @@ class DealershipStore {
 
     const grossProfit = Math.max(0, salesRevenue - costOfGoodsSold);
 
-    // Itemized operating expenses
     const categoryTotals = {};
     let totalExpenses = 0;
     for (const exp of expenses) {
@@ -524,7 +632,6 @@ class DealershipStore {
 
     const netProfit = grossProfit - totalExpenses;
 
-    // Cash In vs Cash Out
     let cashIn = 0;
     let cashOut = 0;
     for (const txn of cashTxns) {
