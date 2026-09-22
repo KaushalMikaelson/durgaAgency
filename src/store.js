@@ -206,7 +206,71 @@ class DealershipStore {
 
   getExpenses() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES)) || [];
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES)) || [];
+      const isDemo = (e) => {
+        if (!e) return false;
+        if (typeof e.id === 'string' && /^EXP-10[1-9]$/.test(e.id)) return true;
+        const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''}`;
+        return text.includes('Shree Balaji Logistics') ||
+               text.includes('Kisan Tractor Works Workshop') ||
+               text.includes('Indian Oil Kisan Pump') ||
+               text.includes('Vikram Singh (Senior Tech') ||
+               text.includes('Gorakhpur Mandi Yard Premises') ||
+               text.includes('Gorakhpur Art Banners') ||
+               text.includes('Chauhan Tea Stall') ||
+               text.includes('UPPCL Electricity Gorakhpur') ||
+               text.includes('Kisan Crane & Recovery');
+      };
+
+      const cleaned = stored.filter(e => !isDemo(e));
+
+      if (cleaned.length !== stored.length) {
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(cleaned));
+      }
+
+      // Ensure authentic baseline showroom expenses (EXP-001 freight & EXP-002 PDI) are preserved
+      const authenticDefaults = [
+        {
+          id: "EXP-001",
+          date: "2026-09-10",
+          category: "Freight / Logistics",
+          chassisTag: "CH-4511-4WD-1102",
+          amount: 14500,
+          paymentMode: "Bank Transfer",
+          paidTo: "Transporter (Malur to Gorakhpur Hub)",
+          description: "Factory transporter unload charges from VST Bangalore to Gorakhpur showroom",
+          notes: "Factory transporter unload charges from VST Bangalore to Gorakhpur showroom",
+          status: "Approved",
+          approvedBy: "Showroom Director"
+        },
+        {
+          id: "EXP-002",
+          date: "2026-09-11",
+          category: "PDI / Servicing",
+          chassisTag: "CH-4211-8901",
+          amount: 2500,
+          paymentMode: "Cash",
+          paidTo: "Local Workshop & Spares",
+          description: "Pre-delivery inspection, canopy installation & engine oil top-up",
+          notes: "Pre-delivery inspection, canopy installation & engine oil top-up",
+          status: "Approved",
+          approvedBy: "System (< ₹5,000)"
+        }
+      ];
+
+      let hasNewAuth = false;
+      authenticDefaults.forEach(auth => {
+        if (!cleaned.some(e => e.id === auth.id)) {
+          cleaned.push(auth);
+          hasNewAuth = true;
+        }
+      });
+
+      if (hasNewAuth || cleaned.length !== stored.length) {
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(cleaned));
+      }
+
+      return cleaned;
     } catch {
       return DEFAULT_EXPENSES;
     }
@@ -214,7 +278,12 @@ class DealershipStore {
 
   getCashTransactions() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TXNS)) || [];
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TXNS)) || DEFAULT_CASH_TRANSACTIONS;
+      const cleaned = stored.filter(t => !t.ref || !/^EXP-10[1-9]$/.test(t.ref));
+      if (cleaned.length !== stored.length) {
+        localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(cleaned));
+      }
+      return cleaned;
     } catch {
       return DEFAULT_CASH_TRANSACTIONS;
     }

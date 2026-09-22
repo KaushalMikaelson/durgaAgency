@@ -458,6 +458,9 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
 class TractorOSApp {
   constructor() {
     this.currentTab = 'dashboard';
+    this.expenseDimension = 'category';
+    this.expensePeriod = 'all';
+    this.expenseFilter = null;
     this.init();
   }
 
@@ -2153,44 +2156,324 @@ class TractorOSApp {
   // 9. SHOWROOM EXPENSES & APPROVAL TIER
   // =========================================================================
   renderExpensesHTML() {
-    const expenses = store.getExpenses();
+    const rawExpenses = store.getExpenses();
+    const dimension = this.expenseDimension || 'category';
+    const period = this.expensePeriod || 'all';
+
+    // 1. Time Period Filter
+    let expenses = [...rawExpenses];
+    if (period === 'month') {
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+      expenses = expenses.filter(e => (e.date || '').startsWith(currentMonth));
+    } else if (period === '30days') {
+      const cutoff = Date.now() - 30 * 86400000;
+      expenses = expenses.filter(e => new Date(e.date).getTime() >= cutoff);
+    }
+
+    // 2. Core Metrics
+    const totalExpenseAmount = expenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
     const pending = expenses.filter(e => e.status === 'Pending Approval');
+    const chassisExpenses = expenses.filter(e => e.chassisTag && e.chassisTag.trim().length > 0);
+    const totalChassisCost = chassisExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+    const totalGeneralOverhead = totalExpenseAmount - totalChassisCost;
+    const avgExpense = expenses.length > 0 ? Math.round(totalExpenseAmount / expenses.length) : 0;
+
+    // 3. Group by selected dimension
+    const groupMap = {};
+    if (dimension === 'category') {
+      expenses.forEach(e => {
+        const cat = e.category || 'Miscellaneous';
+        if (!groupMap[cat]) groupMap[cat] = { key: cat, label: cat, amount: 0, count: 0 };
+        groupMap[cat].amount += Number(e.amount || 0);
+        groupMap[cat].count += 1;
+      });
+    } else if (dimension === 'paymentMode') {
+      expenses.forEach(e => {
+        const mode = e.paymentMode || 'Cash';
+        if (!groupMap[mode]) groupMap[mode] = { key: mode, label: `${mode} Outflow`, amount: 0, count: 0 };
+        groupMap[mode].amount += Number(e.amount || 0);
+        groupMap[mode].count += 1;
+      });
+    } else if (dimension === 'chassisNature') {
+      groupMap['Tagged Unit Cost'] = { key: 'Tagged Unit Cost', label: 'Tractor Chassis Direct Cost', amount: 0, count: 0 };
+      groupMap['General Showroom'] = { key: 'General Showroom', label: 'Showroom General Overhead', amount: 0, count: 0 };
+      expenses.forEach(e => {
+        if (e.chassisTag && e.chassisTag.trim().length > 0) {
+          groupMap['Tagged Unit Cost'].amount += Number(e.amount || 0);
+          groupMap['Tagged Unit Cost'].count += 1;
+        } else {
+          groupMap['General Showroom'].amount += Number(e.amount || 0);
+          groupMap['General Showroom'].count += 1;
+        }
+      });
+    }
+
+    const CATEGORY_COLORS = {
+      'Fuel': '#d97706',
+      'Diesel / Fuel': '#d97706',
+      'Transport': '#2563eb',
+      'Freight / Logistics': '#2563eb',
+      'Repairs & PDI': '#059669',
+      'PDI / Servicing': '#059669',
+      'Salaries': '#db2777',
+      'Staff Salaries & Incentives': '#db2777',
+      'Showroom Rent': '#7c3aed',
+      'Showroom Rent & Utilities': '#7c3aed',
+      'Electricity': '#0891b2',
+      'Customer & Tea/Food': '#f59e0b',
+      'Tea & Refreshments': '#f59e0b',
+      'Customer Welcome & Gifts': '#f59e0b',
+      'Advertising': '#ea580c',
+      'Marketing / Village Wall Painting': '#ea580c',
+      'Commission / Brokerage': '#4f46e5',
+      'Miscellaneous': '#64748b',
+      'Other Operational': '#64748b',
+      'Cash': '#10b981',
+      'Bank Transfer': '#3b82f6',
+      'UPI': '#8b5cf6',
+      'Cheque': '#f59e0b',
+      'Tagged Unit Cost': '#2563eb',
+      'General Showroom': '#10b981'
+    };
+
+    const DEFAULT_PALETTE = ['#d97706', '#2563eb', '#059669', '#7c3aed', '#db2777', '#0891b2', '#f59e0b', '#ea580c', '#4f46e5', '#64748b', '#14b8a6', '#6366f1'];
+
+    const groups = Object.values(groupMap)
+      .filter(g => g.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+
+    groups.forEach((g, idx) => {
+      g.color = CATEGORY_COLORS[g.key] || DEFAULT_PALETTE[idx % DEFAULT_PALETTE.length];
+      g.percent = totalExpenseAmount > 0 ? ((g.amount / totalExpenseAmount) * 100).toFixed(1) : '0.0';
+    });
+
+    const topGroup = groups[0] || null;
+
+    // 4. SVG Donut Arc Generation
+    const R = 85;
+    const C = 2 * Math.PI * R; // 534.07075
+    let accumulatedPercent = 0;
+    const arcsHtml = groups.map(g => {
+      const percentVal = totalExpenseAmount > 0 ? (g.amount / totalExpenseAmount) : 0;
+      const dashLength = percentVal * C;
+      const gap = groups.length > 1 ? 2.5 : 0;
+      const visibleDash = Math.max(0, dashLength - gap);
+      const offset = -accumulatedPercent * C;
+      accumulatedPercent += percentVal;
+      const isActive = this.expenseFilter === g.key;
+
+      return `
+        <circle
+          class="chart-arc ${isActive ? 'is-active' : ''}"
+          cx="140" cy="140" r="${R}"
+          stroke="${g.color}"
+          stroke-width="${isActive ? 44 : 36}"
+          stroke-dasharray="${visibleDash.toFixed(2)} ${(C - visibleDash).toFixed(2)}"
+          stroke-dashoffset="${offset.toFixed(2)}"
+          data-key="${g.key}"
+          data-label="${g.label}"
+          data-amount="₹${g.amount.toLocaleString('en-IN')}"
+          data-percent="${g.percent}%"
+          data-count="${g.count}"
+        />
+      `;
+    }).join('');
+
+    // 5. Table display filtering
+    let displayExpenses = [...expenses];
+    if (this.expenseFilter) {
+      if (dimension === 'category') {
+        displayExpenses = displayExpenses.filter(e => (e.category || 'Miscellaneous') === this.expenseFilter);
+      } else if (dimension === 'paymentMode') {
+        displayExpenses = displayExpenses.filter(e => (e.paymentMode || 'Cash') === this.expenseFilter);
+      } else if (dimension === 'chassisNature') {
+        if (this.expenseFilter === 'Tagged Unit Cost') {
+          displayExpenses = displayExpenses.filter(e => e.chassisTag && e.chassisTag.trim().length > 0);
+        } else {
+          displayExpenses = displayExpenses.filter(e => !e.chassisTag || e.chassisTag.trim().length === 0);
+        }
+      }
+    }
+
+    const filterTotalAmount = displayExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
     return `
+      <!-- Top Action Bar -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
         <div style="font-size:13px; color:var(--text-secondary);">
           Automatic Rules: Expenses <strong>&lt; ₹5,000 auto-approved</strong> | <strong>&ge; ₹5,000 requires Director approval</strong>
         </div>
-        <button class="quick-action-btn btn-primary" id="openFastExpenseModalBtn">
-          ${renderIcon('plus')} Fast Expense Entry
-        </button>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <button class="quick-action-btn btn-primary" id="openFastExpenseModalBtn" onclick="window.app.openFastExpenseModal()">
+            ${renderIcon('plus')} Fast Expense Entry
+          </button>
+        </div>
       </div>
 
       ${pending.length > 0 ? `
-        <div style="background:var(--warning-light); border:1px solid #fde68a; border-radius:var(--radius-lg); padding:16px; margin-bottom:20px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <h4 style="font-size:15px; font-weight:800; color:#b45309; display:flex; align-items:center; gap:6px;">
-                ${renderIcon('calculator')} Pending Manager Approvals (${pending.length})
-              </h4>
-              <p style="font-size:12px; color:#92400e; margin-top:2px;">
-                High-value operational expenses requiring showroom director sign-off before posting to cash ledger.
-              </p>
-            </div>
-          </div>
+        <div style="background:var(--warning-light); border:1px solid #fde68a; border-radius:var(--radius-lg); padding:14px 18px; margin-bottom:20px;">
+          <h4 style="font-size:14.5px; font-weight:800; color:#b45309;">
+            Pending Manager Approvals (${pending.length})
+          </h4>
+          <p style="font-size:12px; color:#92400e; margin-top:2px;">
+            Expenses &ge; ₹5,000 require director authorization before posting to cash outflows.
+          </p>
         </div>
       ` : ''}
 
+      <!-- 1. Money Flow KPI Metrics Ribbon -->
+      <div class="expense-analytics-wrapper">
+        <div class="expense-metrics-ribbon">
+          <div class="expense-stat-card card-amber">
+            <span class="stat-label">Total Outflow (Spend) 💸</span>
+            <div class="stat-value font-mono">₹${totalExpenseAmount.toLocaleString('en-IN')}</div>
+            <span class="stat-sub">${expenses.length} expenses logged</span>
+          </div>
+
+          <div class="expense-stat-card card-rose">
+            <span class="stat-label">Top Expense Category 🎯</span>
+            <div class="stat-value" style="font-size:17px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${topGroup ? topGroup.label : 'None Yet'}
+            </div>
+            <span class="stat-sub">
+              ${topGroup ? `₹${topGroup.amount.toLocaleString('en-IN')} (${topGroup.percent}%)` : 'No data recorded'}
+            </span>
+          </div>
+
+          <div class="expense-stat-card card-blue">
+            <span class="stat-label">Chassis Direct Costs 🏷️</span>
+            <div class="stat-value font-mono">₹${totalChassisCost.toLocaleString('en-IN')}</div>
+            <span class="stat-sub">${chassisExpenses.length} tractor-tagged costs</span>
+          </div>
+
+          <div class="expense-stat-card card-emerald">
+            <span class="stat-label">Showroom Overhead 🏢</span>
+            <div class="stat-value font-mono">₹${totalGeneralOverhead.toLocaleString('en-IN')}</div>
+            <span class="stat-sub">Rent, fuel, staff & tea</span>
+          </div>
+        </div>
+
+        <!-- 2. Interactive Donut Chart & Category Breakdown Panel -->
+        <div class="expense-chart-panel">
+          <div class="expense-chart-header">
+            <div class="chart-title-area">
+              <h3>${renderIcon('calculator')} Showroom Money Flow & Expense Distribution</h3>
+              <p>Analyze operational spend breakdown by category, payment mode, or tractor unit cost.</p>
+            </div>
+
+            <div class="chart-controls-group">
+              <!-- Dimension Switcher Pills -->
+              <div class="dimension-pills">
+                <button type="button" class="dimension-btn ${dimension === 'category' ? 'active' : ''}" data-dimension="category">
+                  By Category
+                </button>
+                <button type="button" class="dimension-btn ${dimension === 'paymentMode' ? 'active' : ''}" data-dimension="paymentMode">
+                  By Payment Mode
+                </button>
+                <button type="button" class="dimension-btn ${dimension === 'chassisNature' ? 'active' : ''}" data-dimension="chassisNature">
+                  By Cost Nature
+                </button>
+              </div>
+
+              <!-- Time Filter Selector -->
+              <select id="expensePeriodSelect" class="form-select" style="width:auto; padding:5px 10px; font-size:12px; height:32px;">
+                <option value="all" ${period === 'all' ? 'selected' : ''}>All Time</option>
+                <option value="month" ${period === 'month' ? 'selected' : ''}>This Month</option>
+                <option value="30days" ${period === '30days' ? 'selected' : ''}>Last 30 Days</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="expense-chart-layout">
+            <!-- Left: The Pie / Donut Chart -->
+            <div class="expense-donut-container ${this.expenseFilter ? 'has-active' : ''}">
+              ${totalExpenseAmount > 0 ? `
+                <svg class="expense-pie-svg" viewBox="0 0 280 280" role="img" aria-label="Expense money flow pie chart">
+                  ${arcsHtml}
+                </svg>
+              ` : `
+                <svg class="expense-pie-svg" viewBox="0 0 280 280">
+                  <circle cx="140" cy="140" r="85" fill="none" stroke="var(--border-color)" stroke-width="26" stroke-dasharray="8 6" />
+                </svg>
+              `}
+              <div class="donut-center-info">
+                <span class="center-sub" id="donutCenterSub">Total Outflow</span>
+                <span class="center-val font-mono" id="donutCenterVal">₹${totalExpenseAmount.toLocaleString('en-IN')}</span>
+                <span class="center-extra" id="donutCenterExtra">${expenses.length} Records</span>
+              </div>
+            </div>
+
+            <!-- Right: Interactive Legend & Progress Bars -->
+            <div class="expense-breakdown-side">
+              <div class="breakdown-header">
+                <span>${dimension === 'category' ? 'Expense Category' : dimension === 'paymentMode' ? 'Payment Method' : 'Cost Allocation'}</span>
+                <span>Share of Total (Click to Filter)</span>
+              </div>
+
+              ${groups.length === 0 ? `
+                <div style="padding:28px 16px; text-align:center; color:var(--text-muted); font-size:13px; background:var(--bg-main); border-radius:var(--radius-md);">
+                  No expenses logged for this period. Click <strong>+ Fast Expense Entry</strong> or load sample expenses above.
+                </div>
+              ` : `
+                <div class="expense-legend-grid">
+                  ${groups.map(g => `
+                    <div class="legend-row ${this.expenseFilter === g.key ? 'is-active' : ''}" data-key="${g.key}" data-label="${g.label}" data-amount="₹${g.amount.toLocaleString('en-IN')}" data-percent="${g.percent}%" data-count="${g.count}" title="Click to filter ledger by ${g.label}">
+                      <div class="legend-top">
+                        <div class="legend-left">
+                          <span class="legend-color-dot" style="background:${g.color};"></span>
+                          <span class="legend-cat-name">${g.label}</span>
+                          <span class="legend-cat-count">(${g.count} txns)</span>
+                        </div>
+                        <div class="legend-right">
+                          <span class="legend-amount font-mono">₹${g.amount.toLocaleString('en-IN')}</span>
+                          <span class="legend-percent-badge">${g.percent}%</span>
+                        </div>
+                      </div>
+                      <div class="legend-bar-track">
+                        <div class="legend-bar-fill" style="width:${g.percent}%; background:${g.color};"></div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              `}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Filter Indicator Banner -->
+      ${this.expenseFilter ? `
+        <div class="expense-active-filter-bar">
+          <div class="active-filter-text">
+            <span>🔍 Filtered by <strong>${this.expenseFilter}</strong></span>
+            <span style="font-weight:normal; opacity:0.85;">(${displayExpenses.length} entries • ₹${filterTotalAmount.toLocaleString('en-IN')})</span>
+          </div>
+          <button class="clear-filter-btn" id="clearExpenseFilterBtn">
+            ✕ Clear Filter
+          </button>
+        </div>
+      ` : ''}
+
+      <!-- 3. Expenses Detailed Ledger Table -->
       <div class="panel-card">
+        <div class="panel-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <h4 style="font-size:15px; font-weight:800; display:flex; align-items:center; gap:8px;">
+            ${renderIcon('book')} Showroom Expense Ledger
+            <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">
+              (${displayExpenses.length} ${this.expenseFilter ? 'matching' : 'total'} transactions)
+            </span>
+          </h4>
+        </div>
+
         <div class="table-responsive">
           <table class="data-table">
             <thead>
               <tr>
-                <th>Expense ID</th>
+                <th>ID</th>
                 <th>Date</th>
                 <th>Category</th>
                 <th>Amount (₹)</th>
-                <th>Payment Mode</th>
+                <th>Mode</th>
                 <th>Paid To / Purpose</th>
                 <th>Chassis Tag (Unit Cost)</th>
                 <th>Status</th>
@@ -2198,15 +2481,46 @@ class TractorOSApp {
               </tr>
             </thead>
             <tbody>
-              ${expenses.map(e => `
+              ${displayExpenses.length === 0 ? `
+                <tr>
+                  <td colspan="9" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+                    <div style="font-size:32px; margin-bottom:10px;">💸</div>
+                    <div style="font-weight:700; font-size:15px; color:var(--text-secondary);">
+                      ${this.expenseFilter ? `No expenses found for "${this.expenseFilter}"` : 'No showroom expenses recorded yet'}
+                    </div>
+                    <div style="font-size:12px; margin-top:4px;">
+                      ${this.expenseFilter ? 'Try clearing the filter to view all entries.' : 'Use fast entry for fuel, tea, transport, rent, or maintenance. Expenses < ₹5k auto-approve; ≥ ₹5k require director sign-off.'}
+                    </div>
+                    ${this.expenseFilter ? `
+                      <button class="quick-action-btn btn-sm btn-outline" style="margin:14px auto 0;" id="clearExpenseFilterEmptyBtn">
+                        Clear Filter
+                      </button>
+                    ` : `
+                      <div style="display:flex; justify-content:center; gap:8px; margin-top:14px;">
+                        <button class="quick-action-btn btn-sm btn-primary" onclick="window.app.openFastExpenseModal()">
+                          ${renderIcon('plus')} Record First Expense
+                        </button>
+                      </div>
+                    `}
+                  </td>
+                </tr>
+              ` : displayExpenses.map(e => `
                 <tr>
                   <td><strong>${e.id}</strong></td>
                   <td>${e.date}</td>
-                  <td><span class="badge badge-info">${e.category}</span></td>
-                  <td><strong style="font-size:14px; color:var(--text-primary);">₹${Number(e.amount).toLocaleString('en-IN')}</strong></td>
-                  <td>${e.paymentMode || 'Cash'}</td>
                   <td>
-                    <strong>${e.paidTo || 'Vendor'}</strong><br>
+                    <span class="badge badge-info" style="cursor:pointer;" onclick="window.app.filterExpensesByCategory('${e.category}')" title="Click to filter by ${e.category}">
+                      ${e.category}
+                    </span>
+                  </td>
+                  <td><strong style="font-size:13.5px;" class="font-mono">₹${Number(e.amount).toLocaleString('en-IN')}</strong></td>
+                  <td>
+                    <span class="badge ${e.paymentMode === 'Cash' ? 'badge-success' : 'badge-primary'}">
+                      ${e.paymentMode || 'Cash'}
+                    </span>
+                  </td>
+                  <td>
+                    <strong>${e.paidTo || e.description || 'Showroom Expense'}</strong><br>
                     <span style="font-size:11px; color:var(--text-secondary);">${e.notes || ''}</span>
                   </td>
                   <td>
@@ -2221,11 +2535,11 @@ class TractorOSApp {
                   <td>
                     <div style="display:flex; gap:6px;">
                       ${e.status === 'Pending Approval' ? `
-                        <button class="quick-action-btn btn-sm btn-primary approve-expense-btn" data-exp-id="${e.id}" title="Approve Expense">
-                          ${renderIcon('check')} Approve
+                        <button class="quick-action-btn btn-sm btn-primary approve-expense-btn" data-exp-id="${e.id}">
+                          Approve
                         </button>
                       ` : ''}
-                      <button class="quick-action-btn btn-sm btn-danger delete-expense-btn" data-exp-id="${e.id}" title="Delete">
+                      <button class="quick-action-btn btn-sm btn-danger delete-expense-btn" data-exp-id="${e.id}" title="Delete Expense">
                         ${renderIcon('trash')}
                       </button>
                     </div>
@@ -2245,6 +2559,7 @@ class TractorOSApp {
       addBtn.addEventListener('click', () => this.openFastExpenseModal());
     }
 
+    // 1. Approve & Delete actions
     document.querySelectorAll('.approve-expense-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         store.approveExpense(btn.dataset.expId, 'Showroom Director (Approved)');
@@ -2258,6 +2573,93 @@ class TractorOSApp {
         }
       });
     });
+
+    // 2. Dimension toggle buttons
+    document.querySelectorAll('.dimension-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dim = btn.dataset.dimension;
+        if (dim && dim !== this.expenseDimension) {
+          this.expenseDimension = dim;
+          this.expenseFilter = null; // reset filter on dimension change
+          this.renderCurrentView();
+        }
+      });
+    });
+
+    // 3. Time period dropdown
+    const periodSelect = document.getElementById('expensePeriodSelect');
+    if (periodSelect) {
+      periodSelect.addEventListener('change', (e) => {
+        this.expensePeriod = e.target.value;
+        this.renderCurrentView();
+      });
+    }
+
+    // 4. Interactive Donut and Legend Hover & Filter
+    const donutCenterSub = document.getElementById('donutCenterSub');
+    const donutCenterVal = document.getElementById('donutCenterVal');
+    const donutCenterExtra = document.getElementById('donutCenterExtra');
+    const donutContainer = document.querySelector('.expense-donut-container');
+
+    const defaultSub = donutCenterSub ? donutCenterSub.textContent : 'Total Outflow';
+    const defaultVal = donutCenterVal ? donutCenterVal.textContent : '₹0';
+    const defaultExtra = donutCenterExtra ? donutCenterExtra.textContent : '';
+
+    const interactiveElements = document.querySelectorAll('.chart-arc, .legend-row');
+    interactiveElements.forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        const label = el.dataset.label;
+        const amount = el.dataset.amount;
+        const percent = el.dataset.percent;
+        const count = el.dataset.count;
+        const key = el.dataset.key;
+
+        if (donutCenterSub) donutCenterSub.textContent = label || 'Category';
+        if (donutCenterVal) donutCenterVal.textContent = amount || '₹0';
+        if (donutCenterExtra) donutCenterExtra.textContent = `${percent || ''} (${count || 0} txns)`;
+
+        if (donutContainer) donutContainer.classList.add('has-active');
+
+        // Highlight matching arc and legend row
+        document.querySelectorAll(`.chart-arc[data-key="${key}"], .legend-row[data-key="${key}"]`).forEach(node => {
+          node.classList.add('is-active');
+        });
+      });
+
+      el.addEventListener('mouseleave', () => {
+        if (donutCenterSub) donutCenterSub.textContent = defaultSub;
+        if (donutCenterVal) donutCenterVal.textContent = defaultVal;
+        if (donutCenterExtra) donutCenterExtra.textContent = defaultExtra;
+
+        if (donutContainer && !this.expenseFilter) donutContainer.classList.remove('has-active');
+
+        // Remove highlight if not the active filter
+        document.querySelectorAll('.chart-arc, .legend-row').forEach(node => {
+          if (node.dataset.key !== this.expenseFilter) {
+            node.classList.remove('is-active');
+          }
+        });
+      });
+
+      el.addEventListener('click', () => {
+        const key = el.dataset.key;
+        if (key) {
+          this.expenseFilter = (this.expenseFilter === key) ? null : key;
+          this.renderCurrentView();
+        }
+      });
+    });
+
+    // 5. Clear filter buttons
+    const clearBtn = document.getElementById('clearExpenseFilterBtn') || document.getElementById('clearExpenseFilterEmptyBtn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        this.expenseFilter = null;
+        this.renderCurrentView();
+      });
+    }
+
+    // 6. Expenses event binding complete
   }
 
   // =========================================================================
@@ -2644,6 +3046,80 @@ class TractorOSApp {
           showToast(`Expense of ₹${amount.toLocaleString('en-IN')} logged and auto-approved (< ₹5,000)!`, 'success', 'Expense Recorded');
         }
       };
+    }
+  }
+
+  filterExpensesByCategory(cat) {
+    if (cat) {
+      this.expenseDimension = 'category';
+      this.expenseFilter = (this.expenseFilter === cat ? null : cat);
+      this.renderCurrentView();
+    }
+  }
+
+  purgeDemoExpenses() {
+    try {
+      const STORAGE_KEYS = { EXPENSES: 'mde_expenses_prod_v2', CASH_TXNS: 'mde_cash_txns_prod_v2' };
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES) || '[]');
+      const isDemo = (e) => {
+        if (!e) return false;
+        if (typeof e.id === 'string' && /^EXP-10[1-9]$/.test(e.id)) return true;
+        const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''}`;
+        return text.includes('Shree Balaji Logistics') ||
+               text.includes('Kisan Tractor Works Workshop') ||
+               text.includes('Indian Oil Kisan Pump') ||
+               text.includes('Vikram Singh (Senior Tech') ||
+               text.includes('Gorakhpur Mandi Yard Premises') ||
+               text.includes('Gorakhpur Art Banners') ||
+               text.includes('Chauhan Tea Stall') ||
+               text.includes('UPPCL Electricity Gorakhpur') ||
+               text.includes('Kisan Crane & Recovery');
+      };
+
+      let cleaned = stored.filter(e => !isDemo(e));
+      const authenticDefaults = [
+        {
+          id: "EXP-001",
+          date: "2026-09-10",
+          category: "Freight / Logistics",
+          chassisTag: "CH-4511-4WD-1102",
+          amount: 14500,
+          paymentMode: "Bank Transfer",
+          paidTo: "Transporter (Malur to Gorakhpur Hub)",
+          description: "Factory transporter unload charges from VST Bangalore to Gorakhpur showroom",
+          notes: "Factory transporter unload charges from VST Bangalore to Gorakhpur showroom",
+          status: "Approved",
+          approvedBy: "Showroom Director"
+        },
+        {
+          id: "EXP-002",
+          date: "2026-09-11",
+          category: "PDI / Servicing",
+          chassisTag: "CH-4211-8901",
+          amount: 2500,
+          paymentMode: "Cash",
+          paidTo: "Local Workshop & Spares",
+          description: "Pre-delivery inspection, canopy installation & engine oil top-up",
+          notes: "Pre-delivery inspection, canopy installation & engine oil top-up",
+          status: "Approved",
+          approvedBy: "System (< ₹5,000)"
+        }
+      ];
+
+      authenticDefaults.forEach(auth => {
+        if (!cleaned.some(e => e.id === auth.id)) {
+          cleaned.push(auth);
+        }
+      });
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(cleaned));
+
+      const storedCash = JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TXNS) || '[]');
+      const cleanCash = storedCash.filter(t => !t.ref || !/^EXP-10[1-9]$/.test(t.ref));
+      localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(cleanCash));
+
+      this.renderCurrentView();
+    } catch (err) {
+      console.warn('Purge demo error:', err);
     }
   }
 
