@@ -604,8 +604,8 @@ export function Modals() {
                 billEl.style.transform = '';
                 billEl.style.transformOrigin = '';
                 billEl.style.marginBottom = '';
-                if (billEl.scrollHeight > 960) {
-                  const scale = Math.floor((960 / billEl.scrollHeight) * 1000) / 1000;
+                if (billEl.scrollHeight > 1040) {
+                  const scale = Math.floor((1040 / billEl.scrollHeight) * 1000) / 1000;
                   billEl.style.transform = `scale(${scale})`;
                   billEl.style.transformOrigin = 'top center';
                   billEl.style.marginBottom = `-${billEl.scrollHeight - (billEl.scrollHeight * scale)}px`;

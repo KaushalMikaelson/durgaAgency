@@ -1690,11 +1690,11 @@ import { supabase } from './lib/supabase.js';
 
     // Strict 1-page density calculation based on item count
     let densityClass = 'mdd-density-standard';
-    if (itemCount >= 19) {
+    if (itemCount >= 16) {
       densityClass = 'mdd-density-ultra';
-    } else if (itemCount >= 13) {
-      densityClass = 'mdd-density-dense';
     } else if (itemCount >= 8) {
+      densityClass = 'mdd-density-dense';
+    } else if (itemCount >= 5) {
       densityClass = 'mdd-density-compact';
     }
 
@@ -1707,23 +1707,23 @@ import { supabase } from './lib/supabase.js';
           const serialNo = idx + 1;
           rowsHtml += `
             <tr class="mdd-live-row">
-              <td style="width:75px; text-align:center; font-weight:800; font-size:15px; color:#334155; padding:6px 4px;">
+              <td style="width:75px; text-align:center; font-weight:800; font-size:14px; color:#334155; padding:2px 4px;">
                 ${serialNo}
               </td>
-              <td style="padding:4px 8px;">
+              <td style="padding:2px 8px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                   <input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${item.desc || ''}" placeholder="विवरण (Item / Service / Diesel)" style="font-weight:600; flex:1;" />
                   <div style="display:flex; align-items:center; gap:2px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:1px 6px;" title="मात्रा / Quantity">
                     <span style="font-size:12px; font-weight:800; color:#64748b;">x</span>
-                    <input type="number" class="mdd-sheet-table-input mdd-live-qty" value="${item.qty || ''}" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13.5px; color:#1e3a8a;" />
+                    <input type="number" class="mdd-sheet-table-input mdd-live-qty" value="${item.qty || ''}" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13px; color:#1e3a8a;" />
                   </div>
                 </div>
               </td>
-              <td style="width:100px; text-align:right; padding:4px 8px;">
-                <input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${item.rupees !== undefined ? item.rupees : ''}" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" />
+              <td style="width:100px; text-align:right; padding:2px 8px;">
+                <input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${item.rupees !== undefined ? item.rupees : ''}" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:14px;" />
               </td>
-              <td style="width:50px; text-align:center; padding:4px 4px;">
-                <input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${p}" placeholder="00" min="0" max="99" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" />
+              <td style="width:50px; text-align:center; padding:2px 4px;">
+                <input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${p}" placeholder="00" min="0" max="99" style="text-align:center; font-family:monospace, sans-serif; font-size:13px;" />
               </td>
             </tr>
           `;
@@ -1731,38 +1731,36 @@ import { supabase } from './lib/supabase.js';
       } else {
         rowsHtml += `
           <tr class="mdd-live-row">
-            <td style="width:75px; text-align:center; font-weight:800; font-size:15px; color:#334155; padding:6px 4px;">
+            <td style="width:75px; text-align:center; font-weight:800; font-size:14px; color:#334155; padding:2px 4px;">
               1
             </td>
-            <td style="padding:4px 8px;">
+            <td style="padding:2px 8px;">
               <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                 <input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)..." style="font-weight:600; flex:1;" />
                 <div style="display:flex; align-items:center; gap:2px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:1px 6px;" title="मात्रा / Quantity">
                   <span style="font-size:12px; font-weight:800; color:#64748b;">x</span>
-                  <input type="number" class="mdd-sheet-table-input mdd-live-qty" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13.5px; color:#1e3a8a;" />
+                  <input type="number" class="mdd-sheet-table-input mdd-live-qty" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13px; color:#1e3a8a;" />
                 </div>
               </div>
             </td>
-            <td style="width:100px; text-align:right; padding:4px 8px;">
-              <input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" />
+            <td style="width:100px; text-align:right; padding:2px 8px;">
+              <input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" min="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:14px;" />
             </td>
-            <td style="width:50px; text-align:center; padding:4px 4px;">
-              <input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" min="0" max="99" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" />
+            <td style="width:50px; text-align:center; padding:2px 4px;">
+              <input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" min="0" max="99" style="text-align:center; font-family:monospace, sans-serif; font-size:13px;" />
             </td>
           </tr>
         `;
       }
-      // Spacer row: only needed if itemCount < 12 to absorb remaining height. For large bills (>= 12), omit to guarantee 1-page fit.
-      if (itemCount < 12) {
-        rowsHtml += `
-          <tr class="mdd-plane-spacer-row">
-            <td style="width:75px;">&nbsp;</td>
-            <td>&nbsp;</td>
-            <td style="width:100px;">&nbsp;</td>
-            <td style="width:50px;">&nbsp;</td>
-          </tr>
-        `;
-      }
+      // Spacer row: absorbs remaining height so item rows stay tightly packed at the top with NO extra vertical gaps
+      rowsHtml += `
+        <tr class="mdd-plane-spacer-row">
+          <td style="width:75px;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td style="width:100px;">&nbsp;</td>
+          <td style="width:50px;">&nbsp;</td>
+        </tr>
+      `;
     } else if (isPureBlank) {
       // Pure blank plane sheet inside - clean vertical columns, no horizontal boxes
       rowsHtml += `
@@ -1804,30 +1802,28 @@ import { supabase } from './lib/supabase.js';
 
         rowsHtml += `
           <tr class="mdd-item-row">
-            <td style="width:75px; text-align:center; font-weight:800; font-size:15px;">${serialNo}</td>
-            <td style="font-weight:600; font-size:14.5px; padding:7px 12px;">
+            <td style="width:75px; text-align:center; font-weight:800; font-size:14px; padding:2px 4px;">${serialNo}</td>
+            <td style="font-weight:600; font-size:13.5px; padding:2px 8px;">
               <div class="mdd-item-row-content" style="display:flex; justify-content:space-between; align-items:baseline; width:100%;">
                 <span class="mdd-item-desc">${item.desc || ''}${rateNote}</span>
-                ${qtyTag ? `<span class="mdd-item-qty-tag" style="font-weight:800; font-family:monospace, sans-serif; font-size:14px; color:#0f172a; margin-left:14px; white-space:nowrap; letter-spacing:0.5px;">${qtyTag}</span>` : ''}
+                ${qtyTag ? `<span class="mdd-item-qty-tag" style="font-weight:800; font-family:monospace, sans-serif; font-size:13px; color:#0f172a; margin-left:10px; white-space:nowrap; letter-spacing:0.5px;">${qtyTag}</span>` : ''}
               </div>
             </td>
-            <td style="width:100px; text-align:right; font-weight:800; font-family:monospace, sans-serif; font-size:16px;">${rowRupees ? Number(rowRupees).toLocaleString('en-IN') : '-'}</td>
-            <td style="width:50px; text-align:center; font-family:monospace, sans-serif; font-size:14px;">${p}</td>
+            <td style="width:100px; text-align:right; font-weight:800; font-family:monospace, sans-serif; font-size:15px; padding:2px 8px;">${rowRupees ? Number(rowRupees).toLocaleString('en-IN') : '-'}</td>
+            <td style="width:50px; text-align:center; font-family:monospace, sans-serif; font-size:13px; padding:2px 4px;">${p}</td>
           </tr>
         `;
       });
 
-      // Spacer row: only needed if itemCount < 12 to absorb remaining height. For large bills (>= 12), omit to guarantee 1-page fit.
-      if (itemCount < 12) {
-        rowsHtml += `
-          <tr class="mdd-plane-spacer-row">
-            <td style="width:75px;">&nbsp;</td>
-            <td>&nbsp;</td>
-            <td style="width:100px;">&nbsp;</td>
-            <td style="width:50px;">&nbsp;</td>
-          </tr>
-        `;
-      }
+      // Spacer row: absorbs remaining height so item rows stay tightly packed at the top with NO extra vertical gaps
+      rowsHtml += `
+        <tr class="mdd-plane-spacer-row">
+          <td style="width:75px;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td style="width:100px;">&nbsp;</td>
+          <td style="width:50px;">&nbsp;</td>
+        </tr>
+      `;
     }
 
     const totalR = isPureBlank ? '' : (b.totalRupees !== undefined ? Number(b.totalRupees).toLocaleString('en-IN') : '0');
@@ -3730,18 +3726,18 @@ import { supabase } from './lib/supabase.js';
         targetRow.className = 'mdd-live-row';
         const idx = rows.length + 1;
         targetRow.innerHTML = `
-          <td style="width:75px; text-align:center; font-weight:800; font-size:15px; color:#334155; padding:6px 4px;">${idx}</td>
-          <td style="padding:4px 8px;">
+          <td style="width:75px; text-align:center; font-weight:800; font-size:14px; color:#334155; padding:2px 4px;">${idx}</td>
+          <td style="padding:2px 8px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
               <input type="text" class="mdd-sheet-table-input mdd-live-desc" value="${desc}" style="font-weight:600; flex:1;" />
               <div style="display:flex; align-items:center; gap:2px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:1px 6px;" title="मात्रा / Quantity">
                 <span style="font-size:12px; font-weight:800; color:#64748b;">x</span>
-                <input type="number" class="mdd-sheet-table-input mdd-live-qty" value="${qty || ''}" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13.5px; color:#1e3a8a;" />
+                <input type="number" class="mdd-sheet-table-input mdd-live-qty" value="${qty || ''}" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13px; color:#1e3a8a;" />
               </div>
             </div>
           </td>
-          <td style="width:100px; text-align:right; padding:4px 8px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${rupees}" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
-          <td style="width:50px; text-align:center; padding:4px 4px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${paise || '00'}" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
+          <td style="width:100px; text-align:right; padding:2px 8px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" value="${rupees}" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:14px;" /></td>
+          <td style="width:50px; text-align:center; padding:2px 4px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" value="${paise || '00'}" style="text-align:center; font-family:monospace, sans-serif; font-size:13px;" /></td>
         `;
         const spacer = tbody.querySelector('.mdd-plane-spacer-row');
         if (spacer) {
@@ -3771,18 +3767,18 @@ import { supabase } from './lib/supabase.js';
       const tr = document.createElement('tr');
       tr.className = 'mdd-live-row';
       tr.innerHTML = `
-        <td style="width:75px; text-align:center; font-weight:800; font-size:15px; color:#334155; padding:6px 4px;">${idx}</td>
-        <td style="padding:4px 8px;">
+        <td style="width:75px; text-align:center; font-weight:800; font-size:14px; color:#334155; padding:2px 4px;">${idx}</td>
+        <td style="padding:2px 8px;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <input type="text" class="mdd-sheet-table-input mdd-live-desc" placeholder="विवरण (Item / Service)" style="font-weight:600; flex:1;" />
             <div style="display:flex; align-items:center; gap:2px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:1px 6px;" title="मात्रा / Quantity">
               <span style="font-size:12px; font-weight:800; color:#64748b;">x</span>
-              <input type="number" class="mdd-sheet-table-input mdd-live-qty" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13.5px; color:#1e3a8a;" />
+              <input type="number" class="mdd-sheet-table-input mdd-live-qty" placeholder="Qty" min="0" step="any" style="width:50px; text-align:center; font-weight:800; font-size:13px; color:#1e3a8a;" />
             </div>
           </div>
         </td>
-        <td style="width:100px; text-align:right; padding:4px 8px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:15px;" /></td>
-        <td style="width:50px; text-align:center; padding:4px 4px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" style="text-align:center; font-family:monospace, sans-serif; font-size:13.5px;" /></td>
+        <td style="width:100px; text-align:right; padding:2px 8px;"><input type="number" class="mdd-sheet-table-input mdd-live-rupees" placeholder="0" style="text-align:right; font-weight:700; font-family:monospace, sans-serif; font-size:14px;" /></td>
+        <td style="width:50px; text-align:center; padding:2px 4px;"><input type="number" class="mdd-sheet-table-input mdd-live-paise" placeholder="00" style="text-align:center; font-family:monospace, sans-serif; font-size:13px;" /></td>
       `;
       const spacer = tbody.querySelector('.mdd-plane-spacer-row');
       if (spacer) {
