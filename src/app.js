@@ -2810,8 +2810,12 @@ class TractorOSApp {
                       ${t.type === 'IN' ? '+' : '-'}₹${Number(t.amount).toLocaleString('en-IN')}
                     </strong>
                   </td>
-                  <td>${t.party}</td>
-                  <td>${t.mode}</td>
+                  <td>${t.party || t.partyName || 'Showroom Party'}</td>
+                  <td>
+                    <span class="badge ${(t.mode || t.paymentMode) === 'Cash' ? 'badge-success' : 'badge-primary'}">
+                      ${t.mode || t.paymentMode || 'Cash'}
+                    </span>
+                  </td>
                   <td style="font-size:11px; color:var(--text-muted);">${t.ref || '-'}</td>
                 </tr>
               `).join('')}
@@ -2826,21 +2830,155 @@ class TractorOSApp {
     const addBtn = document.getElementById('openAddCashTxnBtn');
     if (addBtn) {
       addBtn.addEventListener('click', () => {
-        const party = prompt("Enter Party / Customer / Vendor Name:", "Kisan Advance Booking");
-        const amount = prompt("Enter Amount (₹):", "50000");
-        const type = confirm("Click OK for Money IN (Collection), or Cancel for Money OUT (Payment)") ? 'IN' : 'OUT';
-        if (party && amount) {
-          store.addCashTransaction({
-            type,
-            category: type === 'IN' ? 'Customer Advance' : 'Operational Expense',
-            amount: Number(amount) || 0,
-            party,
-            mode: 'Bank / Cash',
-            ref: 'Manual Entry'
-          });
-        }
+        this.openCashMovementModal('IN');
       });
     }
+  }
+
+  openCashMovementModal(defaultType = 'IN') {
+    const modal = document.getElementById('cashMovementModal');
+    if (!modal) return;
+
+    const form = document.getElementById('cashMovementForm');
+    const inRadio = document.getElementById('cmFlowTypeIn');
+    const outRadio = document.getElementById('cmFlowTypeOut');
+    const inLabel = document.getElementById('cmTypeInLabel');
+    const outLabel = document.getElementById('cmTypeOutLabel');
+    const categorySelect = document.getElementById('cmCategory');
+    const partyInput = document.getElementById('cmParty');
+    const amountInput = document.getElementById('cmAmount');
+    const dateInput = document.getElementById('cmDate');
+    const refInput = document.getElementById('cmRef');
+    const notesInput = document.getElementById('cmNotes');
+    const submitBtn = document.getElementById('cmSubmitBtn');
+
+    if (form) form.reset();
+    if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+
+    const inCategories = [
+      { value: 'Customer Advance', text: 'Customer Token Advance' },
+      { value: 'Tractor Sale', text: 'Tractor Full / Margin Payment' },
+      { value: 'Implement Sale', text: 'Implement / Rotavator Sale' },
+      { value: 'Workshop & Service', text: 'Workshop / Service Collection' },
+      { value: 'Bank Loan Credit', text: 'Bank Loan Disbursement (Direct Credit)' },
+      { value: 'OEM / Govt Subsidy', text: 'OEM / DBT Subsidy Credit' },
+      { value: 'Capital / Other Inflow', text: 'Owner / Capital Infusion' },
+      { value: 'Miscellaneous', text: 'Other Inflow' }
+    ];
+
+    const outCategories = [
+      { value: 'Freight & Unloading', text: 'Freight & Unloading (Stock Arrival)' },
+      { value: 'PDI & Workshop Consumables', text: 'PDI & Workshop Consumables' },
+      { value: 'Fuel & Transport', text: 'Fuel & Demo Diesel' },
+      { value: 'Showroom Rent & Utilities', text: 'Showroom Rent & Utilities' },
+      { value: 'Staff Salaries & Incentives', text: 'Staff Salaries & Incentives' },
+      { value: 'Local Marketing & Banners', text: 'Local Marketing & Wall Paintings' },
+      { value: 'Tea, Refreshments & Hospitality', text: 'Tea & Customer Hospitality' },
+      { value: 'Office & Documentation', text: 'Office & Documentation Charges' },
+      { value: 'Miscellaneous', text: 'Other Outflow / Expense' }
+    ];
+
+    const updateFlowUI = (isDeposit) => {
+      if (inLabel) {
+        inLabel.style.border = isDeposit ? '2px solid #059669' : '2px solid #e2e8f0';
+        inLabel.style.background = isDeposit ? '#ecfdf5' : '#ffffff';
+        inLabel.style.color = isDeposit ? '#065f46' : '#64748b';
+      }
+      if (outLabel) {
+        outLabel.style.border = !isDeposit ? '2px solid #dc2626' : '2px solid #e2e8f0';
+        outLabel.style.background = !isDeposit ? '#fef2f2' : '#ffffff';
+        outLabel.style.color = !isDeposit ? '#991b1b' : '#64748b';
+      }
+
+      const partyLabelEl = document.getElementById('cmPartyLabel') || partyInput?.parentElement?.querySelector('label');
+      if (partyLabelEl) {
+        partyLabelEl.textContent = isDeposit ? 'Customer / Source Name *' : 'Vendor / Payee / Beneficiary *';
+      }
+      if (partyInput) {
+        partyInput.placeholder = isDeposit ? 'e.g. Rameshwar Yadav (Farmer)' : 'e.g. Local Transport, Petrol Pump, Landlord';
+      }
+
+      if (categorySelect) {
+        const cats = isDeposit ? inCategories : outCategories;
+        categorySelect.innerHTML = cats.map(c => `<option value="${c.value}">${c.text}</option>`).join('');
+      }
+
+      if (submitBtn) {
+        submitBtn.textContent = isDeposit ? '✓ Record Money IN' : '✓ Record Money OUT (Expense)';
+        submitBtn.className = isDeposit ? 'quick-action-btn btn-primary' : 'quick-action-btn btn-danger';
+      }
+    };
+
+    if (inRadio && outRadio) {
+      if (defaultType === 'OUT') {
+        outRadio.checked = true;
+        updateFlowUI(false);
+      } else {
+        inRadio.checked = true;
+        updateFlowUI(true);
+      }
+
+      inRadio.onchange = () => updateFlowUI(true);
+      outRadio.onchange = () => updateFlowUI(false);
+    } else {
+      updateFlowUI(true);
+    }
+
+    if (form) {
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const isDeposit = inRadio ? inRadio.checked : true;
+        const type = isDeposit ? 'IN' : 'OUT';
+        const amount = Number(document.getElementById('cmAmount')?.value) || 0;
+        if (amount <= 0) {
+          showToast('Please enter a valid amount greater than ₹0', 'warning', 'Invalid Amount');
+          return;
+        }
+
+        const party = (partyInput?.value || '').trim() || (isDeposit ? 'Showroom Customer' : 'Local Vendor');
+        const category = categorySelect?.value || (isDeposit ? 'Customer Advance' : 'Miscellaneous');
+        const mode = document.getElementById('cmMode')?.value || 'Cash';
+        const date = dateInput?.value || new Date().toISOString().split('T')[0];
+        const ref = (refInput?.value || '').trim();
+        const notes = (notesInput?.value || '').trim();
+
+        if (type === 'OUT') {
+          store.addExpense({
+            date,
+            amount,
+            category,
+            paymentMode: mode,
+            paidTo: party,
+            notes: notes || 'Cash & Bank payment outflow',
+            status: 'Approved'
+          });
+          showToast(`₹${amount.toLocaleString('en-IN')} payment recorded & synced with Expenses!`, 'success', 'Money Out Recorded');
+        } else {
+          store.addCashTransaction({
+            date,
+            type: 'IN',
+            category,
+            amount,
+            party,
+            partyName: party,
+            mode,
+            paymentMode: mode,
+            ref: ref || `REC-${Date.now().toString().slice(-4)}`,
+            notes: notes || 'Showroom collection inflow'
+          });
+          showToast(`₹${amount.toLocaleString('en-IN')} collection recorded to Cash & Bank!`, 'success', 'Money In Recorded');
+        }
+
+        this.closeAllModals();
+        this.renderCurrentView();
+        this.renderSidebar();
+      };
+    }
+
+    this.openModal('cashMovementModal');
+    setTimeout(() => {
+      if (amountInput) amountInput.focus();
+    }, 100);
   }
 
   // =========================================================================

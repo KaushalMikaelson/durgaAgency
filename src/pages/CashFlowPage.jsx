@@ -128,8 +128,8 @@ export function CashFlowPage() {
                   </span>
                 </td>
                 <td>{t.category}</td>
-                <td><strong>{t.partyName}</strong></td>
-                <td>{t.paymentMode}</td>
+                <td><strong>{t.partyName || t.party || 'Showroom Party'}</strong></td>
+                <td>{t.paymentMode || t.mode || 'Cash'}</td>
                 <td className={`text-right font-mono font-bold ${t.type === 'IN' ? 'text-emerald' : 'text-amber'}`}>
                   {t.type === 'IN' ? '+' : '-'}₹{Number(t.amount).toLocaleString('en-IN')}
                 </td>

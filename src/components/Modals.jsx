@@ -926,6 +926,180 @@ export function Modals() {
           </form>
         </div>
       </div>
+
+      {/* Modal 11: Cash & Bank Movement Entry Modal */}
+      <div className="modal-backdrop" id="cashMovementModal">
+        <div className="modal-box" style={{ maxWidth: '580px' }}>
+          <div className="modal-header" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '14px' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '17px', fontWeight: 800, margin: 0 }}>
+              <span style={{ fontSize: '20px' }}>🏦</span>
+              <span>Record Cash & Bank Movement</span>
+            </h3>
+            <button type="button" className="modal-close-btn">&times;</button>
+          </div>
+          <form id="cashMovementForm">
+            <div className="modal-body" style={{ padding: '20px' }}>
+              {/* Type Switcher: MONEY IN vs MONEY OUT */}
+              <div style={{ marginBottom: '18px' }}>
+                <label className="form-label" style={{ marginBottom: '8px', display: 'block', fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
+                  Movement Direction
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <label
+                    id="cmTypeInLabel"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '12px 14px',
+                      borderRadius: '8px',
+                      border: '2px solid #059669',
+                      background: '#ecfdf5',
+                      color: '#065f46',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="cmFlowType"
+                      id="cmFlowTypeIn"
+                      value="IN"
+                      defaultChecked
+                      style={{ marginRight: '6px', accentColor: '#059669' }}
+                    />
+                    <span>↓ MONEY IN (Collection / Deposit)</span>
+                  </label>
+                  <label
+                    id="cmTypeOutLabel"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '12px 14px',
+                      borderRadius: '8px',
+                      border: '2px solid #e2e8f0',
+                      background: '#fff',
+                      color: '#64748b',
+                      fontWeight: 700,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="cmFlowType"
+                      id="cmFlowTypeOut"
+                      value="OUT"
+                      style={{ marginRight: '6px', accentColor: '#dc2626' }}
+                    />
+                    <span>↑ MONEY OUT (Payment / Expense)</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '14px', marginBottom: '14px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', marginBottom: '6px', display: 'block' }}>Amount (₹) *</label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontWeight: 800, color: 'var(--text-secondary)' }}>₹</span>
+                    <input
+                      type="number"
+                      id="cmAmount"
+                      className="form-input"
+                      placeholder="e.g. 50000"
+                      required
+                      min="1"
+                      step="any"
+                      style={{ paddingLeft: '28px', fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}
+                    />
+                  </div>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', marginBottom: '6px', display: 'block' }}>Category *</label>
+                  <select id="cmCategory" className="form-select" style={{ width: '100%' }}>
+                    <option value="Customer Advance">Customer Token Advance</option>
+                    <option value="Tractor Sale">Tractor Full / Margin Payment</option>
+                    <option value="Implement Sale">Implement / Rotavator Sale</option>
+                    <option value="Workshop & Service">Workshop / Service Collection</option>
+                    <option value="Bank Loan Credit">Bank Loan Disbursement (Direct Credit)</option>
+                    <option value="OEM / Govt Subsidy">OEM / DBT Subsidy Credit</option>
+                    <option value="Capital / Other Inflow">Owner / Capital Infusion</option>
+                    <option value="Miscellaneous">Other Income</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" id="cmPartyLabel" style={{ fontWeight: 600, fontSize: '12.5px', marginBottom: '6px', display: 'block' }}>Customer / Source Name *</label>
+                  <input
+                    type="text"
+                    id="cmParty"
+                    className="form-input"
+                    placeholder="e.g. Rameshwar Yadav (Farmer)"
+                    required
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', marginBottom: '6px', display: 'block' }}>Payment Channel / Mode</label>
+                  <select id="cmMode" className="form-select" style={{ width: '100%' }}>
+                    <option value="Cash">💵 Cash (Showroom Safe / Counter)</option>
+                    <option value="Bank Transfer">🏦 Bank Transfer (SBI / NEFT / RTGS)</option>
+                    <option value="UPI">📱 UPI / PhonePe / QR</option>
+                    <option value="Cheque">📜 Cheque / Demand Draft</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', marginBottom: '6px', display: 'block' }}>Transaction Date</label>
+                  <input
+                    type="date"
+                    id="cmDate"
+                    className="form-input"
+                    defaultValue={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', marginBottom: '6px', display: 'block' }}>Reference / Slip / Chassis / UTR</label>
+                  <input
+                    type="text"
+                    id="cmRef"
+                    className="form-input"
+                    placeholder="e.g. Chq #551201 or UTR 918231 or CH-4511"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label" style={{ fontWeight: 600, fontSize: '12.5px', marginBottom: '6px', display: 'block' }}>Remarks / Purpose (Optional)</label>
+                <input
+                  type="text"
+                  id="cmNotes"
+                  className="form-input"
+                  placeholder="e.g. Token advance for tractor booking"
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ borderTop: '1px solid var(--border-color)', padding: '14px 20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button type="button" className="quick-action-btn btn-outline modal-close-btn">Cancel</button>
+              <button type="submit" className="quick-action-btn btn-primary" id="cmSubmitBtn" style={{ minWidth: '170px', justifyContent: 'center' }}>
+                ✓ Save Money IN
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </>
   );
 }

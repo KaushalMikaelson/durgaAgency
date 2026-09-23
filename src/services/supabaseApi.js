@@ -179,12 +179,14 @@ function rowToCash(row) {
     id: row.id,
     date: row.date,
     type: row.type || 'IN',
-    category: row.category,
+    category: row.category || 'Operational',
     amount: Number(row.amount || 0),
-    partyName: row.party_name,
-    paymentMode: row.payment_mode,
-    notes: row.notes,
-    ref: row.ref,
+    party: row.party_name || 'Showroom Party',
+    partyName: row.party_name || 'Showroom Party',
+    mode: row.payment_mode || 'Cash',
+    paymentMode: row.payment_mode || 'Cash',
+    notes: row.notes || '',
+    ref: row.ref || null,
     createdAt: row.created_at
   };
 }
@@ -194,10 +196,10 @@ function cashToRow(txn) {
     id: txn.id || `TXN-${Date.now()}`,
     date: txn.date || new Date().toISOString().split('T')[0],
     type: txn.type || 'IN',
-    category: txn.category || 'Tractor Sale',
+    category: txn.category || 'Operational',
     amount: Number(txn.amount || 0),
-    party_name: txn.partyName || txn.party_name || '',
-    payment_mode: txn.paymentMode || txn.payment_mode || 'Cash',
+    party_name: txn.partyName || txn.party_name || txn.party || 'Showroom Party',
+    payment_mode: txn.paymentMode || txn.payment_mode || txn.mode || 'Cash',
     notes: txn.notes || '',
     ref: txn.ref || null
   };
@@ -528,6 +530,26 @@ export const supabaseApi = {
         throw err;
       }
     },
+    async delete(id) {
+      try {
+        const { error } = await supabase.from('cash_transactions').delete().eq('id', id);
+        if (error) throw error;
+        return { success: true };
+      } catch (err) {
+        console.error('Supabase cashflow.delete error:', err);
+        throw err;
+      }
+    },
+    async deleteByRef(ref) {
+      try {
+        const { error } = await supabase.from('cash_transactions').delete().eq('ref', ref);
+        if (error) throw error;
+        return { success: true };
+      } catch (err) {
+        console.error('Supabase cashflow.deleteByRef error:', err);
+        throw err;
+      }
+    },
     async getSnapshot() {
       try {
         const [bills, expenses, cashTxns] = await Promise.all([
@@ -536,13 +558,34 @@ export const supabaseApi = {
           supabaseApi.cashflow.getAll()
         ]);
         const billRevenue = bills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0);
+        let billPaidTotal = 0;
+        bills.forEach(b => {
+          const total = Number(b.totalRupees || 0);
+          let paid = total;
+          if (b.paymentStatus === 'Due') {
+            paid = 0;
+          } else if (b.paymentStatus === 'Partial' && b.paidAmount !== undefined) {
+            paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+          } else if (b.paidAmount !== undefined && b.paidAmount !== null && b.paidAmount !== '') {
+            paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+          }
+          if (b.paymentStatus === 'Paid' && paid === 0 && total > 0) paid = total;
+          billPaidTotal += paid;
+        });
+
         let cashIn = 0;
         let cashOut = 0;
         for (const txn of cashTxns) {
           const amt = Number(txn.amount || 0);
-          if (txn.type === 'IN') cashIn += amt;
-          else if (txn.type === 'OUT') cashOut += amt;
+          if (txn.type === 'IN') {
+            if (!txn.ref || !txn.ref.startsWith('BILL-')) {
+              cashIn += amt;
+            }
+          } else if (txn.type === 'OUT') {
+            cashOut += amt;
+          }
         }
+        cashIn += billPaidTotal;
         const categoryTotals = {};
         let totalExpenses = 0;
         for (const exp of expenses.filter(e => e.status === 'Approved')) {

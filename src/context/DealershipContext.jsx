@@ -56,14 +56,96 @@ export function DealershipProvider({ children }) {
         api.cashflow.getSnapshot()
       ]);
 
-      if (billsData.status === 'fulfilled' && billsData.value) setBills(billsData.value);
+      const rawExpenses = (expensesData.status === 'fulfilled' && expensesData.value) ? expensesData.value : [];
+      let rawCash = (cashData.status === 'fulfilled' && cashData.value) ? [...cashData.value] : [];
+
+      if (rawExpenses.length > 0) {
+        const approvedExpenses = rawExpenses.filter(e => e.status === 'Approved');
+        approvedExpenses.forEach(exp => {
+          if (!rawCash.some(t => t.ref === exp.id)) {
+            rawCash.unshift({
+              id: `TXN-${exp.id}`,
+              date: exp.date || new Date().toISOString().split('T')[0],
+              type: 'OUT',
+              category: exp.category || 'Operational Expense',
+              amount: Number(exp.amount || 0),
+              party: exp.paidTo || 'Showroom Vendor',
+              partyName: exp.paidTo || 'Showroom Vendor',
+              mode: exp.paymentMode || 'Cash',
+              paymentMode: exp.paymentMode || 'Cash',
+              ref: exp.id,
+              notes: exp.notes || ''
+            });
+          }
+        });
+      }
+
+      const rawBills = (billsData.status === 'fulfilled' && billsData.value) ? billsData.value : [];
+      if (rawBills.length > 0) {
+        rawBills.forEach(b => {
+          const total = Number(b.totalRupees || 0);
+          let paid = total;
+          if (b.paymentStatus === 'Due') {
+            paid = 0;
+          } else if (b.paymentStatus === 'Partial' && b.paidAmount !== undefined) {
+            paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+          } else if (b.paidAmount !== undefined && b.paidAmount !== null && b.paidAmount !== '') {
+            paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+          }
+          if (b.paymentStatus === 'Paid' && paid === 0 && total > 0) paid = total;
+
+          const billRef = b.billNumber ? `BILL-${b.billNumber}` : (b.id ? String(b.id) : '');
+          const existing = rawCash.find(t => (billRef && t.ref === billRef) || (b.id && (t.ref === b.id || t.billId === b.id)));
+
+          if (paid > 0) {
+            if (existing) {
+              existing.amount = paid;
+              existing.type = 'IN';
+            } else {
+              rawCash.unshift({
+                id: `TXN-BILL-${b.billNumber || b.id}`,
+                date: b.date || new Date().toISOString().split('T')[0],
+                type: 'IN',
+                category: 'Customer Bill Collection',
+                amount: paid,
+                party: b.customerName || 'Cash Customer',
+                partyName: b.customerName || 'Cash Customer',
+                mode: b.paymentMode || 'Cash',
+                paymentMode: b.paymentMode || 'Cash',
+                ref: billRef,
+                billId: b.id,
+                notes: `Official Bill #${b.billNumber || ''} payment collection`
+              });
+            }
+          } else if (existing) {
+            rawCash = rawCash.filter(t => t !== existing);
+          }
+        });
+      }
+
+      if (billsData.status === 'fulfilled' && billsData.value) setBills(rawBills);
       if (leadsData.status === 'fulfilled' && leadsData.value) setLeads(leadsData.value);
       if (tractorsData.status === 'fulfilled' && tractorsData.value) setTractors(tractorsData.value);
-      if (expensesData.status === 'fulfilled' && expensesData.value) setExpenses(expensesData.value);
-      if (cashData.status === 'fulfilled' && cashData.value) setCashTxns(cashData.value);
+      if (expensesData.status === 'fulfilled') setExpenses(rawExpenses);
+      setCashTxns(rawCash);
       if (demosData.status === 'fulfilled' && demosData.value) setDemos(demosData.value);
       if (settingsData.status === 'fulfilled' && settingsData.value) setSettings(settingsData.value);
-      if (snapshotData.status === 'fulfilled' && snapshotData.value) setFinancialSnapshot(snapshotData.value);
+
+      let calcCashIn = 0;
+      let calcCashOut = 0;
+      rawCash.forEach(t => {
+        const amt = Number(t.amount || 0);
+        if (t.type === 'IN') calcCashIn += amt;
+        else if (t.type === 'OUT') calcCashOut += amt;
+      });
+
+      setFinancialSnapshot({
+        billRevenue: rawBills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0),
+        cashIn: calcCashIn,
+        cashOut: calcCashOut,
+        netCashFlow: calcCashIn - calcCashOut,
+        totalExpenses: rawExpenses.filter(e => e.status === 'Approved').reduce((s, e) => s + Number(e.amount || 0), 0)
+      });
     } catch (e) {
       console.warn("API refresh error:", e);
     }
@@ -138,8 +220,28 @@ export function DealershipProvider({ children }) {
 
   const saveExpense = async (expData) => {
     try {
-      const created = await api.expenses.create(expData);
+      const isAutoApproved = Number(expData.amount) < 5000 || expData.status === 'Approved';
+      const created = await api.expenses.create({
+        ...expData,
+        status: isAutoApproved ? 'Approved' : (expData.status || 'Pending Approval'),
+        approvedBy: isAutoApproved ? 'System (< ₹5,000)' : (expData.approvedBy || null)
+      });
       setExpenses(prev => [created, ...prev]);
+
+      if (isAutoApproved) {
+        await api.cashflow.create({
+          id: `TXN-${created.id}`,
+          date: created.date || new Date().toISOString().split('T')[0],
+          type: 'OUT',
+          category: created.category || 'Operational Expense',
+          amount: Number(created.amount || 0),
+          partyName: created.paidTo || 'Vendor',
+          paymentMode: created.paymentMode || 'Cash',
+          ref: created.id,
+          notes: created.notes || ''
+        }).catch(e => console.warn(e));
+      }
+
       showToast(`Logged ₹${Number(expData.amount).toLocaleString('en-IN')} expense`, 'success');
       refreshAll();
     } catch (e) {
@@ -147,10 +249,39 @@ export function DealershipProvider({ children }) {
     }
   };
 
+  const deleteExpense = async (id) => {
+    try {
+      await api.expenses.delete(id);
+      if (api.cashflow?.deleteByRef) {
+        await api.cashflow.deleteByRef(id).catch(e => console.warn(e));
+      }
+      setExpenses(prev => prev.filter(e => e.id !== id));
+      setCashTxns(prev => prev.filter(t => t.ref !== id));
+      showToast('Expense record deleted', 'info');
+      refreshAll();
+    } catch (e) {
+      showToast('Failed to delete expense', 'error');
+    }
+  };
+
   const saveCashTxn = async (txnData) => {
     try {
       const created = await api.cashflow.create(txnData);
       setCashTxns(prev => [created, ...prev]);
+
+      if (txnData.type === 'OUT' && (!txnData.ref || !txnData.ref.startsWith('EXP-'))) {
+        await api.expenses.create({
+          date: txnData.date || new Date().toISOString().split('T')[0],
+          category: txnData.category || 'Operational Expense',
+          amount: Number(txnData.amount || 0),
+          paidTo: txnData.partyName || txnData.party || 'Vendor',
+          paymentMode: txnData.paymentMode || txnData.mode || 'Cash',
+          status: 'Approved',
+          approvedBy: 'Cash & Bank Entry',
+          notes: txnData.notes || 'Recorded from Cash & Bank tab'
+        }).catch(e => console.warn(e));
+      }
+
       showToast(`Recorded ₹${Number(txnData.amount).toLocaleString('en-IN')} (${txnData.type})`, 'success');
       refreshAll();
     } catch (e) {
@@ -197,6 +328,7 @@ export function DealershipProvider({ children }) {
       deleteBill,
       saveLead,
       saveExpense,
+      deleteExpense,
       saveCashTxn,
       updateTractorStock
     }}>

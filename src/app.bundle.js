@@ -575,13 +575,142 @@ import { supabase } from './lib/supabase.js';
     }
     getCashTransactions() {
       try {
-        const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TXNS)) || DEFAULT_CASH_TRANSACTIONS;
-        const cleaned = stored.filter(t => !t.ref || !/^EXP-10[1-9]$/.test(t.ref));
-        if (cleaned.length !== stored.length) {
-          localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(cleaned));
-        }
-        return cleaned;
-      } catch { return DEFAULT_CASH_TRANSACTIONS; }
+        let stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TXNS)) || [];
+        // 1. Filter out demo/seed references
+        stored = stored.filter(t => !t.ref || (!/^EXP-10[1-9]$/.test(t.ref) && t.ref !== 'EXP-001' && t.ref !== 'EXP-002'));
+
+        // 2. Fetch approved showroom expenses
+        const approvedExpenses = this.getExpenses().filter(e => e.status === 'Approved');
+        const approvedExpIds = new Set(approvedExpenses.map(e => e.id));
+
+        // 3. Prune orphaned expense transactions
+        stored = stored.filter(t => !t.ref || !t.ref.startsWith('EXP-') || approvedExpIds.has(t.ref));
+
+        // 4. Ensure every approved expense is synced as a Cash/Bank OUT movement
+        approvedExpenses.forEach(exp => {
+          const party = exp.paidTo || 'Showroom Vendor';
+          const mode = exp.paymentMode || 'Cash';
+          const amt = Number(exp.amount || 0);
+          const existing = stored.find(t => t.ref === exp.id);
+          if (existing) {
+            existing.amount = amt;
+            existing.date = exp.date || existing.date;
+            existing.category = exp.category || existing.category;
+            existing.party = party;
+            existing.partyName = party;
+            existing.mode = mode;
+            existing.paymentMode = mode;
+            existing.type = 'OUT';
+            existing.notes = exp.notes || exp.description || existing.notes || '';
+          } else {
+            stored.unshift({
+              id: `TXN-${exp.id}`,
+              date: exp.date || new Date().toISOString().split('T')[0],
+              type: 'OUT',
+              category: exp.category || 'Operational Expense',
+              amount: amt,
+              party: party,
+              partyName: party,
+              mode: mode,
+              paymentMode: mode,
+              ref: exp.id,
+              notes: exp.notes || exp.description || ''
+            });
+          }
+        });
+
+        // 5. Fetch bills & ensure all paid bills are synced as Cash/Bank IN movements
+        const bills = this.getBills();
+        const validBillRefs = new Set();
+
+        bills.forEach(b => {
+          const total = Number(b.totalRupees || 0);
+          let paid = total;
+          if (b.paymentStatus === 'Due') {
+            paid = 0;
+          } else if (b.paymentStatus === 'Partial' && b.paidAmount !== undefined) {
+            paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+          } else if (b.paidAmount !== undefined && b.paidAmount !== null && b.paidAmount !== '') {
+            paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+          }
+          if (b.paymentStatus === 'Paid' && paid === 0 && total > 0) {
+            paid = total;
+          }
+
+          const billRef = b.billNumber ? `BILL-${b.billNumber}` : (b.id ? String(b.id) : '');
+          if (billRef) validBillRefs.add(billRef);
+          if (b.id) validBillRefs.add(String(b.id));
+
+          const existing = stored.find(t => (billRef && t.ref === billRef) || (b.id && (t.ref === b.id || t.billId === b.id)));
+
+          if (paid > 0) {
+            const party = b.customerName || 'Cash Customer';
+            const mode = b.paymentMode || 'Cash';
+            const billNameStr = b.billName ? ` (${b.billName})` : '';
+            const notes = `Official Bill #${b.billNumber || ''}${billNameStr} payment collection`;
+
+            if (existing) {
+              existing.amount = paid;
+              existing.date = b.date || existing.date;
+              existing.category = 'Customer Bill Collection';
+              existing.party = party;
+              existing.partyName = party;
+              existing.mode = mode;
+              existing.paymentMode = mode;
+              existing.type = 'IN';
+              existing.notes = notes;
+              existing.ref = billRef || existing.ref;
+            } else {
+              stored.unshift({
+                id: `TXN-BILL-${b.billNumber || b.id || Date.now().toString().slice(-4)}`,
+                date: b.date || new Date().toISOString().split('T')[0],
+                type: 'IN',
+                category: 'Customer Bill Collection',
+                amount: paid,
+                party: party,
+                partyName: party,
+                mode: mode,
+                paymentMode: mode,
+                ref: billRef,
+                billId: b.id,
+                notes: notes
+              });
+            }
+          } else if (existing) {
+            stored = stored.filter(t => t !== existing);
+          }
+        });
+
+        // 6. Prune orphaned bill transactions if the bill was deleted
+        stored = stored.filter(t => !t.ref || !t.ref.startsWith('BILL-') || validBillRefs.has(t.ref));
+
+        // 7. Deduplicate stored: ensure no duplicate IDs or references exist
+        const seenIds = new Set();
+        const seenRefs = new Set();
+        stored = stored.filter(t => {
+          if (t.id && seenIds.has(t.id)) return false;
+          if (t.ref && seenRefs.has(t.ref)) return false;
+          if (t.id) seenIds.add(t.id);
+          if (t.ref) seenRefs.add(t.ref);
+          return true;
+        });
+
+        // 8. Normalize all entries
+        stored.forEach(t => {
+          t.party = t.party || t.partyName || 'Showroom Party';
+          t.partyName = t.partyName || t.party || 'Showroom Party';
+          t.mode = t.mode || t.paymentMode || 'Cash';
+          t.paymentMode = t.paymentMode || t.mode || 'Cash';
+          t.amount = Number(t.amount || 0);
+        });
+
+        stored.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+        localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(stored));
+        return stored;
+      } catch {
+        return DEFAULT_CASH_TRANSACTIONS;
+      }
     }
     getDemos() {
       try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.DEMOS)) || DEFAULT_DEMOS; } catch { return DEFAULT_DEMOS; }
@@ -660,15 +789,7 @@ import { supabase } from './lib/supabase.js';
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
 
       if (isAutoApproved) {
-        this.addCashTransaction({
-          date: newExpense.date,
-          type: 'OUT',
-          category: newExpense.category,
-          amount: newExpense.amount,
-          party: newExpense.paidTo || 'Vendor',
-          mode: newExpense.paymentMode || 'Cash',
-          ref: newExpense.id
-        });
+        this.getCashTransactions();
       }
       this.notify();
       if (typeof supabaseApi !== 'undefined' && supabaseApi?.expenses) {
@@ -684,15 +805,7 @@ import { supabase } from './lib/supabase.js';
         item.status = 'Approved';
         item.approvedBy = approverName;
         localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
-        this.addCashTransaction({
-          date: new Date().toISOString().split('T')[0],
-          type: 'OUT',
-          category: item.category,
-          amount: item.amount,
-          party: item.paidTo || 'Vendor',
-          mode: item.paymentMode || 'Bank Transfer',
-          ref: item.id
-        });
+        this.getCashTransactions();
         this.notify();
         if (typeof supabaseApi !== 'undefined' && supabaseApi?.expenses) {
           supabaseApi.expenses.create(item).catch(e => console.warn('Supabase expense approve failed:', e));
@@ -703,9 +816,18 @@ import { supabase } from './lib/supabase.js';
     deleteExpense(id) {
       const expenses = this.getExpenses().filter(e => e.id !== id);
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+
+      // Synchronously purge matching cash transaction
+      try {
+        const rawCash = JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TXNS)) || [];
+        const cleanCash = rawCash.filter(t => t.ref !== id);
+        localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(cleanCash));
+      } catch {}
+
       this.notify();
-      if (typeof supabaseApi !== 'undefined' && supabaseApi?.expenses) {
-        supabaseApi.expenses.delete(id).catch(e => console.warn('Supabase expense delete failed:', e));
+      if (typeof supabaseApi !== 'undefined') {
+        if (supabaseApi.expenses) supabaseApi.expenses.delete(id).catch(e => console.warn('Supabase expense delete failed:', e));
+        if (supabaseApi.cashflow?.deleteByRef) supabaseApi.cashflow.deleteByRef(id).catch(e => console.warn('Supabase cashflow delete failed:', e));
       }
     }
 
@@ -715,9 +837,22 @@ import { supabase } from './lib/supabase.js';
       const newTxn = {
         id: newId,
         date: txnData.date || new Date().toISOString().split('T')[0],
-        ...txnData
+        type: txnData.type || 'IN',
+        category: txnData.category || 'Operational',
+        amount: Number(txnData.amount || 0),
+        party: txnData.party || txnData.partyName || 'Showroom Party',
+        partyName: txnData.partyName || txnData.party || 'Showroom Party',
+        mode: txnData.mode || txnData.paymentMode || 'Cash',
+        paymentMode: txnData.paymentMode || txnData.mode || 'Cash',
+        ref: txnData.ref || null,
+        notes: txnData.notes || ''
       };
-      txns.unshift(newTxn);
+      const existingIdx = txns.findIndex(t => (newTxn.ref && t.ref === newTxn.ref) || t.id === newTxn.id);
+      if (existingIdx >= 0) {
+        txns[existingIdx] = { ...txns[existingIdx], ...newTxn };
+      } else {
+        txns.unshift(newTxn);
+      }
       localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(txns));
       this.notify();
       if (typeof supabaseApi !== 'undefined' && supabaseApi?.cashflow) {
@@ -894,6 +1029,7 @@ import { supabase } from './lib/supabase.js';
         bills.unshift(newBill);
       }
       localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
+      this.getCashTransactions();
       this.notify();
       if (typeof supabaseApi !== 'undefined' && supabaseApi?.bills) {
         supabaseApi.bills.save(newBill).catch(e => console.warn('Supabase bill save failed:', e));
@@ -912,6 +1048,7 @@ import { supabase } from './lib/supabase.js';
         return bId !== target && bNo !== target;
       });
       localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
+      this.getCashTransactions();
       this.notify();
       if (typeof supabaseApi !== 'undefined' && supabaseApi?.bills) {
         supabaseApi.bills.delete(target).catch(e => console.warn('Supabase bill delete failed:', e));
@@ -4444,8 +4581,12 @@ import { supabase } from './lib/supabase.js';
                         ${t.type === 'IN' ? '+' : '-'}₹${Number(t.amount).toLocaleString('en-IN')}
                       </strong>
                     </td>
-                    <td>${t.party}</td>
-                    <td>${t.mode}</td>
+                    <td>${t.party || t.partyName || 'Showroom Party'}</td>
+                    <td>
+                      <span class="badge ${(t.mode || t.paymentMode) === 'Cash' ? 'badge-success' : 'badge-primary'}">
+                        ${t.mode || t.paymentMode || 'Cash'}
+                      </span>
+                    </td>
                     <td style="font-size:11px; color:var(--text-muted);">${t.ref || '-'}</td>
                   </tr>
                 `).join('')}
@@ -4460,21 +4601,155 @@ import { supabase } from './lib/supabase.js';
       const addBtn = document.getElementById('openAddCashTxnBtn');
       if (addBtn) {
         addBtn.addEventListener('click', () => {
-          const party = prompt("Enter Party / Customer / Vendor Name:", "Kisan Token Advance");
-          const amount = prompt("Enter Amount (₹):", "50000");
-          const type = confirm("Click OK for Money IN (Collection), or Cancel for Money OUT (Payment)") ? 'IN' : 'OUT';
-          if (party && amount) {
-            store.addCashTransaction({
-              type,
-              category: type === 'IN' ? 'Customer Advance' : 'Operational Expense',
-              amount: Number(amount) || 0,
-              party,
-              mode: 'Bank / Cash',
-              ref: 'Manual Entry'
-            });
-          }
+          this.openCashMovementModal('IN');
         });
       }
+    }
+
+    openCashMovementModal(defaultType = 'IN') {
+      const modal = document.getElementById('cashMovementModal');
+      if (!modal) return;
+
+      const form = document.getElementById('cashMovementForm');
+      const inRadio = document.getElementById('cmFlowTypeIn');
+      const outRadio = document.getElementById('cmFlowTypeOut');
+      const inLabel = document.getElementById('cmTypeInLabel');
+      const outLabel = document.getElementById('cmTypeOutLabel');
+      const categorySelect = document.getElementById('cmCategory');
+      const partyInput = document.getElementById('cmParty');
+      const amountInput = document.getElementById('cmAmount');
+      const dateInput = document.getElementById('cmDate');
+      const refInput = document.getElementById('cmRef');
+      const notesInput = document.getElementById('cmNotes');
+      const submitBtn = document.getElementById('cmSubmitBtn');
+
+      if (form) form.reset();
+      if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+
+      const inCategories = [
+        { value: 'Customer Advance', text: 'Customer Token Advance' },
+        { value: 'Tractor Sale', text: 'Tractor Full / Margin Payment' },
+        { value: 'Implement Sale', text: 'Implement / Rotavator Sale' },
+        { value: 'Workshop & Service', text: 'Workshop / Service Collection' },
+        { value: 'Bank Loan Credit', text: 'Bank Loan Disbursement (Direct Credit)' },
+        { value: 'OEM / Govt Subsidy', text: 'OEM / DBT Subsidy Credit' },
+        { value: 'Capital / Other Inflow', text: 'Owner / Capital Infusion' },
+        { value: 'Miscellaneous', text: 'Other Inflow' }
+      ];
+
+      const outCategories = [
+        { value: 'Freight & Unloading', text: 'Freight & Unloading (Stock Arrival)' },
+        { value: 'PDI & Workshop Consumables', text: 'PDI & Workshop Consumables' },
+        { value: 'Fuel & Transport', text: 'Fuel & Demo Diesel' },
+        { value: 'Showroom Rent & Utilities', text: 'Showroom Rent & Utilities' },
+        { value: 'Staff Salaries & Incentives', text: 'Staff Salaries & Incentives' },
+        { value: 'Local Marketing & Banners', text: 'Local Marketing & Wall Paintings' },
+        { value: 'Tea, Refreshments & Hospitality', text: 'Tea & Customer Hospitality' },
+        { value: 'Office & Documentation', text: 'Office & Documentation Charges' },
+        { value: 'Miscellaneous', text: 'Other Outflow / Expense' }
+      ];
+
+      const updateFlowUI = (isDeposit) => {
+        if (inLabel) {
+          inLabel.style.border = isDeposit ? '2px solid #059669' : '2px solid #e2e8f0';
+          inLabel.style.background = isDeposit ? '#ecfdf5' : '#ffffff';
+          inLabel.style.color = isDeposit ? '#065f46' : '#64748b';
+        }
+        if (outLabel) {
+          outLabel.style.border = !isDeposit ? '2px solid #dc2626' : '2px solid #e2e8f0';
+          outLabel.style.background = !isDeposit ? '#fef2f2' : '#ffffff';
+          outLabel.style.color = !isDeposit ? '#991b1b' : '#64748b';
+        }
+
+        const partyLabelEl = document.getElementById('cmPartyLabel') || partyInput?.parentElement?.querySelector('label');
+        if (partyLabelEl) {
+          partyLabelEl.textContent = isDeposit ? 'Customer / Source Name *' : 'Vendor / Payee / Beneficiary *';
+        }
+        if (partyInput) {
+          partyInput.placeholder = isDeposit ? 'e.g. Rameshwar Yadav (Farmer)' : 'e.g. Local Transport, Petrol Pump, Landlord';
+        }
+
+        if (categorySelect) {
+          const cats = isDeposit ? inCategories : outCategories;
+          categorySelect.innerHTML = cats.map(c => `<option value="${c.value}">${c.text}</option>`).join('');
+        }
+
+        if (submitBtn) {
+          submitBtn.textContent = isDeposit ? '✓ Record Money IN' : '✓ Record Money OUT (Expense)';
+          submitBtn.className = isDeposit ? 'quick-action-btn btn-primary' : 'quick-action-btn btn-danger';
+        }
+      };
+
+      if (inRadio && outRadio) {
+        if (defaultType === 'OUT') {
+          outRadio.checked = true;
+          updateFlowUI(false);
+        } else {
+          inRadio.checked = true;
+          updateFlowUI(true);
+        }
+
+        inRadio.onchange = () => updateFlowUI(true);
+        outRadio.onchange = () => updateFlowUI(false);
+      } else {
+        updateFlowUI(true);
+      }
+
+      if (form) {
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const isDeposit = inRadio ? inRadio.checked : true;
+          const type = isDeposit ? 'IN' : 'OUT';
+          const amount = Number(document.getElementById('cmAmount')?.value) || 0;
+          if (amount <= 0) {
+            showToast('Please enter a valid amount greater than ₹0', 'warning', 'Invalid Amount');
+            return;
+          }
+
+          const party = (partyInput?.value || '').trim() || (isDeposit ? 'Showroom Customer' : 'Local Vendor');
+          const category = categorySelect?.value || (isDeposit ? 'Customer Advance' : 'Miscellaneous');
+          const mode = document.getElementById('cmMode')?.value || 'Cash';
+          const date = dateInput?.value || new Date().toISOString().split('T')[0];
+          const ref = (refInput?.value || '').trim();
+          const notes = (notesInput?.value || '').trim();
+
+          if (type === 'OUT') {
+            store.addExpense({
+              date,
+              amount,
+              category,
+              paymentMode: mode,
+              paidTo: party,
+              notes: notes || 'Cash & Bank payment outflow',
+              status: 'Approved'
+            });
+            showToast(`₹${amount.toLocaleString('en-IN')} payment recorded & synced with Expenses!`, 'success', 'Money Out Recorded');
+          } else {
+            store.addCashTransaction({
+              date,
+              type: 'IN',
+              category,
+              amount,
+              party,
+              partyName: party,
+              mode,
+              paymentMode: mode,
+              ref: ref || `REC-${Date.now().toString().slice(-4)}`,
+              notes: notes || 'Showroom collection inflow'
+            });
+            showToast(`₹${amount.toLocaleString('en-IN')} collection recorded to Cash & Bank!`, 'success', 'Money In Recorded');
+          }
+
+          this.closeAllModals();
+          this.renderCurrentView();
+          this.renderSidebar();
+        };
+      }
+
+      this.openModal('cashMovementModal');
+      setTimeout(() => {
+        if (amountInput) amountInput.focus();
+      }, 100);
     }
 
     renderVillageMapHTML() {
