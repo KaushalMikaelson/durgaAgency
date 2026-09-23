@@ -150,14 +150,61 @@ export function toIsoDate(dmyOrIso) {
   return str.split('T')[0];
 }
 
+export function autoFitBillToOnePage(billElement) {
+  if (!billElement) return;
+  billElement.style.transform = '';
+  billElement.style.transformOrigin = '';
+  billElement.style.marginBottom = '';
+
+  const SAFE_MAX_PX = 960;
+  const actualHeight = billElement.scrollHeight;
+
+  if (actualHeight > SAFE_MAX_PX) {
+    const scale = Math.floor((SAFE_MAX_PX / actualHeight) * 1000) / 1000;
+    billElement.style.transform = `scale(${scale})`;
+    billElement.style.transformOrigin = 'top center';
+    const collapsed = actualHeight - (actualHeight * scale);
+    billElement.style.marginBottom = `-${collapsed}px`;
+  }
+}
+
+if (typeof window !== 'undefined' && !window._hasBoundBillPrintAutoFit) {
+  window._hasBoundBillPrintAutoFit = true;
+  window.addEventListener('beforeprint', () => {
+    const bill = document.getElementById('printableMddBill');
+    if (bill) autoFitBillToOnePage(bill);
+  });
+  window.addEventListener('afterprint', () => {
+    const bill = document.getElementById('printableMddBill');
+    if (bill) {
+      bill.style.transform = '';
+      bill.style.transformOrigin = '';
+      bill.style.marginBottom = '';
+    }
+  });
+}
+
 export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false) {
   const nextAutoNo = (typeof store !== 'undefined' && store.getNextBillNumber) ? store.getNextBillNumber() : '87';
   const b = bill || {};
   const billNumber = b.billNumber || nextAutoNo;
+  const billName = b.billName || '';
   const rawDate = b.date || new Date().toISOString().split('T')[0];
   const dateStr = isPureBlank ? '' : formatToDMY(rawDate);
 
   const items = b.items || [];
+  const itemCount = items.length;
+
+  // Strict 1-page density calculation based on item count
+  let densityClass = 'mdd-density-standard';
+  if (itemCount >= 19) {
+    densityClass = 'mdd-density-ultra';
+  } else if (itemCount >= 13) {
+    densityClass = 'mdd-density-dense';
+  } else if (itemCount >= 8) {
+    densityClass = 'mdd-density-compact';
+  }
+
   let rowsHtml = '';
 
   if (isLive) {
@@ -212,15 +259,17 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
         </tr>
       `;
     }
-    // Single plain spacer row to absorb remaining vertical height without drawing horizontal boxes
-    rowsHtml += `
-      <tr class="mdd-plane-spacer-row">
-        <td style="width:75px;">&nbsp;</td>
-        <td>&nbsp;</td>
-        <td style="width:100px;">&nbsp;</td>
-        <td style="width:50px;">&nbsp;</td>
-      </tr>
-    `;
+    // Spacer row: only needed if itemCount < 12 to absorb remaining height. For large bills (>= 12), omit to guarantee 1-page fit.
+    if (itemCount < 12) {
+      rowsHtml += `
+        <tr class="mdd-plane-spacer-row">
+          <td style="width:75px;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td style="width:100px;">&nbsp;</td>
+          <td style="width:50px;">&nbsp;</td>
+        </tr>
+      `;
+    }
   } else if (isPureBlank) {
     // Pure blank plane sheet inside - clean vertical columns, no horizontal boxes
     rowsHtml += `
@@ -275,15 +324,17 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
       `;
     });
 
-    // Single plain spacer row extending cleanly to bottom Total row - NO EMPTY BOXES
-    rowsHtml += `
-      <tr class="mdd-plane-spacer-row">
-        <td style="width:75px;">&nbsp;</td>
-        <td>&nbsp;</td>
-        <td style="width:100px;">&nbsp;</td>
-        <td style="width:50px;">&nbsp;</td>
-      </tr>
-    `;
+    // Spacer row: only needed if itemCount < 12 to absorb remaining height. For large bills (>= 12), omit to guarantee 1-page fit.
+    if (itemCount < 12) {
+      rowsHtml += `
+        <tr class="mdd-plane-spacer-row">
+          <td style="width:75px;">&nbsp;</td>
+          <td>&nbsp;</td>
+          <td style="width:100px;">&nbsp;</td>
+          <td style="width:50px;">&nbsp;</td>
+        </tr>
+      `;
+    }
   }
 
   const totalR = isPureBlank ? '' : (b.totalRupees !== undefined ? Number(b.totalRupees).toLocaleString('en-IN') : '0');
@@ -291,7 +342,7 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
   const words = isPureBlank ? '' : (b.amountWords || (b.totalRupees ? numberToIndianWords(b.totalRupees) : ''));
 
   return `
-    <div class="mdd-bill-sheet" id="printableMddBill">
+    <div class="mdd-bill-sheet ${densityClass}" id="printableMddBill" data-item-count="${itemCount}">
       <!-- Top Bar with ESTIMATE and Phone -->
       <div class="mdd-top-bar">
         <div class="mdd-estimate-pill">ESTIMATE</div>
@@ -321,9 +372,11 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
           <span>नं० :</span>
           ${isLive ? `
             <input type="text" class="mdd-sheet-input mdd-bill-no-val" id="mddLiveBillNo" value="${billNumber}" title="बिल नंबर बदलें / Edit Bill Number" style="width:105px; font-size:22px; font-weight:900; font-family:monospace, sans-serif; color:#000000; letter-spacing:1px; border-bottom:1.5px dotted #000000 !important;" />
+            ${billName ? `<span class="mdd-bill-name-badge">${billName}</span>` : ''}
             <span class="badge badge-success no-print" style="font-size:10px; margin-left:6px; padding:2px 6px;">✏️ Edit No.</span>
           ` : `
             <span class="mdd-bill-no-val" id="mddLiveBillNoVal">${billNumber}</span>
+            ${billName ? `<span class="mdd-bill-name-badge">${billName}</span>` : ''}
             <button type="button" class="no-print" id="mddEditBillNoBtn" title="बिल नंबर बदलें / Edit Bill Number" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:4px; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer; margin-left:6px; display:inline-flex; align-items:center; gap:3px;">
               ✏️ Edit #
             </button>
@@ -439,15 +492,19 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
       <!-- Words and Signature Footer -->
       <div class="mdd-footer">
         <div class="mdd-words-row">
-          <span style="white-space:nowrap;">Rs. in words</span>
+          <span style="white-space:nowrap; font-weight:800;">Rs. in words</span>
           <span class="mdd-dots-line" id="mddLiveWordsVal" style="font-weight:700; font-size:13.5px; padding-left:8px;">${words}</span>
         </div>
-        <div class="mdd-words-row" style="height:14px;">
-          <span class="mdd-dots-line" style="width:100%;"></span>
-        </div>
+        ${itemCount < 12 ? `
+          <div class="mdd-words-row" style="height:12px;">
+            <span class="mdd-dots-line" style="width:100%;"></span>
+          </div>
+        ` : ''}
         <div class="mdd-sign-row">
           <div class="mdd-sign-box">
-            हस्ताक्षर
+            <div class="mdd-sign-space" style="height: 38px;"></div>
+            <div class="mdd-sign-line"></div>
+            <div class="mdd-sign-label">हस्ताक्षर</div>
           </div>
         </div>
       </div>
@@ -1466,12 +1523,12 @@ class TractorOSApp {
 
         <div class="metric-card" style="border-top: 4px solid #f59e0b;">
           <div class="metric-card-header">
-            <span class="label" style="font-weight:700; color:#d97706;">Next Auto Bill No.</span>
+            <span class="label" style="font-weight:700; color:#d97706;">Next Unique Bill No.</span>
             <div class="metric-icon" style="background:rgba(245, 158, 11, 0.12); color:#d97706; font-weight:800;">⚡</div>
           </div>
           <div class="metric-value" style="color:#b45309; font-family:monospace, sans-serif;">No. ${nextAutoNo}</div>
           <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
-            <span>Auto-Generated Sequence</span>
+            <span>Strictly Unique Sequence</span>
           </div>
         </div>
       </div>
@@ -1548,7 +1605,10 @@ class TractorOSApp {
                 }
                 return `
                   <tr>
-                    <td><strong style="color:var(--primary); font-size:14px;">No. ${item.billNumber}</strong></td>
+                    <td>
+                      <strong style="color:var(--primary); font-size:14px;">No. ${item.billNumber}</strong>
+                      ${item.billName ? `<div style="font-size:11px; font-weight:700; color:#2563eb; margin-top:2px;">📌 ${item.billName}</div>` : ''}
+                    </td>
                     <td><span style="font-family:monospace, sans-serif; font-weight:600;">${formatToDMY(item.date)}</span></td>
                     <td>
                       <strong>${item.customerName || 'मेसर्स ग्राहक'}</strong><br>
@@ -3063,8 +3123,8 @@ class TractorOSApp {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES) || '[]');
       const isDemo = (e) => {
         if (!e) return false;
-        if (typeof e.id === 'string' && /^EXP-10[1-9]$/.test(e.id)) return true;
-        const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''}`;
+        if (typeof e.id === 'string' && (e.id === 'EXP-001' || e.id === 'EXP-002' || /^EXP-10[1-9]$/.test(e.id))) return true;
+        const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''} ${e.chassisTag || ''}`;
         return text.includes('Shree Balaji Logistics') ||
                text.includes('Kisan Tractor Works Workshop') ||
                text.includes('Indian Oil Kisan Pump') ||
@@ -3073,49 +3133,24 @@ class TractorOSApp {
                text.includes('Gorakhpur Art Banners') ||
                text.includes('Chauhan Tea Stall') ||
                text.includes('UPPCL Electricity Gorakhpur') ||
-               text.includes('Kisan Crane & Recovery');
+               text.includes('Kisan Crane & Recovery') ||
+               text.includes('Malur to Gorakhpur') ||
+               text.includes('canopy installation & engine oil') ||
+               text.includes('CH-4511-4WD-1102') ||
+               text.includes('CH-4211-8901');
       };
 
-      let cleaned = stored.filter(e => !isDemo(e));
-      const authenticDefaults = [
-        {
-          id: "EXP-001",
-          date: "2026-09-10",
-          category: "Freight / Logistics",
-          chassisTag: "CH-4511-4WD-1102",
-          amount: 14500,
-          paymentMode: "Bank Transfer",
-          paidTo: "Transporter (Malur to Gorakhpur Hub)",
-          description: "Factory transporter unload charges from VST Bangalore to Gorakhpur showroom",
-          notes: "Factory transporter unload charges from VST Bangalore to Gorakhpur showroom",
-          status: "Approved",
-          approvedBy: "Showroom Director"
-        },
-        {
-          id: "EXP-002",
-          date: "2026-09-11",
-          category: "PDI / Servicing",
-          chassisTag: "CH-4211-8901",
-          amount: 2500,
-          paymentMode: "Cash",
-          paidTo: "Local Workshop & Spares",
-          description: "Pre-delivery inspection, canopy installation & engine oil top-up",
-          notes: "Pre-delivery inspection, canopy installation & engine oil top-up",
-          status: "Approved",
-          approvedBy: "System (< ₹5,000)"
-        }
-      ];
-
-      authenticDefaults.forEach(auth => {
-        if (!cleaned.some(e => e.id === auth.id)) {
-          cleaned.push(auth);
-        }
-      });
+      const cleaned = stored.filter(e => !isDemo(e));
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(cleaned));
 
       const storedCash = JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TXNS) || '[]');
-      const cleanCash = storedCash.filter(t => !t.ref || !/^EXP-10[1-9]$/.test(t.ref));
+      const cleanCash = storedCash.filter(t => !t.ref || (!/^EXP-10[1-9]$/.test(t.ref) && t.ref !== 'EXP-001' && t.ref !== 'EXP-002'));
       localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(cleanCash));
+
+      if (typeof supabaseApi !== 'undefined' && supabaseApi?.expenses) {
+        supabaseApi.expenses.delete('EXP-001').catch(() => {});
+        supabaseApi.expenses.delete('EXP-002').catch(() => {});
+      }
 
       this.renderCurrentView();
     } catch (err) {
@@ -3234,15 +3269,18 @@ class TractorOSApp {
     const billNoInput = document.getElementById('nbBillNo');
     if (billNoInput) billNoInput.value = prefill?.billNumber || nextNo;
 
+    const billNameInput = document.getElementById('nbBillName');
+    if (billNameInput) billNameInput.value = prefill?.billName || '';
+
     const hint = document.getElementById('nbBillNoHint');
     if (hint) {
-      hint.innerHTML = `Auto-incremented (Prev: #${highestPrev}) • <a href="javascript:void(0)" id="nbResetAutoBtn" style="color:#2563eb; font-weight:700; text-decoration:underline;">Auto No (#${nextNo})</a>`;
+      hint.innerHTML = `Unique Sequence (Prev: #${highestPrev}) • <a href="javascript:void(0)" id="nbResetAutoBtn" style="color:#2563eb; font-weight:700; text-decoration:underline;">Next Unique (#${nextNo})</a>`;
       const resetBtn = document.getElementById('nbResetAutoBtn');
       if (resetBtn && billNoInput) {
         resetBtn.onclick = (e) => {
           e.preventDefault();
           billNoInput.value = nextNo;
-          showToast(`Bill number reset to #${nextNo}`, 'info', 'Auto Number');
+          showToast(`Bill number reset to #${nextNo}`, 'info', 'Unique Number');
         };
       }
     }
@@ -3327,6 +3365,7 @@ class TractorOSApp {
   gatherBillFormData() {
     const nextNo = store.getNextBillNumber();
     const billNumber = document.getElementById('nbBillNo')?.value.trim() || nextNo;
+    const billName = document.getElementById('nbBillName')?.value.trim() || '';
     const rawDate = document.getElementById('nbDate')?.value || new Date().toISOString().split('T')[0];
     const date = formatToDMY(rawDate);
     const customerName = document.getElementById('nbCustomer')?.value.trim() || 'मेसर्स ग्राहक';
@@ -3362,6 +3401,7 @@ class TractorOSApp {
     return {
       id: this.editingBillId || undefined,
       billNumber,
+      billName,
       date,
       customerName,
       address,
@@ -3594,6 +3634,10 @@ class TractorOSApp {
               <span style="font-size:11.5px; font-weight:800; color:#334155;">नं० (Bill #):</span>
               <input type="text" id="tsbBillNoInput" value="${currentBill.billNumber || nextAutoNo}" style="width:75px; font-size:13.5px; font-weight:900; font-family:monospace, sans-serif; padding:2px 6px; border:1px solid #94a3b8; border-radius:4px; text-align:center; color:#1e3a8a; background:#ffffff;" placeholder="No." />
             </div>
+            <div style="display:flex; align-items:center; gap:5px; background:#f8fafc; padding:3px 8px; border-radius:6px; border:1px solid #cbd5e1;" title="Optional Bill Name or Reference">
+              <span style="font-size:11.5px; font-weight:800; color:#334155;">नाम/Ref:</span>
+              <input type="text" id="tsbBillNameInput" value="${currentBill.billName || ''}" style="width:115px; font-size:12px; font-weight:700; padding:2px 6px; border:1px solid #94a3b8; border-radius:4px; color:#1e3a8a; background:#ffffff;" placeholder="बिल का नाम" />
+            </div>
             <button class="quick-action-btn btn-sm btn-primary" id="tsbSaveBillBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
               💾 Save Bill
             </button>
@@ -3613,6 +3657,7 @@ class TractorOSApp {
       const saveBillBtn = document.getElementById('tsbSaveBillBtn');
       const printBtn = document.getElementById('tsbPrintBillBtn');
       const tsbBillNoInput = document.getElementById('tsbBillNoInput');
+      const tsbBillNameInput = document.getElementById('tsbBillNameInput');
 
       if (tsbBillNoInput) {
         tsbBillNoInput.oninput = () => {
@@ -3624,6 +3669,12 @@ class TractorOSApp {
             const liveInp = document.getElementById('mddLiveBillNo');
             if (liveInp) liveInp.value = val;
           }
+        };
+      }
+
+      if (tsbBillNameInput) {
+        tsbBillNameInput.oninput = () => {
+          currentBill.billName = tsbBillNameInput.value.trim();
         };
       }
 
@@ -3658,6 +3709,8 @@ class TractorOSApp {
       if (printBtn) {
         printBtn.onclick = () => {
           if (isLive) this.syncLiveSheetDataToCurrent(currentBill);
+          const billEl = document.getElementById('printableMddBill');
+          if (billEl) autoFitBillToOnePage(billEl);
           document.body.classList.add('is-printing-bill', 'bill-modal-active', 'modal-open');
           window.print();
         };
@@ -3673,7 +3726,11 @@ class TractorOSApp {
       if (saveBillBtn) {
         saveBillBtn.onclick = () => {
           if (isLive) this.syncLiveSheetDataToCurrent(currentBill);
+          if (tsbBillNameInput) currentBill.billName = tsbBillNameInput.value.trim();
           const saved = store.addBill(currentBill);
+          currentBill.id = saved.id;
+          currentBill.billNumber = saved.billNumber;
+          currentBill.billName = saved.billName;
           showToast(`Bill #${saved.billNumber} for ${saved.customerName} successfully saved!`, 'success', 'Saved');
           renderView('filled');
         };
@@ -3690,11 +3747,13 @@ class TractorOSApp {
 
   syncLiveSheetDataToCurrent(bill) {
     const billNoInput = document.getElementById('mddLiveBillNo') || document.getElementById('tsbBillNoInput');
+    const billNameInput = document.getElementById('tsbBillNameInput');
     const custInput = document.getElementById('mddLiveCustomer');
     const addrInput = document.getElementById('mddLiveAddress');
     const vehInput = document.getElementById('mddLiveVehicle');
     const dateInput = document.getElementById('mddLiveDate');
     if (billNoInput && billNoInput.value.trim()) bill.billNumber = billNoInput.value.trim();
+    if (billNameInput && billNameInput.value.trim()) bill.billName = billNameInput.value.trim();
     if (custInput) bill.customerName = custInput.value.trim() || 'मेसर्स ग्राहक';
     if (addrInput) bill.address = addrInput.value.trim() || '';
     if (vehInput) bill.vehicle = vehInput.value.trim() || '';

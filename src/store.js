@@ -65,6 +65,33 @@ class DealershipStore {
       localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify([]));
       localStorage.setItem('mde_seed_purge_v1', 'done');
     }
+
+    // Continuous seed purge: permanently remove EXP-001/EXP-002 and fake data
+    try {
+      const expStored = JSON.parse(localStorage.getItem(STORAGE_KEYS.EXPENSES) || '[]');
+      const isSeedExp = (e) => {
+        if (!e) return false;
+        if (typeof e.id === 'string' && (e.id === 'EXP-001' || e.id === 'EXP-002' || /^EXP-10[1-9]$/.test(e.id))) return true;
+        const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''} ${e.chassisTag || ''}`;
+        return text.includes('Malur to Gorakhpur') ||
+               text.includes('canopy installation & engine oil') ||
+               text.includes('Shree Balaji Logistics') ||
+               text.includes('CH-4511-4WD-1102') ||
+               text.includes('CH-4211-8901');
+      };
+      const purged = expStored.filter(e => !isSeedExp(e));
+      if (purged.length !== expStored.length) {
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(purged));
+      }
+      if (supabase) {
+        supabase.from('expenses').delete().in('id', ['EXP-001', 'EXP-002']).then(() => {});
+      }
+      const cashStored = JSON.parse(localStorage.getItem(STORAGE_KEYS.CASH_TXNS) || '[]');
+      const cleanCash = cashStored.filter(t => !t.ref || (!/^EXP-10[1-9]$/.test(t.ref) && t.ref !== 'EXP-001' && t.ref !== 'EXP-002'));
+      if (cleanCash.length !== cashStored.length) {
+        localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(cleanCash));
+      }
+    } catch (e) { /* ignore */ }
     if (!localStorage.getItem(STORAGE_KEYS.EXPENSES)) {
       localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(DEFAULT_EXPENSES));
     }
@@ -126,8 +153,19 @@ class DealershipStore {
         updated = true;
       }
 
-      if (expenses && expenses.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+      if (expenses) {
+        const isSeed = (e) => {
+          if (!e) return false;
+          if (typeof e.id === 'string' && (e.id === 'EXP-001' || e.id === 'EXP-002' || /^EXP-10[1-9]$/.test(e.id))) return true;
+          const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''} ${e.chassisTag || ''}`;
+          return text.includes('Malur to Gorakhpur') ||
+                 text.includes('canopy installation & engine oil') ||
+                 text.includes('Shree Balaji Logistics') ||
+                 text.includes('CH-4511-4WD-1102') ||
+                 text.includes('CH-4211-8901');
+        };
+        const cleanExpenses = expenses.filter(e => !isSeed(e));
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(cleanExpenses));
         updated = true;
       }
 
@@ -210,6 +248,7 @@ class DealershipStore {
       const isDemo = (e) => {
         if (!e) return false;
         if (typeof e.id === 'string' && /^EXP-10[1-9]$/.test(e.id)) return true;
+        if (typeof e.id === 'string' && (e.id === 'EXP-001' || e.id === 'EXP-002')) return true;
         const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''}`;
         return text.includes('Shree Balaji Logistics') ||
                text.includes('Kisan Tractor Works Workshop') ||
@@ -219,54 +258,14 @@ class DealershipStore {
                text.includes('Gorakhpur Art Banners') ||
                text.includes('Chauhan Tea Stall') ||
                text.includes('UPPCL Electricity Gorakhpur') ||
-               text.includes('Kisan Crane & Recovery');
+               text.includes('Kisan Crane & Recovery') ||
+               text.includes('Malur to Gorakhpur') ||
+               text.includes('canopy installation & engine oil');
       };
 
       const cleaned = stored.filter(e => !isDemo(e));
 
       if (cleaned.length !== stored.length) {
-        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(cleaned));
-      }
-
-      // Ensure authentic baseline showroom expenses (EXP-001 freight & EXP-002 PDI) are preserved
-      const authenticDefaults = [
-        {
-          id: "EXP-001",
-          date: "2026-09-10",
-          category: "Freight / Logistics",
-          chassisTag: "CH-4511-4WD-1102",
-          amount: 14500,
-          paymentMode: "Bank Transfer",
-          paidTo: "Transporter (Malur to Gorakhpur Hub)",
-          description: "Factory transporter unload charges from VST Bangalore to Gorakhpur showroom",
-          notes: "Factory transporter unload charges from VST Bangalore to Gorakhpur showroom",
-          status: "Approved",
-          approvedBy: "Showroom Director"
-        },
-        {
-          id: "EXP-002",
-          date: "2026-09-11",
-          category: "PDI / Servicing",
-          chassisTag: "CH-4211-8901",
-          amount: 2500,
-          paymentMode: "Cash",
-          paidTo: "Local Workshop & Spares",
-          description: "Pre-delivery inspection, canopy installation & engine oil top-up",
-          notes: "Pre-delivery inspection, canopy installation & engine oil top-up",
-          status: "Approved",
-          approvedBy: "System (< ₹5,000)"
-        }
-      ];
-
-      let hasNewAuth = false;
-      authenticDefaults.forEach(auth => {
-        if (!cleaned.some(e => e.id === auth.id)) {
-          cleaned.push(auth);
-          hasNewAuth = true;
-        }
-      });
-
-      if (hasNewAuth || cleaned.length !== stored.length) {
         localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(cleaned));
       }
 
@@ -512,26 +511,89 @@ class DealershipStore {
 
   getNextBillNumber() {
     const bills = this.getBills();
-    let maxNo = 86;
-    if (bills && Array.isArray(bills) && bills.length > 0) {
-      const nums = bills.map(b => parseInt(b.billNumber, 10)).filter(n => !isNaN(n));
-      if (nums.length > 0) {
-        maxNo = Math.max(...nums);
+    let maxNo = 86; // Based on authentic Maa Durga Diesel paper bill book baseline (#86)
+    try {
+      const storedSeq = parseInt(localStorage.getItem('mde_last_bill_seq'), 10);
+      if (!isNaN(storedSeq) && storedSeq > maxNo) {
+        maxNo = storedSeq;
       }
+    } catch {}
+
+    if (bills && Array.isArray(bills) && bills.length > 0) {
+      bills.forEach(b => {
+        if (!b) return;
+        const raw = String(b.billNumber || '').trim();
+        const matches = raw.match(/\d+/g);
+        if (matches && matches.length > 0) {
+          const val = parseInt(matches[matches.length - 1], 10);
+          if (!isNaN(val) && val > maxNo) {
+            maxNo = val;
+          }
+        }
+      });
     }
     return String(maxNo + 1);
+  }
+
+  ensureUniqueBillNumber(requestedNumber, excludeBillId = null) {
+    const bills = this.getBills();
+    let num = String(requestedNumber || '').trim();
+    if (!num) {
+      num = this.getNextBillNumber();
+    }
+
+    const isDuplicate = (candidate) => {
+      return bills.some(b => {
+        if (!b) return false;
+        if (excludeBillId && b.id === excludeBillId) return false;
+        return String(b.billNumber || '').trim().toLowerCase() === candidate.toLowerCase();
+      });
+    };
+
+    if (!isDuplicate(num)) {
+      return num;
+    }
+
+    // Advance sequence until strictly unique
+    const matches = num.match(/^(.*?)(\d+)$/);
+    if (matches) {
+      const prefix = matches[1];
+      let baseInt = parseInt(matches[2], 10);
+      let candidate = num;
+      while (isDuplicate(candidate)) {
+        baseInt++;
+        candidate = prefix + baseInt;
+      }
+      return candidate;
+    } else {
+      let counter = 1;
+      let candidate = `${num}-${counter}`;
+      while (isDuplicate(candidate)) {
+        counter++;
+        candidate = `${num}-${counter}`;
+      }
+      return candidate;
+    }
   }
 
   // --- Bill Operations ---
   addBill(billData) {
     const bills = this.getBills();
-    const nextNo = this.getNextBillNumber();
-    const billNumber = (billData.billNumber && String(billData.billNumber).trim() !== '')
+    const billId = billData.id || `BILL-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    
+    // Ensure every single bill has a strictly unique bill number
+    const requestedNo = (billData.billNumber && String(billData.billNumber).trim() !== '')
       ? String(billData.billNumber).trim()
-      : nextNo;
+      : this.getNextBillNumber();
+    const uniqueBillNumber = this.ensureUniqueBillNumber(requestedNo, billData.id || null);
+
+    // Optional unique bill name / reference title
+    const billName = billData.billName ? String(billData.billName).trim() : '';
+
     const newBill = {
-      id: billData.id || `BILL-${Date.now()}`,
-      billNumber: String(billNumber),
+      id: billId,
+      billNumber: String(uniqueBillNumber),
+      billName: billName,
       date: formatToDMY(billData.date || new Date()),
       customerName: billData.customerName || 'मेसर्स ग्राहक',
       address: billData.address || '',
@@ -541,10 +603,28 @@ class DealershipStore {
       totalRupees: Number(billData.totalRupees || 0),
       totalPaise: Number(billData.totalPaise || 0),
       amountWords: billData.amountWords || '',
-      ...billData
+      ...billData,
+      id: billId,
+      billNumber: String(uniqueBillNumber),
+      billName: billName
     };
     newBill.date = formatToDMY(newBill.date);
-    const existingIndex = bills.findIndex(b => (newBill.id && b.id === newBill.id) || String(b.billNumber) === String(billNumber));
+
+    // Advance persistent sequence counter if numeric
+    const matches = String(uniqueBillNumber).match(/\d+/g);
+    if (matches && matches.length > 0) {
+      const numVal = parseInt(matches[matches.length - 1], 10);
+      if (!isNaN(numVal)) {
+        try {
+          const prevSeq = parseInt(localStorage.getItem('mde_last_bill_seq'), 10) || 86;
+          if (numVal > prevSeq) {
+            localStorage.setItem('mde_last_bill_seq', String(numVal));
+          }
+        } catch {}
+      }
+    }
+
+    const existingIndex = bills.findIndex(b => b.id === billId);
     if (existingIndex >= 0) {
       bills[existingIndex] = { ...bills[existingIndex], ...newBill };
     } else {

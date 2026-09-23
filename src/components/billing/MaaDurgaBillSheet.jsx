@@ -335,15 +335,11 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
             <span className="words-val">{hindiWords}</span>
           </div>
 
-          <div className="slip-signs-row">
-            <div className="sign-col customer-sign">
-              <div className="sign-line"></div>
-              <span>हस्ताक्षर ग्राहक (Customer Signature)</span>
-            </div>
-            <div className="sign-col shop-sign">
-              <div className="shop-sign-title">For: Maa Durga Diesel</div>
-              <div className="sign-line"></div>
-              <span>हस्ताक्षर विक्रेता (Authorized Signatory)</span>
+          <div className="slip-signs-row" style={{ justifyContent: 'flex-end' }}>
+            <div className="sign-col shop-sign" style={{ textAlign: 'center' }}>
+              <div style={{ height: '40px' }}></div>
+              <div className="sign-line" style={{ width: '180px', margin: '0 auto 4px' }}></div>
+              <span>हस्ताक्षर</span>
             </div>
           </div>
         </div>

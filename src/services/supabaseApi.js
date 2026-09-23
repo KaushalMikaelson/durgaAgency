@@ -437,7 +437,35 @@ export const supabaseApi = {
           .select('*')
           .order('created_at', { ascending: false });
         if (error) throw error;
-        return (data || []).map(rowToExpense);
+        const all = (data || []).map(rowToExpense);
+
+        // Filter out seeded/demo expenses
+        const SEED_IDS = ['EXP-001', 'EXP-002'];
+        const SEED_TEXTS = [
+          'Malur to Gorakhpur', 'canopy installation & engine oil',
+          'Shree Balaji Logistics', 'Kisan Tractor Works Workshop',
+          'Indian Oil Kisan Pump', 'Vikram Singh (Senior Tech',
+          'Gorakhpur Mandi Yard Premises', 'Gorakhpur Art Banners',
+          'Chauhan Tea Stall', 'UPPCL Electricity Gorakhpur', 'Kisan Crane & Recovery',
+          'CH-4511-4WD-1102', 'CH-4211-8901', 'Factory transporter unload',
+          'Pre-delivery inspection'
+        ];
+        const isSeed = (e) => {
+          if (!e) return false;
+          if (SEED_IDS.includes(e.id)) return true;
+          if (typeof e.id === 'string' && /^EXP-10[1-9]$/.test(e.id)) return true;
+          const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''} ${e.category || ''} ${e.chassisTag || ''}`;
+          return SEED_TEXTS.some(s => text.includes(s));
+        };
+        const seedIds = all.filter(isSeed).map(e => e.id);
+        const cleaned = all.filter(e => !isSeed(e));
+
+        // Delete seed records from Supabase permanently
+        if (seedIds.length > 0) {
+          supabase.from('expenses').delete().in('id', seedIds).then(() => {});
+        }
+
+        return cleaned;
       } catch (err) {
         console.warn('Supabase expenses.getAll failed:', err);
         return [];

@@ -1274,7 +1274,7 @@ body {
   min-height: 680px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   position: relative;
   box-sizing: border-box;
 }
@@ -1573,6 +1573,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .mdd-words-row {
@@ -1590,17 +1591,100 @@ body {
 .mdd-sign-row {
   display: flex;
   justify-content: flex-end;
-  margin-top: 28px;
+  align-items: flex-end;
+  margin-top: 16px;
   padding-right: 16px;
+  flex-shrink: 0;
 }
 
 .mdd-sign-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  font-size: 16px;
+  min-width: 155px;
+  flex-shrink: 0;
+}
+
+.mdd-sign-authority {
+  font-size: 13px;
+  font-weight: 800;
+  color: #000000;
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+}
+
+.mdd-sign-line {
+  width: 100%;
+  border-bottom: 1.5px solid #000000;
+  margin-bottom: 4px;
+}
+
+.mdd-sign-label {
+  font-size: 15px;
   font-weight: 900;
   color: #000000;
-  min-width: 140px;
+  font-family: 'Noto Sans Devanagari', sans-serif;
+  letter-spacing: 0.5px;
 }
+
+.mdd-bill-name-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 1px 7px;
+  border-radius: 4px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* Screen Density Tiers for Multi-Item Bills */
+.mdd-density-compact { padding: 18px 22px; }
+.mdd-density-compact .mdd-emblem-left { width: 85px; height: 85px; min-width: 85px; }
+.mdd-density-compact .mdd-emblem-right { width: 72px; height: 72px; min-width: 72px; }
+.mdd-density-compact .mdd-shop-name { font-size: 34px; }
+.mdd-density-compact .mdd-table tbody tr td { padding: 5px 8px; font-size: 13.5px; }
+
+.mdd-density-dense { padding: 14px 18px; }
+.mdd-density-dense .mdd-top-bar { margin-bottom: 3px; }
+.mdd-density-dense .mdd-emblem-left { width: 62px; height: 62px; min-width: 62px; }
+.mdd-density-dense .mdd-emblem-right { width: 52px; height: 52px; min-width: 52px; }
+.mdd-density-dense .mdd-shop-name { font-size: 28px; }
+.mdd-density-dense .mdd-address-lines { font-size: 12px; line-height: 1.25; margin-top: 2px; }
+.mdd-density-dense .mdd-meta-grid { margin-top: 4px; font-size: 13.5px; }
+.mdd-density-dense .mdd-customer-section { gap: 3px; margin: 4px 0 6px 0; font-size: 13px; }
+.mdd-density-dense .mdd-table-wrapper { min-height: auto; margin: 4px 0 8px 0; flex: 0 1 auto; }
+.mdd-density-dense .mdd-table { flex: 0 1 auto; height: auto; }
+.mdd-density-dense.mdd-bill-sheet { min-height: auto; }
+.mdd-density-dense .mdd-table thead th { padding: 4px 6px; font-size: 13px; }
+.mdd-density-dense .mdd-table tbody tr td { padding: 3px 7px; font-size: 12.5px; line-height: 1.25; }
+.mdd-density-dense .mdd-item-qty-tag { font-size: 12px; margin-left: 8px; }
+.mdd-density-dense .mdd-plane-spacer-row { display: none; height: 0; }
+.mdd-density-dense .mdd-footer { margin-top: 8px; gap: 4px; }
+.mdd-density-dense .mdd-words-row { font-size: 12.5px; }
+.mdd-density-dense .mdd-sign-row { margin-top: 10px; }
+
+.mdd-density-ultra { padding: 10px 14px; }
+.mdd-density-ultra .mdd-top-bar { margin-bottom: 2px; }
+.mdd-density-ultra .mdd-emblem-left { width: 48px; height: 48px; min-width: 48px; }
+.mdd-density-ultra .mdd-emblem-right { width: 40px; height: 40px; min-width: 40px; }
+.mdd-density-ultra .mdd-shop-name { font-size: 22px; }
+.mdd-density-ultra .mdd-address-lines { font-size: 11px; line-height: 1.2; }
+.mdd-density-ultra .mdd-meta-grid { margin-top: 2px; font-size: 12px; }
+.mdd-density-ultra .mdd-customer-section { gap: 2px; margin: 2px 0 4px 0; font-size: 12px; }
+.mdd-density-ultra .mdd-table-wrapper { min-height: auto; margin: 2px 0 4px 0; flex: 0 1 auto; }
+.mdd-density-ultra .mdd-table { flex: 0 1 auto; height: auto; }
+.mdd-density-ultra.mdd-bill-sheet { min-height: auto; }
+.mdd-density-ultra .mdd-table thead th { padding: 2px 4px; font-size: 11.5px; }
+.mdd-density-ultra .mdd-table tbody tr td { padding: 2px 5px; font-size: 11px; line-height: 1.2; }
+.mdd-density-ultra .mdd-item-qty-tag { font-size: 10.5px; margin-left: 6px; }
+.mdd-density-ultra .mdd-plane-spacer-row { display: none; height: 0; }
+.mdd-density-ultra .mdd-footer { margin-top: 4px; gap: 2px; }
+.mdd-density-ultra .mdd-words-row { font-size: 11px; }
+.mdd-density-ultra .mdd-sign-row { margin-top: 6px; }
 
 /* Preset pills for quick bill entry */
 .preset-bar {
@@ -1710,7 +1794,7 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 6mm 8mm 6mm 8mm;
+    margin: 4mm 6mm 4mm 6mm !important;
   }
 
   *, *::before, *::after {
@@ -1724,9 +1808,9 @@ body {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
-    height: auto !important;
-    min-height: auto !important;
-    overflow: visible !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important; /* CRITICAL: Prevents browser print from generating page 2 */
     font-size: 12pt !important;
   }
 
@@ -1821,29 +1905,31 @@ body {
     max-height: none !important;
   }
 
-  /* Authentic Maa Durga Diesel Bill Sheet - FULL A4 PAGE */
+  /* Authentic Maa Durga Diesel Bill Sheet - STRICT 1-PAGE A4 ENFORCEMENT */
   .mdd-bill-sheet {
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
+    justify-content: space-between !important; /* Fill full page, distribute space */
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
-    border: 2.5px solid #000000 !important;
+    border: 2px solid #000000 !important;
     border-radius: 0 !important;
-    padding: 6mm 8mm !important;
+    padding: 3mm 5mm !important;
     margin: 0 auto !important;
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    /* Full A4 page height minus print margins (297mm - 12mm = 285mm) */
-    height: 280mm !important;
-    min-height: 280mm !important;
-    max-height: 280mm !important;
+    height: auto !important;
+    min-height: 282mm !important; /* Fill full A4 page height */
+    max-height: 282mm !important; /* Safely within 297mm A4 height */
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    overflow: visible !important; /* CRITICAL: Never clip the signature or footer at the bottom */
   }
 
   .mdd-top-bar {
@@ -1851,7 +1937,7 @@ body {
     justify-content: space-between !important;
     align-items: center !important;
     position: relative !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 3px !important;
   }
 
   .mdd-estimate-pill {
@@ -1860,7 +1946,7 @@ body {
     background: #ffffff !important;
     box-shadow: none !important;
     font-weight: 900 !important;
-    padding: 2px 20px !important;
+    padding: 1.5px 16px !important;
   }
 
   .mdd-top-phone {
@@ -1873,15 +1959,14 @@ body {
     align-items: center !important;
     justify-content: space-between !important;
     width: 100% !important;
-    gap: 10px !important;
-    padding: 2px 0 6px 0 !important;
+    gap: 8px !important;
+    padding: 1px 0 4px 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-emblem-left {
     display: flex !important;
-    width: 105px !important;
-    height: 105px !important;
-    min-width: 105px !important;
     align-items: center !important;
     justify-content: center !important;
     overflow: hidden !important;
@@ -1889,9 +1974,6 @@ body {
 
   .mdd-emblem-right {
     display: flex !important;
-    width: 88px !important;
-    height: 88px !important;
-    min-width: 88px !important;
     align-items: center !important;
     justify-content: center !important;
   }
@@ -1906,7 +1988,7 @@ body {
   }
 
   .mdd-durga-logo {
-    transform: scale(1.2) !important;
+    transform: scale(1.15) !important;
     transform-origin: center center !important;
   }
 
@@ -1916,19 +1998,15 @@ body {
   }
 
   .mdd-shop-name {
-    font-size: 38px !important;
     color: #000000 !important;
     text-shadow: none !important;
-    letter-spacing: 1.5px !important;
+    letter-spacing: 1px !important;
     line-height: 1.1 !important;
     white-space: nowrap !important;
   }
 
   .mdd-address-lines {
-    font-size: 13px !important;
     color: #000000 !important;
-    line-height: 1.3 !important;
-    margin-top: 3px !important;
     text-align: center !important;
   }
 
@@ -1936,13 +2014,12 @@ body {
     display: flex !important;
     justify-content: space-between !important;
     align-items: baseline !important;
-    margin-top: 8px !important;
-    font-size: 15px !important;
     font-weight: 700 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-bill-no-val {
-    font-size: 22px !important;
     font-weight: 900 !important;
     color: #000000 !important;
   }
@@ -1953,31 +2030,26 @@ body {
   }
 
   .mdd-customer-section {
-    margin-top: 6px !important;
-    margin-bottom: 10px !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 6px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-cust-row {
     display: flex !important;
     align-items: baseline !important;
-    gap: 8px !important;
-    font-size: 14.5px !important;
   }
 
   .mdd-cust-split {
     display: flex !important;
     justify-content: space-between !important;
     align-items: baseline !important;
-    gap: 14px !important;
   }
 
   .mdd-cust-col {
     display: flex !important;
     align-items: baseline !important;
-    gap: 6px !important;
   }
 
   /* Table structure and borders: PLANE SHEET INSIDE (NO BOXES) */
@@ -1988,22 +2060,28 @@ body {
     border: 2px solid #000000 !important;
     border-radius: 0 !important;
     background: #ffffff !important;
-    margin: 6px 0 10px 0 !important;
-    min-height: 140mm !important;
+    min-height: auto !important;
+    height: auto !important;
     overflow: visible !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-table {
     width: 100% !important;
-    height: 100% !important;
+    height: auto !important;
     flex: 1 1 auto !important;
     display: table !important;
     border-collapse: collapse !important;
     table-layout: fixed !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-table thead {
     display: table-header-group !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-table thead th {
@@ -2011,8 +2089,6 @@ body {
     border-right: 1.5px solid #000000 !important;
     background: #f8fafc !important;
     color: #000000 !important;
-    padding: 6px 8px !important;
-    font-size: 14.5px !important;
     font-weight: 800 !important;
   }
 
@@ -2022,13 +2098,11 @@ body {
 
   .mdd-sub-th {
     background: #ffffff !important;
-    font-size: 13px !important;
-    padding: 2px !important;
   }
 
   .mdd-table tbody {
     display: table-row-group !important;
-    height: 100% !important;
+    height: auto !important;
   }
 
   /* CRITICAL: NO HORIZONTAL BOX LINES IN BODY - CLEAN PLANE SHEET */
@@ -2036,9 +2110,9 @@ body {
     border-right: 1.5px solid #000000 !important;
     border-bottom: none !important; /* NO HORIZONTAL BORDER LINES */
     color: #000000 !important;
-    padding: 7px 10px !important;
-    font-size: 14.5px !important;
     vertical-align: top !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-item-row-content {
@@ -2055,9 +2129,7 @@ body {
   .mdd-item-qty-tag {
     font-weight: 800 !important;
     font-family: monospace, sans-serif !important;
-    font-size: 14px !important;
     color: #000000 !important;
-    margin-left: 14px !important;
     white-space: nowrap !important;
     letter-spacing: 0.5px !important;
   }
@@ -2067,17 +2139,20 @@ body {
   }
 
   .mdd-plane-spacer-row {
-    height: 100% !important;
+    height: auto !important;
   }
 
   .mdd-plane-spacer-row td {
     border-bottom: none !important;
-    height: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
   }
 
-  /* Table footer: Total row */
+  /* Table footer: Total row bound directly below the items */
   .mdd-table tfoot {
-    display: table-footer-group !important;
+    display: table-row-group !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-table tfoot tr td {
@@ -2085,10 +2160,10 @@ body {
     border-right: 1.5px solid #000000 !important;
     border-bottom: none !important;
     color: #000000 !important;
-    padding: 6px 10px !important;
     font-weight: 900 !important;
-    font-size: 15px !important;
     vertical-align: middle !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-table tfoot tr td:last-child {
@@ -2099,8 +2174,6 @@ body {
     background: #1e3a8a !important;
     color: #ffffff !important;
     box-shadow: none !important;
-    font-size: 14px !important;
-    padding: 3px 12px !important;
     border-radius: 2px !important;
   }
 
@@ -2153,35 +2226,191 @@ body {
   }
 
   .mdd-footer {
-    margin-top: 10px !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    flex-shrink: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-top: 6px !important;
   }
 
   .mdd-words-row {
     display: flex !important;
     align-items: baseline !important;
-    gap: 8px !important;
-    font-size: 13.5px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-sign-row {
     display: flex !important;
     justify-content: flex-end !important;
-    margin-top: 24px !important;
+    align-items: flex-end !important;
     padding-right: 12px !important;
+    flex-shrink: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-sign-box {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
     text-align: center !important;
-    font-size: 15px !important;
+    flex-shrink: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .mdd-sign-authority {
     font-weight: 800 !important;
     color: #000000 !important;
-    border-top: 1px dashed #000000 !important;
-    padding-top: 6px !important;
-    min-width: 140px !important;
+    text-align: center !important;
+    display: block !important;
   }
+
+  .mdd-sign-line {
+    width: 100% !important;
+    border-bottom: 1.5px solid #000000 !important;
+    display: block !important;
+    margin-bottom: 3px !important;
+  }
+
+  .mdd-sign-label {
+    font-weight: 900 !important;
+    color: #000000 !important;
+    text-align: center !important;
+    display: block !important;
+  }
+
+  /* ========================================================================
+     PRINT DENSITY TIERS (STRICT 1-PAGE GUARANTEE FOR ANY ROW COUNT)
+     ======================================================================== */
+
+  /* Tier 1: Standard (1-7 items) */
+  .mdd-density-standard {
+    min-height: 255mm !important;
+    justify-content: space-between !important;
+    padding: 4mm 6mm !important;
+  }
+  .mdd-density-standard .mdd-emblem-left { width: 92px !important; height: 92px !important; min-width: 92px !important; }
+  .mdd-density-standard .mdd-emblem-right { width: 78px !important; height: 78px !important; min-width: 78px !important; }
+  .mdd-density-standard .mdd-shop-name { font-size: 36px !important; }
+  .mdd-density-standard .mdd-address-lines { font-size: 13px !important; line-height: 1.3 !important; margin-top: 3px !important; }
+  .mdd-density-standard .mdd-meta-grid { margin-top: 6px !important; font-size: 14.5px !important; }
+  .mdd-density-standard .mdd-bill-no-val { font-size: 20px !important; }
+  .mdd-density-standard .mdd-customer-section { margin-top: 5px !important; margin-bottom: 8px !important; gap: 5px !important; font-size: 14px !important; }
+  .mdd-density-standard .mdd-cust-row { font-size: 14px !important; gap: 6px !important; }
+  .mdd-density-standard .mdd-table-wrapper { margin: 5px 0 8px 0 !important; }
+  .mdd-density-standard .mdd-table thead th { padding: 5px 7px !important; font-size: 14px !important; }
+  .mdd-density-standard .mdd-sub-th { font-size: 12.5px !important; padding: 2px !important; }
+  .mdd-density-standard .mdd-table tbody tr td { padding: 6px 9px !important; font-size: 14px !important; }
+  .mdd-density-standard .mdd-item-qty-tag { font-size: 13.5px !important; margin-left: 12px !important; }
+  .mdd-density-standard .mdd-table tfoot tr td { padding: 5px 9px !important; font-size: 14.5px !important; }
+  .mdd-density-standard .mdd-total-badge { font-size: 13.5px !important; padding: 3px 10px !important; }
+  .mdd-density-standard .mdd-footer { margin-top: 8px !important; gap: 6px !important; }
+  .mdd-density-standard .mdd-words-row { font-size: 13px !important; gap: 6px !important; }
+  .mdd-density-standard .mdd-sign-row { margin-top: 14px !important; }
+  .mdd-density-standard .mdd-sign-box { min-width: 140px !important; }
+  .mdd-density-standard .mdd-sign-authority { font-size: 12.5px !important; margin-bottom: 20px !important; }
+  .mdd-density-standard .mdd-sign-label { font-size: 14px !important; }
+  .mdd-density-standard .mdd-plane-spacer-row td { min-height: 40px !important; }
+
+  /* Tier 2: Compact (8-12 items) */
+  .mdd-density-compact {
+    padding: 3mm 5mm !important;
+    min-height: 275mm !important;
+    justify-content: space-between !important;
+  }
+  .mdd-density-compact .mdd-emblem-left { width: 68px !important; height: 68px !important; min-width: 68px !important; }
+  .mdd-density-compact .mdd-emblem-right { width: 58px !important; height: 58px !important; min-width: 58px !important; }
+  .mdd-density-compact .mdd-shop-name { font-size: 28px !important; }
+  .mdd-density-compact .mdd-address-lines { font-size: 11.5px !important; line-height: 1.2 !important; margin-top: 2px !important; }
+  .mdd-density-compact .mdd-meta-grid { margin-top: 3px !important; font-size: 13px !important; }
+  .mdd-density-compact .mdd-bill-no-val { font-size: 17px !important; }
+  .mdd-density-compact .mdd-customer-section { margin-top: 3px !important; margin-bottom: 5px !important; gap: 3px !important; font-size: 13px !important; }
+  .mdd-density-compact .mdd-cust-row { font-size: 13px !important; gap: 5px !important; }
+  .mdd-density-compact .mdd-table-wrapper { margin: 3px 0 5px 0 !important; }
+  .mdd-density-compact .mdd-table thead th { padding: 3.5px 5px !important; font-size: 12.5px !important; }
+  .mdd-density-compact .mdd-sub-th { font-size: 11.5px !important; padding: 1.5px !important; }
+  .mdd-density-compact .mdd-table tbody tr td { padding: 3.5px 7px !important; font-size: 12.5px !important; line-height: 1.25 !important; }
+  .mdd-density-compact .mdd-item-qty-tag { font-size: 12px !important; margin-left: 10px !important; }
+  .mdd-density-compact .mdd-table tfoot tr td { padding: 4px 7px !important; font-size: 13px !important; }
+  .mdd-density-compact .mdd-total-badge { font-size: 12.5px !important; padding: 2px 8px !important; }
+  .mdd-density-compact .mdd-footer { margin-top: 5px !important; gap: 4px !important; }
+  .mdd-density-compact .mdd-words-row { font-size: 12px !important; gap: 5px !important; }
+  .mdd-density-compact .mdd-sign-row { margin-top: 10px !important; }
+  .mdd-density-compact .mdd-sign-box { min-width: 125px !important; }
+  .mdd-density-compact .mdd-sign-authority { font-size: 11.5px !important; margin-bottom: 16px !important; }
+  .mdd-density-compact .mdd-sign-label { font-size: 13px !important; }
+  .mdd-density-compact .mdd-plane-spacer-row td { min-height: 10px !important; }
+
+  /* Tier 3: Dense (13-18 items - specifically solves user's 17 items invoice) */
+  .mdd-density-dense {
+    padding: 2.2mm 4mm !important;
+    min-height: 275mm !important;
+    justify-content: space-between !important;
+  }
+  .mdd-density-dense .mdd-top-bar { margin-bottom: 1.5px !important; }
+  .mdd-density-dense .mdd-estimate-pill { padding: 1px 12px !important; font-size: 11px !important; }
+  .mdd-density-dense .mdd-top-phone { font-size: 11.5px !important; }
+  .mdd-density-dense .mdd-header-main { padding: 0 0 2px 0 !important; gap: 6px !important; }
+  .mdd-density-dense .mdd-emblem-left { width: 46px !important; height: 46px !important; min-width: 46px !important; }
+  .mdd-density-dense .mdd-emblem-right { width: 40px !important; height: 40px !important; min-width: 40px !important; }
+  .mdd-density-dense .mdd-shop-name { font-size: 23px !important; letter-spacing: 0.8px !important; }
+  .mdd-density-dense .mdd-address-lines { font-size: 10.5px !important; line-height: 1.15 !important; margin-top: 1px !important; }
+  .mdd-density-dense .mdd-meta-grid { margin-top: 2px !important; font-size: 12px !important; }
+  .mdd-density-dense .mdd-bill-no-val { font-size: 15px !important; }
+  .mdd-density-dense .mdd-customer-section { margin-top: 2px !important; margin-bottom: 3px !important; gap: 2px !important; font-size: 12px !important; }
+  .mdd-density-dense .mdd-cust-row { font-size: 12px !important; gap: 4px !important; }
+  .mdd-density-dense .mdd-table-wrapper { margin: 2px 0 4px 0 !important; }
+  .mdd-density-dense .mdd-table thead th { padding: 2px 4px !important; font-size: 11.5px !important; }
+  .mdd-density-dense .mdd-sub-th { font-size: 10.5px !important; padding: 1px !important; }
+  .mdd-density-dense .mdd-table tbody tr td { padding: 1.6px 5px !important; font-size: 11px !important; line-height: 1.15 !important; }
+  .mdd-density-dense .mdd-item-row-content { font-size: 11px !important; }
+  .mdd-density-dense .mdd-item-qty-tag { font-size: 10.5px !important; margin-left: 6px !important; }
+  .mdd-density-dense .mdd-table tfoot tr td { padding: 2.2px 5px !important; font-size: 12px !important; }
+  .mdd-density-dense .mdd-total-badge { font-size: 11.5px !important; padding: 1px 7px !important; }
+  .mdd-density-dense .mdd-footer { margin-top: 3px !important; gap: 2px !important; }
+  .mdd-density-dense .mdd-words-row { font-size: 10.5px !important; gap: 4px !important; }
+  .mdd-density-dense .mdd-sign-row { margin-top: 6px !important; }
+  .mdd-density-dense .mdd-sign-box { min-width: 115px !important; }
+  .mdd-density-dense .mdd-sign-authority { font-size: 11px !important; margin-bottom: 12px !important; }
+  .mdd-density-dense .mdd-sign-label { font-size: 12.5px !important; }
+  .mdd-density-dense .mdd-plane-spacer-row { display: none !important; height: 0 !important; }
+
+  /* Tier 4: Ultra Dense (19+ items - up to 28 items on 1 single A4 sheet) */
+  .mdd-density-ultra {
+    padding: 1.8mm 3mm !important;
+    min-height: 275mm !important;
+    justify-content: space-between !important;
+  }
+  .mdd-density-ultra .mdd-top-bar { margin-bottom: 1px !important; }
+  .mdd-density-ultra .mdd-estimate-pill { padding: 1px 8px !important; font-size: 9.5px !important; }
+  .mdd-density-ultra .mdd-top-phone { font-size: 10.5px !important; }
+  .mdd-density-ultra .mdd-header-main { padding: 0 !important; gap: 4px !important; }
+  .mdd-density-ultra .mdd-emblem-left { width: 36px !important; height: 36px !important; min-width: 36px !important; }
+  .mdd-density-ultra .mdd-emblem-right { width: 30px !important; height: 30px !important; min-width: 30px !important; }
+  .mdd-density-ultra .mdd-shop-name { font-size: 19px !important; letter-spacing: 0.5px !important; }
+  .mdd-density-ultra .mdd-address-lines { font-size: 9.5px !important; line-height: 1.1 !important; margin-top: 0 !important; }
+  .mdd-density-ultra .mdd-meta-grid { margin-top: 1px !important; font-size: 10.5px !important; }
+  .mdd-density-ultra .mdd-bill-no-val { font-size: 13.5px !important; }
+  .mdd-density-ultra .mdd-customer-section { margin-top: 1px !important; margin-bottom: 2px !important; gap: 1px !important; font-size: 10.5px !important; }
+  .mdd-density-ultra .mdd-cust-row { font-size: 10.5px !important; gap: 3px !important; }
+  .mdd-density-ultra .mdd-table-wrapper { margin: 1px 0 2px 0 !important; }
+  .mdd-density-ultra .mdd-table thead th { padding: 1.2px 3px !important; font-size: 10.5px !important; }
+  .mdd-density-ultra .mdd-sub-th { font-size: 9.5px !important; padding: 0.5px !important; }
+  .mdd-density-ultra .mdd-table tbody tr td { padding: 1px 4px !important; font-size: 9.5px !important; line-height: 1.12 !important; }
+  .mdd-density-ultra .mdd-item-row-content { font-size: 9.5px !important; }
+  .mdd-density-ultra .mdd-item-qty-tag { font-size: 9px !important; margin-left: 4px !important; }
+  .mdd-density-ultra .mdd-table tfoot tr td { padding: 1.5px 4px !important; font-size: 10.5px !important; }
+  .mdd-density-ultra .mdd-total-badge { font-size: 10px !important; padding: 1px 5px !important; }
+  .mdd-density-ultra .mdd-footer { margin-top: 2px !important; gap: 1.5px !important; }
+  .mdd-density-ultra .mdd-words-row { font-size: 9px !important; }
+  .mdd-density-ultra .mdd-sign-row { margin-top: 4px !important; }
+  .mdd-density-ultra .mdd-sign-box { min-width: 95px !important; }
+  .mdd-density-ultra .mdd-sign-authority { font-size: 10px !important; margin-bottom: 8px !important; }
+  .mdd-density-ultra .mdd-sign-label { font-size: 11.5px !important; }
+  .mdd-density-ultra .mdd-plane-spacer-row { display: none !important; height: 0 !important; }
 
   /* Quotation & Gate Pass Sheet */
   .quote-sheet {

@@ -30,34 +30,15 @@
       "drive": "2WD",
       "price": 745000,
       "dealerPurchaseCost": 670000,
-      "stockCount": 1,
-      "bestSoil": [
-        "All Types",
-        "Sandy Loam",
-        "Medium",
-        "Loam"
-      ],
+      "stockCount": 0,
+      "bestSoil": ["All Types", "Sandy Loam", "Medium", "Loam"],
       "recommendedAcresMin": 5,
       "recommendedAcresMax": 18,
-      "compatibleImplements": [
-        "Rotavator (5 ft)",
-        "Cultivator (9 Tyne)",
-        "Trolley (6-8 Ton)",
-        "Thresher",
-        "Sprayer"
-      ],
-      "popularCrops": [
-        "Wheat",
-        "Mustard",
-        "Vegetables",
-        "Paddy",
-        "Pulses"
-      ],
-      "chassisList": [
-        "CH-4211-8901"
-      ],
+      "compatibleImplements": ["Rotavator (5 ft)", "Cultivator (9 Tyne)", "Trolley (6-8 Ton)", "Thresher", "Sprayer"],
+      "popularCrops": ["Wheat", "Mustard", "Vegetables", "Paddy", "Pulses"],
+      "chassisList": [],
       "warranty": "6 Years / 6000 Hours Warranty",
-      "status": "In Stock"
+      "status": "Available to Order"
     },
     {
       "id": "TRAC-002",
@@ -72,32 +53,15 @@
       "drive": "4WD",
       "price": 795000,
       "dealerPurchaseCost": 715000,
-      "stockCount": 1,
-      "bestSoil": [
-        "Wetland / Puddle",
-        "Clay",
-        "Black Soil",
-        "Loam"
-      ],
+      "stockCount": 0,
+      "bestSoil": ["Wetland / Puddle", "Clay", "Black Soil", "Loam"],
       "recommendedAcresMin": 6,
       "recommendedAcresMax": 22,
-      "compatibleImplements": [
-        "Rotavator (5-6 ft)",
-        "Puddler",
-        "Cultivator (9 Tyne)",
-        "Trolley (8 Ton)"
-      ],
-      "popularCrops": [
-        "Paddy / Rice",
-        "Wheat",
-        "Potato",
-        "Sugarcane"
-      ],
-      "chassisList": [
-        "CH-4211-4WD-9204"
-      ],
+      "compatibleImplements": ["Rotavator (5-6 ft)", "Puddler", "Cultivator (9 Tyne)", "Trolley (8 Ton)"],
+      "popularCrops": ["Paddy / Rice", "Wheat", "Potato", "Sugarcane"],
+      "chassisList": [],
       "warranty": "6 Years / 6000 Hours Warranty",
-      "status": "In Stock"
+      "status": "Available to Order"
     },
     {
       "id": "TRAC-003",
@@ -113,28 +77,11 @@
       "price": 770000,
       "dealerPurchaseCost": 695000,
       "stockCount": 0,
-      "bestSoil": [
-        "Medium",
-        "Loam",
-        "Clay Loam",
-        "All Types"
-      ],
+      "bestSoil": ["Medium", "Loam", "Clay Loam", "All Types"],
       "recommendedAcresMin": 8,
       "recommendedAcresMax": 28,
-      "compatibleImplements": [
-        "Rotavator (6 ft)",
-        "Cultivator (11 Tyne)",
-        "Trolley (8-10 Ton)",
-        "MB Plough (2 Bottom)",
-        "Thresher"
-      ],
-      "popularCrops": [
-        "Wheat",
-        "Paddy",
-        "Sugarcane",
-        "Potato",
-        "Maize"
-      ],
+      "compatibleImplements": ["Rotavator (6 ft)", "Cultivator (11 Tyne)", "Trolley (8-10 Ton)", "MB Plough (2 Bottom)", "Thresher"],
+      "popularCrops": ["Wheat", "Paddy", "Sugarcane", "Potato", "Maize"],
       "chassisList": [],
       "warranty": "6 Years / 6000 Hours Warranty",
       "status": "Available to Order"
@@ -152,34 +99,15 @@
       "drive": "4WD",
       "price": 835000,
       "dealerPurchaseCost": 755000,
-      "stockCount": 2,
-      "bestSoil": [
-        "Hard Ground",
-        "Black Soil",
-        "Wetland / Puddle",
-        "Clay Loam"
-      ],
+      "stockCount": 0,
+      "bestSoil": ["Hard Ground", "Black Soil", "Wetland / Puddle", "Clay Loam"],
       "recommendedAcresMin": 10,
       "recommendedAcresMax": 32,
-      "compatibleImplements": [
-        "Rotavator (6-7 ft)",
-        "Heavy Disc Harrow",
-        "MB Plough",
-        "Laser Leveller",
-        "Puddler"
-      ],
-      "popularCrops": [
-        "Paddy",
-        "Sugarcane",
-        "Wheat",
-        "Commercial Farming"
-      ],
-      "chassisList": [
-        "CH-4511-4WD-1102",
-        "CH-4511-4WD-1103"
-      ],
+      "compatibleImplements": ["Rotavator (6-7 ft)", "Heavy Disc Harrow", "MB Plough", "Laser Leveller", "Puddler"],
+      "popularCrops": ["Paddy", "Sugarcane", "Wheat", "Commercial Farming"],
+      "chassisList": [],
       "warranty": "6 Years / 6000 Hours Warranty",
-      "status": "In Stock"
+      "status": "Available to Order"
     },
     {
       "id": "TRAC-005",
@@ -194,33 +122,15 @@
       "drive": "2WD",
       "price": 815000,
       "dealerPurchaseCost": 735000,
-      "stockCount": 1,
-      "bestSoil": [
-        "All Types",
-        "Medium",
-        "Loam",
-        "Sandy Clay"
-      ],
+      "stockCount": 0,
+      "bestSoil": ["All Types", "Medium", "Loam", "Sandy Clay"],
       "recommendedAcresMin": 12,
       "recommendedAcresMax": 40,
-      "compatibleImplements": [
-        "Rotavator (7 ft)",
-        "Cultivator (13 Tyne)",
-        "Trolley (10-12 Ton)",
-        "Thresher",
-        "Laser Leveller"
-      ],
-      "popularCrops": [
-        "Sugarcane",
-        "Wheat",
-        "Paddy",
-        "Custom Hiring Work"
-      ],
-      "chassisList": [
-        "CH-5011-2WD-3381"
-      ],
+      "compatibleImplements": ["Rotavator (7 ft)", "Cultivator (13 Tyne)", "Trolley (10-12 Ton)", "Thresher", "Laser Leveller"],
+      "popularCrops": ["Sugarcane", "Wheat", "Paddy", "Custom Hiring Work"],
+      "chassisList": [],
       "warranty": "6 Years / 6000 Hours Warranty",
-      "status": "In Stock"
+      "status": "Available to Order"
     },
     {
       "id": "TRAC-006",
@@ -235,174 +145,20 @@
       "drive": "4WD",
       "price": 890000,
       "dealerPurchaseCost": 805000,
-      "stockCount": 1,
-      "bestSoil": [
-        "Heavy Clay",
-        "Black Cotton Soil",
-        "Wetlands / Marshy",
-        "Submerged Puddling"
-      ],
+      "stockCount": 0,
+      "bestSoil": ["Heavy Clay", "Black Cotton Soil", "Wetlands / Marshy", "Submerged Puddling"],
       "recommendedAcresMin": 15,
       "recommendedAcresMax": 50,
-      "compatibleImplements": [
-        "Rotavator (7-8 ft)",
-        "Reversible MB Plough",
-        "Laser Leveller",
-        "Sugarcane Loader",
-        "Trolley (12-14 Ton)"
-      ],
-      "popularCrops": [
-        "Sugarcane",
-        "Paddy / Rice",
-        "Commercial Heavy Custom Hiring"
-      ],
-      "chassisList": [
-        "CH-5011-4WD-7729"
-      ],
+      "compatibleImplements": ["Rotavator (7-8 ft)", "Reversible MB Plough", "Laser Leveller", "Sugarcane Loader", "Trolley (12-14 Ton)"],
+      "popularCrops": ["Sugarcane", "Paddy / Rice", "Commercial Heavy Custom Hiring"],
+      "chassisList": [],
       "warranty": "6 Years / 6000 Hours Warranty",
-      "status": "In Stock"
+      "status": "Available to Order"
     }
   ],
-  "leads": [
-    {
-      "id": "LEAD-101",
-      "name": "Rameshwar Singh",
-      "phone": "+91 94150 48291",
-      "village": "Pipraich",
-      "landAcres": 14,
-      "soilType": "Loam",
-      "crops": [
-        "Wheat",
-        "Paddy",
-        "Sugarcane"
-      ],
-      "budgetMax": 850000,
-      "interestedModelId": "TRAC-004",
-      "interestedModel": "VST Zetor 4511 4WD",
-      "stage": "Negotiation",
-      "buyingScore": 88,
-      "financeRequired": true,
-      "exchangeWanted": true,
-      "nextAction": "Close deal: Finalize exchange value for Mahindra 575 DI (2017)",
-      "notes": "Farmer visited showroom twice. Ready for token payment this week."
-    },
-    {
-      "id": "LEAD-102",
-      "name": "Choudhary Birendra Yadav",
-      "phone": "+91 98391 55204",
-      "village": "Bansgaon",
-      "landAcres": 22,
-      "soilType": "Clay Loam",
-      "crops": [
-        "Paddy",
-        "Wheat"
-      ],
-      "budgetMax": 900000,
-      "interestedModelId": "TRAC-006",
-      "interestedModel": "VST Zetor 5011 4WD",
-      "stage": "Demo Scheduled",
-      "buyingScore": 78,
-      "financeRequired": false,
-      "exchangeWanted": false,
-      "nextAction": "Field demo scheduled at Bansgaon farm on Saturday with 7ft Rotavator",
-      "notes": "Cash buyer, looking for powerful tractor with superior wet puddling capacity."
-    }
-  ],
-  "bills": [
-    {
-      "id": "BILL-1001",
-      "billNumber": "21",
-      "date": "2026-09-12",
-      "customerName": "रामेश्वर सिंह",
-      "address": "ग्राम - पिपराइच, गोरखपुर",
-      "phone": "9415048291",
-      "vehicle": "UP53-AB-4821",
-      "items": [
-        {
-          "slNo": 1,
-          "description": "VST Zetor 50-Hour First Service Kit (Engine Oil, Filters)",
-          "qty": "1 सेट",
-          "rate": 4200,
-          "amountRupees": 4200,
-          "amountPaise": 0
-        },
-        {
-          "slNo": 2,
-          "description": "डीजल फिल्टर प्राथमिक एवं द्वितीयक (Primary & Secondary)",
-          "qty": "2 पीस",
-          "rate": 450,
-          "amountRupees": 900,
-          "amountPaise": 0
-        },
-        {
-          "slNo": 3,
-          "description": "सर्विस एवं लेबर चार्ज (PDI & Greasing)",
-          "qty": "1",
-          "rate": 500,
-          "amountRupees": 500,
-          "amountPaise": 0
-        }
-      ],
-      "totalRupees": 5600,
-      "totalPaise": 0,
-      "amountWords": "पाँच हजार छः सौ रुपये मात्र"
-    }
-  ],
-  "expenses": [
-    {
-      "id": "EXP-001",
-      "date": "2026-09-10",
-      "category": "Freight / Logistics",
-      "chassisTag": "CH-4511-4WD-1102",
-      "amount": 14500,
-      "paymentMode": "Bank Transfer",
-      "description": "Factory transporter unload charges from VST Bangalore to Gorakhpur showroom",
-      "status": "Approved"
-    },
-    {
-      "id": "EXP-002",
-      "date": "2026-09-11",
-      "category": "PDI / Servicing",
-      "chassisTag": "CH-4211-8901",
-      "amount": 2500,
-      "paymentMode": "Cash",
-      "description": "Pre-delivery inspection, canopy installation & engine oil top-up",
-      "status": "Approved"
-    }
-  ],
-  "cashTransactions": [
-    {
-      "id": "TXN-001",
-      "date": "2026-09-10",
-      "type": "IN",
-      "category": "Customer Advance",
-      "amount": 50000,
-      "partyName": "Rameshwar Singh",
-      "paymentMode": "UPI / Bank",
-      "notes": "Token advance against VST Zetor 4511 4WD"
-    },
-    {
-      "id": "TXN-002",
-      "date": "2026-09-11",
-      "type": "OUT",
-      "category": "Showroom Expense",
-      "amount": 17000,
-      "partyName": "Logistics Transporter",
-      "paymentMode": "Bank Transfer",
-      "notes": "Freight payment for 2 tractor transit units"
-    }
-  ],
-  "demos": [
-    {
-      "id": "DEMO-001",
-      "farmerName": "Choudhary Birendra Yadav",
-      "phone": "+91 98391 55204",
-      "village": "Bansgaon",
-      "tractorModel": "VST Zetor 5011 4WD",
-      "implement": "Rotavator (7 ft)",
-      "scheduledDate": "2026-09-14",
-      "soilType": "Clay Loam",
-      "status": "Scheduled"
-    }
-  ]
+  "leads": [],
+  "bills": [],
+  "expenses": [],
+  "cashTransactions": [],
+  "demos": []
 }

@@ -468,9 +468,13 @@ export function Modals() {
             <div className="modal-body">
               <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <div className="form-group">
-                  <label className="form-label">बिल नंबर (Bill No.) *</label>
-                  <input type="text" id="nbBillNo" className="form-input" required />
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} id="nbBillNoHint">Auto-incremented</span>
+                  <label className="form-label">बिल नंबर (Unique Bill No.) *</label>
+                  <input type="text" id="nbBillNo" className="form-input" placeholder="e.g. 87" required />
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} id="nbBillNoHint">Auto-incremented Unique #</span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">बिल का नाम / संदर्भ (Bill Name / Ref)</label>
+                  <input type="text" id="nbBillName" className="form-input" placeholder="e.g. हार्वेस्टर रिपेयर / महिंद्रा सर्विस" />
                 </div>
                 <div className="form-group">
                   <label className="form-label">दिनांक (Date) *</label>
@@ -595,6 +599,18 @@ export function Modals() {
           <div className="modal-footer no-print" style={{ justifyContent: 'space-between' }}>
             <button type="button" className="quick-action-btn btn-outline modal-close-btn">Close</button>
             <button type="button" className="quick-action-btn btn-primary" onClick={() => {
+              const billEl = document.getElementById('printableMddBill');
+              if (billEl) {
+                billEl.style.transform = '';
+                billEl.style.transformOrigin = '';
+                billEl.style.marginBottom = '';
+                if (billEl.scrollHeight > 960) {
+                  const scale = Math.floor((960 / billEl.scrollHeight) * 1000) / 1000;
+                  billEl.style.transform = `scale(${scale})`;
+                  billEl.style.transformOrigin = 'top center';
+                  billEl.style.marginBottom = `-${billEl.scrollHeight - (billEl.scrollHeight * scale)}px`;
+                }
+              }
               document.body.classList.add('is-printing-bill', 'bill-modal-active', 'modal-open');
               window.print();
             }} style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)' }}>
