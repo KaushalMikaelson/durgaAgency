@@ -13,28 +13,67 @@ import { formatToDMY } from './utils/dateUtils.js';
 import { supabaseApi } from './services/supabaseApi.js';
 import { supabase } from './lib/supabase.js';
 
+export const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || 
+   window.location.hostname === '127.0.0.1' || 
+   window.location.hostname.startsWith('192.168.') || 
+   window.location.hostname.endsWith('.local') ||
+   import.meta.env?.DEV);
+
+export const isCloudSyncEnabled = () => {
+  if (typeof localStorage !== 'undefined') {
+    const mode = localStorage.getItem('MDE_DATA_SOURCE_MODE');
+    if (mode === 'deployed') return true;
+    if (mode === 'local') return false;
+    if (localStorage.getItem('mde_override_cloud_sync') === 'true') return true;
+    if (localStorage.getItem('mde_override_cloud_sync') === 'false') return false;
+  }
+  if (typeof window !== 'undefined' && window.__ENABLE_CLOUD_SYNC__ !== undefined) {
+    return !!window.__ENABLE_CLOUD_SYNC__;
+  }
+  if (import.meta.env?.VITE_ENABLE_CLOUD_SYNC === 'true') return true;
+  if (import.meta.env?.VITE_ENABLE_CLOUD_SYNC === 'false') return false;
+  // By default: If running locally on localhost, default to local isolated mode
+  if (isLocalhost || import.meta.env?.DEV) return false;
+  return true;
+};
+
+const getPrefix = () => isCloudSyncEnabled() ? 'mde_' : 'mde_local_dev_';
+
 const STORAGE_KEYS = {
-  TRACTORS: 'mde_tractors_prod_v3',
-  LEADS: 'mde_leads_prod_v2',
-  EXPENSES: 'mde_expenses_prod_v2',
-  CASH_TXNS: 'mde_cash_txns_prod_v2',
-  DEMOS: 'mde_demos_prod_v2',
-  QUOTES: 'mde_quotes_prod_v2',
-  BILLS: 'mde_bills_prod_v2',
-  SETTINGS: 'mde_settings_prod_v3'
+  get TRACTORS() { return `${getPrefix()}tractors_prod_v3`; },
+  get LEADS() { return `${getPrefix()}leads_prod_v2`; },
+  get EXPENSES() { return `${getPrefix()}expenses_prod_v2`; },
+  get CASH_TXNS() { return `${getPrefix()}cash_txns_prod_v2`; },
+  get DEMOS() { return `${getPrefix()}demos_prod_v2`; },
+  get QUOTES() { return `${getPrefix()}quotes_prod_v2`; },
+  get BILLS() { return `${getPrefix()}bills_prod_v2`; },
+  get SETTINGS() { return `${getPrefix()}settings_prod_v3`; }
 };
 
 class DealershipStore {
   constructor() {
     this.subscribers = new Set();
     this.init();
-    this.syncWithSupabase();
-    this.setupRealtime();
+    if (isCloudSyncEnabled()) {
+      this.syncWithSupabase();
+      this.setupRealtime();
+    } else {
+      console.log('🔒 [DealershipStore] Isolated Localhost Mode: Cloud sync disabled to keep local dev separated from deployed data.');
+    }
   }
 
   init() {
     try {
-      const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('mde_') && !k.includes('_prod_v2') && !k.includes('_prod_v3'));
+      const isProtectedKey = (k) => 
+        k.includes('_prod_v2') || 
+        k.includes('_prod_v3') || 
+        k.startsWith('mde_local_dev_') || 
+        k === 'mde_override_cloud_sync' ||
+        k.startsWith('mde_seed_') ||
+        k.startsWith('mde_last_');
+
+      const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('mde_') && !isProtectedKey(k));
       for (const k of oldKeys) {
         localStorage.removeItem(k);
       }
@@ -467,7 +506,7 @@ class DealershipStore {
     leads.unshift(newLead);
     localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
     this.notify();
-    if (supabaseApi?.leads) {
+    if (isCloudSyncEnabled() && supabaseApi?.leads) {
       supabaseApi.leads.create(newLead).catch(e => console.warn('Supabase lead create failed:', e));
     }
     return newLead;
@@ -480,7 +519,7 @@ class DealershipStore {
       leads[index] = { ...leads[index], ...updatedFields };
       localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
       this.notify();
-      if (supabaseApi?.leads) {
+      if (isCloudSyncEnabled() && supabaseApi?.leads) {
         supabaseApi.leads.update(leadId, updatedFields).catch(e => console.warn('Supabase lead update failed:', e));
       }
       return leads[index];
@@ -493,7 +532,7 @@ class DealershipStore {
     leads = leads.filter(l => l.id !== leadId);
     localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
     this.notify();
-    if (supabaseApi?.leads) {
+    if (isCloudSyncEnabled() && supabaseApi?.leads) {
       supabaseApi.leads.delete(leadId).catch(e => console.warn('Supabase lead delete failed:', e));
     }
   }
@@ -518,7 +557,7 @@ class DealershipStore {
     }
 
     this.notify();
-    if (supabaseApi?.expenses) {
+    if (isCloudSyncEnabled() && supabaseApi?.expenses) {
       supabaseApi.expenses.create(newExpense).catch(e => console.warn('Supabase expense create failed:', e));
     }
     return newExpense;
@@ -535,7 +574,7 @@ class DealershipStore {
       this.getCashTransactions();
 
       this.notify();
-      if (supabaseApi?.expenses) {
+      if (isCloudSyncEnabled() && supabaseApi?.expenses) {
         supabaseApi.expenses.create(item).catch(e => console.warn('Supabase expense approve failed:', e));
       }
     }
@@ -554,10 +593,10 @@ class DealershipStore {
     } catch {}
 
     this.notify();
-    if (supabaseApi?.expenses) {
+    if (isCloudSyncEnabled() && supabaseApi?.expenses) {
       supabaseApi.expenses.delete(expenseId).catch(e => console.warn('Supabase expense delete failed:', e));
     }
-    if (supabaseApi?.cashflow?.deleteByRef) {
+    if (isCloudSyncEnabled() && supabaseApi?.cashflow?.deleteByRef) {
       supabaseApi.cashflow.deleteByRef(expenseId).catch(e => console.warn('Supabase cashflow delete failed:', e));
     }
   }
@@ -587,7 +626,7 @@ class DealershipStore {
     }
     localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(txns));
     this.notify();
-    if (supabaseApi?.cashflow) {
+    if (isCloudSyncEnabled() && supabaseApi?.cashflow) {
       supabaseApi.cashflow.create(newTxn).catch(e => console.warn('Supabase cashflow sync failed:', e));
     }
     return newTxn;
@@ -605,7 +644,7 @@ class DealershipStore {
     demos.unshift(newDemo);
     localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
     this.notify();
-    if (supabaseApi?.demos) {
+    if (isCloudSyncEnabled() && supabaseApi?.demos) {
       supabaseApi.demos.create(newDemo).catch(e => console.warn('Supabase demo create failed:', e));
     }
     return newDemo;
@@ -618,7 +657,7 @@ class DealershipStore {
       demos[idx] = { ...demos[idx], ...updatedFields };
       localStorage.setItem(STORAGE_KEYS.DEMOS, JSON.stringify(demos));
       this.notify();
-      if (supabaseApi?.demos) {
+      if (isCloudSyncEnabled() && supabaseApi?.demos) {
         supabaseApi.demos.update(demoId, updatedFields).catch(e => console.warn('Supabase demo update failed:', e));
       }
       return demos[idx];
@@ -638,7 +677,7 @@ class DealershipStore {
     quotes.unshift(newQuote);
     localStorage.setItem(STORAGE_KEYS.QUOTES, JSON.stringify(quotes));
     this.notify();
-    if (supabaseApi?.quotes) {
+    if (isCloudSyncEnabled() && supabaseApi?.quotes) {
       supabaseApi.quotes.save(newQuote).catch(e => console.warn('Supabase quote sync failed:', e));
     }
     return newQuote;
@@ -768,7 +807,7 @@ class DealershipStore {
     localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
     this.getCashTransactions();
     this.notify();
-    if (supabaseApi?.bills) {
+    if (isCloudSyncEnabled() && supabaseApi?.bills) {
       supabaseApi.bills.save(newBill).catch(e => console.warn('Supabase bill sync failed:', e));
     }
     return newBill;
@@ -787,7 +826,7 @@ class DealershipStore {
     localStorage.setItem(STORAGE_KEYS.BILLS, JSON.stringify(bills));
     this.getCashTransactions();
     this.notify();
-    if (supabaseApi?.bills) {
+    if (isCloudSyncEnabled() && supabaseApi?.bills) {
       supabaseApi.bills.delete(target).catch(e => console.warn('Supabase bill delete failed:', e));
     }
   }
@@ -838,7 +877,7 @@ class DealershipStore {
     tractors.push(newTractor);
     localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
     this.notify();
-    if (supabaseApi?.tractors) {
+    if (isCloudSyncEnabled() && supabaseApi?.tractors) {
       supabaseApi.tractors.add(newTractor).catch(e => console.warn('Supabase tractor add failed:', e));
     }
     return newTractor;
@@ -854,7 +893,7 @@ class DealershipStore {
       }
       localStorage.setItem(STORAGE_KEYS.TRACTORS, JSON.stringify(tractors));
       this.notify();
-      if (supabaseApi?.tractors) {
+      if (isCloudSyncEnabled() && supabaseApi?.tractors) {
         supabaseApi.tractors.update(tractorId, updatedFields).catch(e => console.warn('Supabase tractor update failed:', e));
       }
       return tractors[index];

@@ -1,8 +1,18 @@
 import React from 'react';
+import { isLocalhost, isCloudSyncEnabled } from '../store.js';
 
 export function Topbar() {
   const toggleTheme = () => {
     document.body.dataset.theme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+  };
+
+  const isLocal = isLocalhost;
+  const isCloud = isCloudSyncEnabled();
+
+  const handleToggleDataSource = (enableCloud) => {
+    localStorage.setItem('MDE_DATA_SOURCE_MODE', enableCloud ? 'deployed' : 'local');
+    localStorage.setItem('mde_override_cloud_sync', enableCloud ? 'true' : 'false');
+    window.location.reload();
   };
 
   return (
@@ -22,6 +32,88 @@ export function Topbar() {
       </div>
 
       <div className="topbar-actions">
+        {/* Toggle button ONLY visible in local mode */}
+        {isLocal && (
+          <div
+            className="data-source-toggle"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              background: '#f1f5f9',
+              border: '1.5px solid #cbd5e1',
+              borderRadius: '20px',
+              padding: '2px',
+              gap: '3px',
+              marginRight: '6px'
+            }}
+            title="Localhost Mode Switcher: Click to toggle between Local Isolated Data and Deployed Live Data"
+          >
+            <button
+              type="button"
+              id="btnSwitchToLocal"
+              onClick={() => handleToggleDataSource(false)}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '16px',
+                border: 'none',
+                fontSize: '11px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                background: !isCloud ? '#ffffff' : 'transparent',
+                color: !isCloud ? '#92400e' : '#64748b',
+                boxShadow: !isCloud ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              🔒 Local Data
+            </button>
+            <button
+              type="button"
+              id="btnSwitchToDeployed"
+              onClick={() => handleToggleDataSource(true)}
+              style={{
+                padding: '4px 10px',
+                borderRadius: '16px',
+                border: 'none',
+                fontSize: '11px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                background: isCloud ? '#2563eb' : 'transparent',
+                color: isCloud ? '#ffffff' : '#64748b',
+                boxShadow: isCloud ? '0 1px 3px rgba(37,99,235,0.25)' : 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              ☁️ Deployed Data
+            </button>
+            <a
+              href="https://durga-agency.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '4px 8px',
+                borderRadius: '14px',
+                fontSize: '11px',
+                fontWeight: '700',
+                color: '#2563eb',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '2px',
+                background: 'rgba(37, 99, 235, 0.08)'
+              }}
+              title="Open your live deployed website on Vercel in a new tab"
+            >
+              Live Site ↗
+            </a>
+          </div>
+        )}
         <button className="quick-action-btn btn-outline" id="langToggleBtn" onClick={() => window.app?.toggleLanguage()}>
           🌐 हिन्दी
         </button>

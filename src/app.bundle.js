@@ -266,15 +266,41 @@ import { supabase } from './lib/supabase.js';
   window.showToast = showToast;
 
   // --- 3. STORAGE & STATE MANAGEMENT ---
+  const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1' || 
+     window.location.hostname.startsWith('192.168.') || 
+     window.location.hostname.endsWith('.local'));
+
+  function isCloudSyncEnabled() {
+    if (typeof localStorage !== 'undefined') {
+      const mode = localStorage.getItem('MDE_DATA_SOURCE_MODE');
+      if (mode === 'deployed') return true;
+      if (mode === 'local') return false;
+      if (localStorage.getItem('mde_override_cloud_sync') === 'true') return true;
+      if (localStorage.getItem('mde_override_cloud_sync') === 'false') return false;
+    }
+    if (typeof window !== 'undefined' && window.__ENABLE_CLOUD_SYNC__ !== undefined) {
+      return !!window.__ENABLE_CLOUD_SYNC__;
+    }
+    if (import.meta.env?.VITE_ENABLE_CLOUD_SYNC === 'true') return true;
+    if (import.meta.env?.VITE_ENABLE_CLOUD_SYNC === 'false') return false;
+    // Default: completely isolate localhost from deployed production data
+    if (isLocalhost || import.meta.env?.DEV) return false;
+    return true;
+  }
+
+  const getPrefix = () => isCloudSyncEnabled() ? 'mde_' : 'mde_local_dev_';
+
   const STORAGE_KEYS = {
-    TRACTORS: 'mde_tractors_prod_v3',
-    LEADS: 'mde_leads_prod_v2',
-    EXPENSES: 'mde_expenses_prod_v2',
-    CASH_TXNS: 'mde_cash_txns_prod_v2',
-    DEMOS: 'mde_demos_prod_v2',
-    QUOTES: 'mde_quotes_prod_v2',
-    BILLS: 'mde_bills_prod_v2',
-    SETTINGS: 'mde_settings_prod_v3'
+    get TRACTORS() { return `${getPrefix()}tractors_prod_v3`; },
+    get LEADS() { return `${getPrefix()}leads_prod_v2`; },
+    get EXPENSES() { return `${getPrefix()}expenses_prod_v2`; },
+    get CASH_TXNS() { return `${getPrefix()}cash_txns_prod_v2`; },
+    get DEMOS() { return `${getPrefix()}demos_prod_v2`; },
+    get QUOTES() { return `${getPrefix()}quotes_prod_v2`; },
+    get BILLS() { return `${getPrefix()}bills_prod_v2`; },
+    get SETTINGS() { return `${getPrefix()}settings_prod_v3`; }
   };
 
   function formatToDMY(dateInput) {
@@ -324,14 +350,25 @@ import { supabase } from './lib/supabase.js';
     constructor() {
       this.subscribers = new Set();
       this.init();
-      this.syncWithSupabase();
-      this.setupRealtime();
+      if (isCloudSyncEnabled()) {
+        this.syncWithSupabase();
+        this.setupRealtime();
+      } else {
+        console.log('🔒 [TractorOS Bundle] Isolated Localhost Mode: Cloud sync disabled to keep local dev separated from deployed data.');
+      }
     }
 
     init() {
       try {
-        // Purge old pre-production keys so user browser gets 100% clean slate
-        const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('mde_') && !k.includes('_prod_v2') && !k.includes('_prod_v3'));
+        const isProtectedKey = (k) => 
+          k.includes('_prod_v2') || 
+          k.includes('_prod_v3') || 
+          k.startsWith('mde_local_dev_') || 
+          k === 'mde_override_cloud_sync' ||
+          k.startsWith('mde_seed_') ||
+          k.startsWith('mde_last_');
+
+        const oldKeys = Object.keys(localStorage).filter(k => k.startsWith('mde_') && !isProtectedKey(k));
         for (const k of oldKeys) {
           localStorage.removeItem(k);
         }
@@ -444,6 +481,7 @@ import { supabase } from './lib/supabase.js';
     }
 
     async syncWithSupabase() {
+      if (!isCloudSyncEnabled()) return;
       try {
         if (typeof supabaseApi === 'undefined' || !supabaseApi) return;
         const [bills, leads, tractors, expenses, cashTxns, demos, quotes, settings] = await Promise.all([
@@ -525,6 +563,7 @@ import { supabase } from './lib/supabase.js';
     }
 
     setupRealtime() {
+      if (!isCloudSyncEnabled()) return;
       try {
         if (typeof supabase === 'undefined' || !supabase || typeof supabase.channel !== 'function') return;
         supabase.channel('supabase-bundle-realtime')
