@@ -307,6 +307,19 @@ import { supabase } from './lib/supabase.js';
     return str.split('T')[0];
   }
 
+  function formatAdaptiveRupee(val) {
+    const num = Number(val) || 0;
+    const abs = Math.abs(num);
+    const sign = num < 0 ? '-' : '';
+    if (abs >= 10000000) {
+      return `${sign}₹${(abs / 10000000).toFixed(2)} Cr`;
+    }
+    if (abs >= 100000) {
+      return `${sign}₹${(abs / 100000).toFixed(2)}L`;
+    }
+    return `${sign}₹${abs.toLocaleString('en-IN')}`;
+  }
+
   class DealershipStore {
     constructor() {
       this.subscribers = new Set();
@@ -1147,12 +1160,14 @@ import { supabase } from './lib/supabase.js';
       const quotes = this.getQuotes();
       const tractors = this.getTractors();
 
-      // Dynamic Sales Revenue: sum of quotes grand totals or cash "IN" from tractor sales/advance
+      // Dynamic Sales Revenue: sum of quotes grand totals or cash "IN" or bill totals
       const quoteRevenue = quotes.reduce((sum, q) => sum + Number(q.grandTotal || 0), 0);
+      const bills = this.getBills ? this.getBills() : [];
+      const billRevenue = bills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0);
       const cashSalesRevenue = cashTxns
-        .filter(t => t.type === 'IN' && (t.category === 'Tractor Sale' || t.category === 'Customer Advance'))
+        .filter(t => t.type === 'IN')
         .reduce((sum, t) => sum + Number(t.amount || 0), 0);
-      const salesRevenue = Math.max(quoteRevenue, cashSalesRevenue);
+      const salesRevenue = Math.max(quoteRevenue + billRevenue, cashSalesRevenue);
 
       // Cost of goods sold: tractor purchase costs for quoted units
       let costOfGoodsSold = 0;
@@ -1453,7 +1468,7 @@ import { supabase } from './lib/supabase.js';
           title: "Showroom Financial Ledger (Clean Slate)",
           summary: "Currently no sales or operating expenses are recorded in the active ledger.",
           keyFindings: [
-            "Gross Profit: ₹0.00 | Total Showroom Expenses: ₹0.00 | Net Profit: ₹0.00",
+            "Gross Profit: ₹0 | Total Showroom Expenses: ₹0 | Net Profit: ₹0",
             "To track true landed margins, log showroom costs with '+ Expense' and tag freight/PDI to chassis numbers.",
             "Showroom bills, tractor sales and spare parts receipts automatically accrue into showroom revenue."
           ],
@@ -1465,11 +1480,11 @@ import { supabase } from './lib/supabase.js';
       const top2 = sortedCats[1] || ['Utilities', 0];
       return {
         title: "Showroom Profitability & Margin Diagnostic",
-        summary: `Gross Profit is ₹${(snapshot.grossProfit / 100000).toFixed(2)}L against total showroom expenses of ₹${(snapshot.totalExpenses / 100000).toFixed(2)}L, leaving Net Profit at ₹${(snapshot.netProfit / 100000).toFixed(2)}L.`,
+        summary: `Gross Profit is ${formatAdaptiveRupee(snapshot.grossProfit)} against total showroom expenses of ${formatAdaptiveRupee(snapshot.totalExpenses)}, leaving Net Profit at ${formatAdaptiveRupee(snapshot.netProfit)}.`,
         keyFindings: [
           sortedCats.length > 0 ? `Highest recorded expense category is ${top1[0]} (₹${Number(top1[1]).toLocaleString('en-IN')})${sortedCats.length > 1 ? `, followed by ${top2[0]} (₹${Number(top2[1]).toLocaleString('en-IN')})` : ''}.` : 'No category expenses recorded yet.',
           `Total approved showroom expenses count: ${expenses.filter(e => e.status === 'Approved').length} records.`,
-          `Net Cash Flow is ₹${(snapshot.netCashFlow / 100000).toFixed(2)}L based on recorded cash in/out transactions.`
+          `Net Cash Flow is ${formatAdaptiveRupee(snapshot.netCashFlow)} based on recorded cash in/out transactions.`
         ],
         recommendation: snapshot.netProfit < 0 ? "Operating overheads currently exceed gross margins; prioritize closing pending hot deals." : "Healthy dealer margins maintained. Keep monitoring freight and PDI costs tagged to chassis numbers."
       };
@@ -1595,7 +1610,7 @@ import { supabase } from './lib/supabase.js';
     billElement.style.transformOrigin = '';
     billElement.style.marginBottom = '';
 
-    const SAFE_MAX_PX = 960;
+    const SAFE_MAX_PX = 1045;
     const actualHeight = billElement.scrollHeight;
 
     if (actualHeight > SAFE_MAX_PX) {
@@ -2185,7 +2200,7 @@ import { supabase } from './lib/supabase.js';
               <span class="metric-label">Sales Revenue (Sep)</span>
               <div class="metric-icon-wrap gold">${renderIcon('rupee')}</div>
             </div>
-            <div class="metric-value">₹${(snapshot.salesRevenue / 100000).toFixed(2)}L</div>
+            <div class="metric-value">${formatAdaptiveRupee(snapshot.salesRevenue)}</div>
             <div class="metric-sub">${(store.getBills ? store.getBills() : []).length} Showroom Bills & Deals</div>
           </div>
 
@@ -2194,7 +2209,7 @@ import { supabase } from './lib/supabase.js';
               <span class="metric-label">Gross Showroom Profit</span>
               <div class="metric-icon-wrap success">${renderIcon('calculator')}</div>
             </div>
-            <div class="metric-value">₹${(snapshot.grossProfit / 100000).toFixed(2)}L</div>
+            <div class="metric-value">${formatAdaptiveRupee(snapshot.grossProfit)}</div>
             <div class="metric-sub">${store.getQuotes().length > 0 ? 'Realized dealer OEM spread' : 'Awaiting delivered deals'}</div>
           </div>
 
@@ -2203,7 +2218,7 @@ import { supabase } from './lib/supabase.js';
               <span class="metric-label">Total Expenses</span>
               <div class="metric-icon-wrap danger">${renderIcon('expense')}</div>
             </div>
-            <div class="metric-value">₹${(snapshot.totalExpenses / 100000).toFixed(2)}L</div>
+            <div class="metric-value">${formatAdaptiveRupee(snapshot.totalExpenses)}</div>
             <div class="metric-sub">${expenses.filter(e => e.status === 'Approved').length} Approved expense vouchers</div>
           </div>
 
@@ -2212,8 +2227,8 @@ import { supabase } from './lib/supabase.js';
               <span class="metric-label">Actual Net Profit</span>
               <div class="metric-icon-wrap info">${renderIcon('bank')}</div>
             </div>
-            <div class="metric-value">₹${(snapshot.netProfit / 100000).toFixed(2)}L</div>
-            <div class="metric-sub" style="color:${snapshot.netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">Net Cash Flow: ${snapshot.netCashFlow >= 0 ? '+' : '-'}₹${(Math.abs(snapshot.netCashFlow) / 100000).toFixed(2)}L</div>
+            <div class="metric-value" style="color:${snapshot.netProfit >= 0 ? 'var(--text-primary)' : 'var(--danger)'};">${formatAdaptiveRupee(snapshot.netProfit)}</div>
+            <div class="metric-sub" style="color:${snapshot.netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">Net Cash Flow: ${snapshot.netCashFlow >= 0 ? '+' : ''}${formatAdaptiveRupee(snapshot.netCashFlow)}</div>
           </div>
         </div>
 
@@ -4502,7 +4517,7 @@ import { supabase } from './lib/supabase.js';
             Cash Flow vs Profit: The Showroom Reality
           </h3>
           <p style="font-size:13px; color:#d1fae5; line-height:1.4;">
-            Accounting Net Profit is <strong>₹${(snapshot.netProfit / 100000).toFixed(2)}L</strong>, while Net Cash Flow is <strong>₹${(snapshot.netCashFlow / 100000).toFixed(2)}L</strong>.
+            Accounting Net Profit is <strong>${formatAdaptiveRupee(snapshot.netProfit)}</strong>, while Net Cash Flow is <strong>${formatAdaptiveRupee(snapshot.netCashFlow)}</strong>.
           </p>
         </div>
 

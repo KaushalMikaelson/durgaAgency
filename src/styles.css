@@ -1499,12 +1499,17 @@ body {
 }
 
 /* Items in body: clean vertical column rules, NO horizontal box borders */
+.mdd-table tbody tr.mdd-item-row,
+.mdd-table tbody tr.mdd-live-row {
+  height: 1px !important; /* CRITICAL: Forces item rows to hug content tightly with NO gaps between items */
+}
+
 .mdd-table tbody tr td {
   border-right: 1.5px solid #000000;
   border-bottom: none; /* NO BOXES: Plain sheet inside */
   font-size: 14.5px;
-  padding: 7px 10px;
-  vertical-align: top;
+  padding: 6px 10px;
+  vertical-align: middle;
   color: #000000;
   box-sizing: border-box;
 }
@@ -1534,21 +1539,42 @@ body {
   border-right: none;
 }
 
-.mdd-plane-spacer-row td {
-  height: 100%;
-  min-height: 180px;
-  border-bottom: none !important;
+.mdd-plane-spacer-row {
+  height: 100% !important;
 }
 
-/* Bottom Total Row */
+.mdd-plane-spacer-row td {
+  height: 100% !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border-bottom: none !important;
+  border-right: 1.5px solid #000000 !important;
+}
+
+.mdd-plane-spacer-row td:last-child {
+  border-right: none !important;
+}
+
+/* Bottom Total Row: compact locked height at the very bottom */
+.mdd-table tfoot {
+  height: 1px !important;
+}
+
+.mdd-table tfoot tr {
+  height: 36px !important;
+}
+
 .mdd-table tfoot tr td {
   border-top: 2px solid #000000;
   border-right: 1.5px solid #000000;
   border-bottom: none;
   font-weight: 800;
-  padding: 6px 10px;
+  padding: 4px 10px !important;
+  height: 36px !important;
+  max-height: 36px !important;
   vertical-align: middle;
   background: #ffffff;
+  box-sizing: border-box !important;
 }
 
 .mdd-table tfoot tr td:last-child {
@@ -1909,7 +1935,7 @@ body {
   .mdd-bill-sheet {
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important; /* Fill full page, distribute space */
+    justify-content: flex-start !important; /* Stack neatly from top to bottom - NO element pulling */
     background: #ffffff !important;
     color: #000000 !important;
     box-shadow: none !important;
@@ -1920,16 +1946,16 @@ body {
     width: 100% !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
-    height: auto !important;
-    min-height: 282mm !important; /* Fill full A4 page height */
-    max-height: 282mm !important; /* Safely within 297mm A4 height */
+    height: 275mm !important; /* EXACT 1-page A4 height (safely fits 297mm A4 with margins) */
+    min-height: 275mm !important;
+    max-height: 275mm !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
     page-break-before: avoid !important;
     break-before: avoid !important;
-    overflow: visible !important; /* CRITICAL: Never clip the signature or footer at the bottom */
+    overflow: hidden !important; /* CRITICAL: GUARANTEES STRICT 1-PAGE PRINT */
   }
 
   .mdd-top-bar {
@@ -2062,14 +2088,15 @@ body {
     background: #ffffff !important;
     min-height: auto !important;
     height: auto !important;
-    overflow: visible !important;
+    overflow: hidden !important;
+    margin: 2mm 0 3mm 0 !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
   .mdd-table {
     width: 100% !important;
-    height: auto !important;
+    height: 100% !important;
     flex: 1 1 auto !important;
     display: table !important;
     border-collapse: collapse !important;
@@ -2090,6 +2117,7 @@ body {
     background: #f8fafc !important;
     color: #000000 !important;
     font-weight: 800 !important;
+    padding: 2mm 3mm !important;
   }
 
   .mdd-table thead th:last-child {
@@ -2098,19 +2126,28 @@ body {
 
   .mdd-sub-th {
     background: #ffffff !important;
+    padding: 1mm 2mm !important;
   }
 
   .mdd-table tbody {
     display: table-row-group !important;
-    height: auto !important;
+    height: 100% !important;
   }
 
-  /* CRITICAL: NO HORIZONTAL BOX LINES IN BODY - CLEAN PLANE SHEET */
+  /* CRITICAL: NO GAPS BETWEEN ITEMS IN PRINT - ALWAYS COMPACT ROWS */
+  .mdd-table tbody tr.mdd-item-row,
+  .mdd-table tbody tr.mdd-live-row {
+    height: 1px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
   .mdd-table tbody tr td {
     border-right: 1.5px solid #000000 !important;
     border-bottom: none !important; /* NO HORIZONTAL BORDER LINES */
     color: #000000 !important;
-    vertical-align: top !important;
+    vertical-align: middle !important;
+    padding: 2mm 3mm !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
@@ -2139,20 +2176,32 @@ body {
   }
 
   .mdd-plane-spacer-row {
-    height: auto !important;
+    height: 100% !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .mdd-plane-spacer-row td {
     border-bottom: none !important;
-    height: auto !important;
+    border-right: 1.5px solid #000000 !important;
+    height: 100% !important;
     padding: 0 !important;
   }
 
-  /* Table footer: Total row bound directly below the items */
+  .mdd-plane-spacer-row td:last-child {
+    border-right: none !important;
+  }
+
+  /* Table footer: Total row bound directly at the bottom with fixed compact height */
   .mdd-table tfoot {
+    height: 1px !important;
     display: table-row-group !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  .mdd-table tfoot tr {
+    height: 9mm !important;
   }
 
   .mdd-table tfoot tr td {
@@ -2162,6 +2211,10 @@ body {
     color: #000000 !important;
     font-weight: 900 !important;
     vertical-align: middle !important;
+    height: 9mm !important;
+    max-height: 9mm !important;
+    padding: 1.5mm 3mm !important;
+    box-sizing: border-box !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }

@@ -150,13 +150,26 @@ export function toIsoDate(dmyOrIso) {
   return str.split('T')[0];
 }
 
+export function formatAdaptiveRupee(val) {
+  const num = Number(val) || 0;
+  const abs = Math.abs(num);
+  const sign = num < 0 ? '-' : '';
+  if (abs >= 10000000) {
+    return `${sign}₹${(abs / 10000000).toFixed(2)} Cr`;
+  }
+  if (abs >= 100000) {
+    return `${sign}₹${(abs / 100000).toFixed(2)}L`;
+  }
+  return `${sign}₹${abs.toLocaleString('en-IN')}`;
+}
+
 export function autoFitBillToOnePage(billElement) {
   if (!billElement) return;
   billElement.style.transform = '';
   billElement.style.transformOrigin = '';
   billElement.style.marginBottom = '';
 
-  const SAFE_MAX_PX = 960;
+  const SAFE_MAX_PX = 1045;
   const actualHeight = billElement.scrollHeight;
 
   if (actualHeight > SAFE_MAX_PX) {
@@ -754,8 +767,8 @@ class TractorOSApp {
             <span class="metric-label">Sales Revenue (Sep)</span>
             <div class="metric-icon-wrap gold">${renderIcon('rupee')}</div>
           </div>
-          <div class="metric-value">₹${(snapshot.salesRevenue / 100000).toFixed(2)}L</div>
-          <div class="metric-sub">5 Tractors Delivered this month</div>
+          <div class="metric-value">${formatAdaptiveRupee(snapshot.salesRevenue)}</div>
+          <div class="metric-sub">${(store.getBills ? store.getBills() : []).length} Showroom Bills & Deals</div>
         </div>
 
         <div class="metric-card success">
@@ -763,8 +776,8 @@ class TractorOSApp {
             <span class="metric-label">Gross Showroom Profit</span>
             <div class="metric-icon-wrap success">${renderIcon('calculator')}</div>
           </div>
-          <div class="metric-value">₹${(snapshot.grossProfit / 100000).toFixed(2)}L</div>
-          <div class="metric-sub">Avg Margin: ~15% OEM Spread</div>
+          <div class="metric-value">${formatAdaptiveRupee(snapshot.grossProfit)}</div>
+          <div class="metric-sub">${store.getQuotes().length > 0 ? 'Realized dealer OEM spread' : 'Awaiting delivered deals'}</div>
         </div>
 
         <div class="metric-card danger">
@@ -772,8 +785,8 @@ class TractorOSApp {
             <span class="metric-label">Total Expenses</span>
             <div class="metric-icon-wrap danger">${renderIcon('expense')}</div>
           </div>
-          <div class="metric-value">₹${(snapshot.totalExpenses / 100000).toFixed(2)}L</div>
-          <div class="metric-sub">Salaries, Fuel, Rent, Transport</div>
+          <div class="metric-value">${formatAdaptiveRupee(snapshot.totalExpenses)}</div>
+          <div class="metric-sub">${store.getExpenses().filter(e => e.status === 'Approved').length} Approved expense vouchers</div>
         </div>
 
         <div class="metric-card info">
@@ -781,8 +794,8 @@ class TractorOSApp {
             <span class="metric-label">Actual Net Profit</span>
             <div class="metric-icon-wrap info">${renderIcon('bank')}</div>
           </div>
-          <div class="metric-value">₹${(snapshot.netProfit / 100000).toFixed(2)}L</div>
-          <div class="metric-sub" style="color:var(--success); font-weight:700;">Net Cash Flow: +₹${(snapshot.netCashFlow / 100000).toFixed(2)}L</div>
+          <div class="metric-value" style="color:${snapshot.netProfit >= 0 ? 'var(--text-primary)' : 'var(--danger)'};">${formatAdaptiveRupee(snapshot.netProfit)}</div>
+          <div class="metric-sub" style="color:${snapshot.netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">Net Cash Flow: ${snapshot.netCashFlow >= 0 ? '+' : ''}${formatAdaptiveRupee(snapshot.netCashFlow)}</div>
         </div>
       </div>
 
@@ -2736,7 +2749,7 @@ class TractorOSApp {
           Cash Flow vs Profit: The Showroom Reality
         </h3>
         <p style="font-size:13px; color:#d1fae5; line-height:1.4;">
-          Your accounting Net Profit is <strong>₹${(snapshot.netProfit / 100000).toFixed(2)} Lakh</strong>, while actual Net Cash Flow is <strong>₹${(snapshot.netCashFlow / 100000).toFixed(2)} Lakh</strong>.
+          Your accounting Net Profit is <strong>${formatAdaptiveRupee(snapshot.netProfit)}</strong>, while actual Net Cash Flow is <strong>${formatAdaptiveRupee(snapshot.netCashFlow)}</strong>.
           Tracking customer token advances and delayed bank loan disbursements ensures you never face sudden liquidity shortages.
         </p>
       </div>

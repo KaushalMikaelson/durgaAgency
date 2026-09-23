@@ -892,10 +892,12 @@ class DealershipStore {
     const tractors = this.getTractors();
 
     const quoteRevenue = quotes.reduce((sum, q) => sum + Number(q.grandTotal || 0), 0);
+    const bills = this.getBills ? this.getBills() : [];
+    const billRevenue = bills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0);
     const cashSalesRevenue = cashTxns
-      .filter(t => t.type === 'IN' && (t.category === 'Tractor Sale' || t.category === 'Customer Advance'))
+      .filter(t => t.type === 'IN')
       .reduce((sum, t) => sum + Number(t.amount || 0), 0);
-    const salesRevenue = Math.max(quoteRevenue, cashSalesRevenue);
+    const salesRevenue = Math.max(quoteRevenue + billRevenue, cashSalesRevenue);
 
     let costOfGoodsSold = 0;
     for (const q of quotes) {

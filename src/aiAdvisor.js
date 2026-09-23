@@ -2,6 +2,7 @@
 // Operates on real ledger & CRM data without hallucinations or seeded dummy data
 
 import { store } from './store.js';
+import { formatAdaptiveRupee } from './app.js';
 
 export function queryBusinessAdvisor(userQuestion) {
   const q = (userQuestion || '').toLowerCase();
@@ -18,7 +19,7 @@ export function queryBusinessAdvisor(userQuestion) {
         title: "Showroom Financial Ledger (Clean Slate)",
         summary: "Currently no sales or operating expenses are recorded in the active ledger.",
         keyFindings: [
-          "Gross Profit: ₹0.00 | Total Showroom Expenses: ₹0.00 | Net Profit: ₹0.00",
+          "Gross Profit: ₹0 | Total Showroom Expenses: ₹0 | Net Profit: ₹0",
           "To track true landed margins, log showroom costs with '+ Expense' and tag freight/PDI to chassis numbers.",
           "Showroom bills, tractor sales and spare parts receipts automatically accrue into showroom revenue."
         ],
@@ -30,11 +31,11 @@ export function queryBusinessAdvisor(userQuestion) {
     const top2 = sortedCats[1] || ['Utilities', 0];
     return {
       title: "Showroom Profitability & Margin Diagnostic",
-      summary: `Gross Profit is ₹${(snapshot.grossProfit / 100000).toFixed(2)}L against total showroom expenses of ₹${(snapshot.totalExpenses / 100000).toFixed(2)}L, leaving Net Profit at ₹${(snapshot.netProfit / 100000).toFixed(2)}L.`,
+      summary: `Gross Profit is ${formatAdaptiveRupee(snapshot.grossProfit)} against total showroom expenses of ${formatAdaptiveRupee(snapshot.totalExpenses)}, leaving Net Profit at ${formatAdaptiveRupee(snapshot.netProfit)}.`,
       keyFindings: [
         sortedCats.length > 0 ? `Highest recorded expense category is ${top1[0]} (₹${Number(top1[1]).toLocaleString('en-IN')})${sortedCats.length > 1 ? `, followed by ${top2[0]} (₹${Number(top2[1]).toLocaleString('en-IN')})` : ''}.` : 'No category expenses recorded yet.',
         `Total approved showroom expenses count: ${expenses.filter(e => e.status === 'Approved').length} records.`,
-        `Net Cash Flow is ₹${(snapshot.netCashFlow / 100000).toFixed(2)}L based on recorded cash in/out transactions.`
+        `Net Cash Flow is ${formatAdaptiveRupee(snapshot.netCashFlow)} based on recorded cash in/out transactions.`
       ],
       recommendation: snapshot.netProfit < 0 ? "Operating overheads currently exceed gross margins; prioritize closing pending hot deals." : "Healthy dealer margins maintained. Keep monitoring freight and PDI costs tagged to chassis numbers."
     };
