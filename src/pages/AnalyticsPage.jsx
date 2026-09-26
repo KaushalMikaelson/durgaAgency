@@ -89,7 +89,7 @@ export function AnalyticsPage() {
       ['Tractors Delivered (Units)', vm.tractorsDelivered],
       ['In-Stock Yard Units', vm.inStockUnits],
       ['Active Farmer Leads', vm.totalLeads],
-      ['Field Demos Conducted', vm.totalDemos],
+      ['High Intent Hot Leads', vm.hotLeads || 0],
       [],
       ['Top Tractor Model', 'Units', 'Revenue (Rs)', 'Share (%)'],
       ...vm.topModels.map(m => [m.model, m.units, m.rev, `${m.pct}%`]),
@@ -444,9 +444,9 @@ export function AnalyticsPage() {
             <div className="analytics-kpi-value" style={{ color: '#6d28d9' }}>{vm.totalLeads} Farmers</div>
             <div className="analytics-kpi-footer">
               <span className="analytics-kpi-chip" style={{ background: 'rgba(139,92,246,0.1)', color: '#6d28d9', border: '1px solid rgba(139,92,246,0.25)' }}>
-                <Flame size={12} /> {vm.totalDemos} Field Demos
+                <Flame size={12} /> {vm.hotLeads || 0} Hot Leads
               </span>
-              <span className="analytics-kpi-aux">Hot Leads Active</span>
+              <span className="analytics-kpi-aux">CRM Active</span>
             </div>
           </motion.div>
         </motion.div>

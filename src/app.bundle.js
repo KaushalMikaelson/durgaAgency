@@ -2203,7 +2203,6 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
         leads: { title: "Customer & Lead CRM", sub: "Farmer profiles, village mapping & algorithmic buying score" },
         inventory: { title: "Tractor Inventory & Landed Margins", sub: "Live showroom stock, specifications & unit profitability" },
         billing: { title: "Billing & Bills Command Center (माँ दुर्गा डीजल)", sub: "Official Maa Durga Diesel bills, estimates & customer receipts" },
-        demos: { title: "Field Demos & Track Testing", sub: "Rotavator/Plough demonstration logs, diesel consumption & feedback" },
         expenses: { title: "Showroom Expenses & Unit Cost Tagging", sub: "Fast entry, approval workflow & per-tractor landed cost" },
         cashflow: { title: "Cash & Bank Ledger", sub: "Cash-in vs Cash-out tracking distinct from accounting profit" },
         villageMap: { title: "Village-Level Territory Analytics", sub: "Geographic demand clustering, crop patterns & route planning" },
@@ -2312,8 +2311,9 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
           this.bindEmiEvents();
           break;
         case 'demos':
-          content.innerHTML = this.renderDemosHTML();
-          this.bindDemosEvents();
+          this.currentTab = 'dashboard';
+          content.innerHTML = this.renderDashboardHTML();
+          this.bindDashboardEvents();
           break;
         case 'expenses':
           content.innerHTML = this.renderExpensesHTML();
@@ -4440,10 +4440,7 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
 
       return `
         <!-- Top Action Bar -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
-          <div style="font-size:13px; color:var(--text-secondary);">
-            Automatic Rules: Expenses <strong>&lt; ₹5,000 auto-approved</strong> | <strong>&ge; ₹5,000 requires Director approval</strong>
-          </div>
+        <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:20px;">
           <button class="quick-action-btn btn-primary" onclick="window.app.openFastExpenseModal()">
             ${renderIcon('plus')} Fast Expense Entry
           </button>
@@ -4460,38 +4457,7 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
           </div>
         ` : ''}
 
-        <!-- 1. Money Flow KPI Metrics Ribbon -->
         <div class="expense-analytics-wrapper">
-          <div class="expense-metrics-ribbon">
-            <div class="expense-stat-card card-amber">
-              <span class="stat-label">Total Outflow (Spend) 💸</span>
-              <div class="stat-value font-mono">₹${totalExpenseAmount.toLocaleString('en-IN')}</div>
-              <span class="stat-sub">${expenses.length} expenses logged</span>
-            </div>
-
-            <div class="expense-stat-card card-rose">
-              <span class="stat-label">Top Expense Category 🎯</span>
-              <div class="stat-value" style="font-size:17px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                ${topGroup ? topGroup.label : 'None Yet'}
-              </div>
-              <span class="stat-sub">
-                ${topGroup ? `₹${topGroup.amount.toLocaleString('en-IN')} (${topGroup.percent}%)` : 'No data recorded'}
-              </span>
-            </div>
-
-            <div class="expense-stat-card card-blue">
-              <span class="stat-label">Chassis Direct Costs 🏷️</span>
-              <div class="stat-value font-mono">₹${totalChassisCost.toLocaleString('en-IN')}</div>
-              <span class="stat-sub">${chassisExpenses.length} tractor-tagged costs</span>
-            </div>
-
-            <div class="expense-stat-card card-emerald">
-              <span class="stat-label">Showroom Overhead 🏢</span>
-              <div class="stat-value font-mono">₹${totalGeneralOverhead.toLocaleString('en-IN')}</div>
-              <span class="stat-sub">Rent, fuel, staff & tea</span>
-            </div>
-          </div>
-
           <!-- 2. Interactive Donut Chart & Category Breakdown Panel -->
           <div class="expense-chart-panel">
             <div class="expense-chart-header">
@@ -5338,7 +5304,7 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
         ['Tractors Delivered (Units)', vm.tractorsDelivered],
         ['In-Stock Yard Units', vm.inStockUnits],
         ['Active Farmer Leads', vm.totalLeads],
-        ['Field Demos Conducted', vm.totalDemos],
+        ['High Intent Hot Leads', vm.hotLeads || 0],
         [],
         ['Top Tractor Model', 'Units', 'Revenue (Rs)', 'Share (%)'],
         ...vm.topModels.map(m => [m.model, m.units, m.rev, `${m.pct}%`]),
@@ -6353,7 +6319,6 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
         leads: this.lang === 'hi' ? '👥 किसान एवं ग्राहक' : '👥 Customers & Leads',
         inventory: this.lang === 'hi' ? '🚜 स्टॉक एवं मुनाफा' : '🚜 Inventory & Margins',
         billing: this.lang === 'hi' ? '🧾 बिलिंग एवं पर्ची (माँ दुर्गा)' : '🧾 Billing & Bills',
-        demos: this.lang === 'hi' ? '🚜 फील्ड डेमो ट्रायल' : '🚜 Field Demos',
         expenses: this.lang === 'hi' ? '💸 शोरूम खर्चे' : '💸 Expenses',
         cashflow: this.lang === 'hi' ? '🏦 रोकड़ एवं बैंक' : '🏦 Cash & Bank',
         villageMap: this.lang === 'hi' ? '🗺️ ग्रामीण बिक्री नक्शा' : '🗺️ Village Sales Map',

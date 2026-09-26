@@ -169,39 +169,8 @@ export function ExpensesPage() {
         </div>
       </div>
 
-      {/* KPI Ribbon */}
+      {/* Donut Chart & Category Breakdown Panel */}
       <div className="expense-analytics-wrapper">
-        <div className="expense-metrics-ribbon">
-          <div className="expense-stat-card card-amber">
-            <span className="stat-label">Total Outflow (Spend) 💸</span>
-            <div className="stat-value font-mono">₹{totalExpenseAmount.toLocaleString('en-IN')}</div>
-            <span className="stat-sub">{filteredByPeriod.length} expenses logged</span>
-          </div>
-
-          <div className="expense-stat-card card-rose">
-            <span className="stat-label">Top Expense Category 🎯</span>
-            <div className="stat-value" style={{ fontSize: '17px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {topGroup ? topGroup.label : 'None Yet'}
-            </div>
-            <span className="stat-sub">
-              {topGroup ? `₹${topGroup.amount.toLocaleString('en-IN')} (${topGroup.percent}%)` : 'No data'}
-            </span>
-          </div>
-
-          <div className="expense-stat-card card-blue">
-            <span className="stat-label">Chassis Direct Costs 🏷️</span>
-            <div className="stat-value font-mono">₹{totalChassisCost.toLocaleString('en-IN')}</div>
-            <span className="stat-sub">{chassisExpenses.length} tractor-tagged costs</span>
-          </div>
-
-          <div className="expense-stat-card card-emerald">
-            <span className="stat-label">Showroom Overhead 🏢</span>
-            <div className="stat-value font-mono">₹{totalGeneralOverhead.toLocaleString('en-IN')}</div>
-            <span className="stat-sub">Rent, fuel, staff & hospitality</span>
-          </div>
-        </div>
-
-        {/* Donut Chart & Category Breakdown Panel */}
         <div className="expense-chart-panel">
           <div className="expense-chart-header">
             <div className="chart-title-area">

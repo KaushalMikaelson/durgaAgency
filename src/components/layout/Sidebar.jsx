@@ -20,7 +20,6 @@ const NAV_ITEMS = [
   { id: 'leads', label: 'Customers & Leads', icon: Users, badgeKey: 'hotLeads' },
   { id: 'recommend', label: 'Recommendation', icon: Sparkles },
   { id: 'billing', label: 'Billing & Bills', icon: Receipt },
-  { id: 'demos', label: 'Field Demos', icon: MapPin },
   { id: 'expenses', label: 'Expenses', icon: TrendingDown },
   { id: 'cashflow', label: 'Cash & Bank', icon: Wallet },
   { id: 'villageMap', label: 'Village Sales Map', icon: Map },
