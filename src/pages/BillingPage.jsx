@@ -65,28 +65,47 @@ export function BillingPage() {
       </div>
 
       {/* Stats Ribbon */}
-      <div className="billing-stats-ribbon" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '20px' }}>
-        <div className="ribbon-card" style={{ borderTop: '4px solid #10b981' }}>
-          <span style={{ color: '#059669', fontWeight: 700 }}>Total Paid (जमा राशि)</span>
-          <strong className="font-mono" style={{ color: '#059669', fontSize: '20px' }}>₹{totalPaid.toLocaleString('en-IN')}</strong>
-          <small style={{ color: '#059669', fontWeight: 600 }}>✅ {paidCount} Bills Paid</small>
+      <div className="metric-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div className="metric-card success">
+          <div className="metric-card-header">
+            <div className="metric-card-title-group">
+              <span className="metric-card-title" style={{ color: '#059669' }}>Total Paid</span>
+              <span className="metric-card-subtitle" style={{ color: '#10b981' }}>(जमा राशि)</span>
+            </div>
+            <div className="metric-icon success">₹</div>
+          </div>
+          <div className="metric-value" style={{ color: '#065f46' }}>₹{totalPaid.toLocaleString('en-IN')}</div>
+          <div className="metric-badge-pill" style={{ background: '#ecfdf5', color: '#047857', border: '1px solid rgba(16,185,129,0.2)' }}>
+            <span>✅ {paidCount} Bills Fully Paid</span>
+          </div>
         </div>
-        <div className="ribbon-card" style={{ borderTop: '4px solid #ef4444' }}>
-          <span style={{ color: '#dc2626', fontWeight: 700 }}>Total Due (बकाया राशि)</span>
-          <strong className="font-mono" style={{ color: '#dc2626', fontSize: '20px' }}>₹{totalDue.toLocaleString('en-IN')}</strong>
-          <small style={{ color: dueCount > 0 ? '#dc2626' : '#10b981', fontWeight: 600 }}>
-            {dueCount > 0 ? `⚠️ ${dueCount} Bills Due` : '✨ No Pending Dues'}
-          </small>
+
+        <div className={`metric-card ${dueCount > 0 ? 'danger' : 'success'}`}>
+          <div className="metric-card-header">
+            <div className="metric-card-title-group">
+              <span className="metric-card-title" style={{ color: dueCount > 0 ? '#dc2626' : '#059669' }}>Total Due</span>
+              <span className="metric-card-subtitle" style={{ color: dueCount > 0 ? '#ef4444' : '#10b981' }}>(बकाया राशि)</span>
+            </div>
+            <div className={`metric-icon ${dueCount > 0 ? 'danger' : 'success'}`}>{dueCount > 0 ? '⏳' : '✨'}</div>
+          </div>
+          <div className="metric-value" style={{ color: dueCount > 0 ? '#b91c1c' : '#059669' }}>₹{totalDue.toLocaleString('en-IN')}</div>
+          <div className="metric-badge-pill" style={{ background: dueCount > 0 ? '#fef2f2' : '#ecfdf5', color: dueCount > 0 ? '#b91c1c' : '#047857', border: `1px solid ${dueCount > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}` }}>
+            <span>{dueCount > 0 ? `⚠️ ${dueCount} Bills Pending / Due` : '✨ No Pending Dues'}</span>
+          </div>
         </div>
-        <div className="ribbon-card" style={{ borderTop: '4px solid #2563eb' }}>
-          <span style={{ color: '#1d4ed8', fontWeight: 700 }}>Total Invoiced (कुल बिल)</span>
-          <strong className="font-mono" style={{ color: '#1d4ed8', fontSize: '20px' }}>₹{totalBilled.toLocaleString('en-IN')}</strong>
-          <small style={{ color: '#64748b' }}>📋 {bills.length} Total Bills</small>
-        </div>
-        <div className="ribbon-card" style={{ borderTop: '4px solid #f59e0b' }}>
-          <span style={{ color: '#d97706', fontWeight: 700 }}>Next Auto Bill No.</span>
-          <strong className="font-mono" style={{ color: '#b45309', fontSize: '20px' }}>#{nextAutoNo}</strong>
-          <small style={{ color: '#64748b' }}>Auto Generated</small>
+
+        <div className="metric-card info">
+          <div className="metric-card-header">
+            <div className="metric-card-title-group">
+              <span className="metric-card-title" style={{ color: '#1d4ed8' }}>Total Invoiced</span>
+              <span className="metric-card-subtitle" style={{ color: '#3b82f6' }}>(कुल बिल)</span>
+            </div>
+            <div className="metric-icon info">🧾</div>
+          </div>
+          <div className="metric-value" style={{ color: '#1e40af' }}>₹{totalBilled.toLocaleString('en-IN')}</div>
+          <div className="metric-badge-pill" style={{ background: '#eff6ff', color: '#1e40af', border: '1px solid rgba(37,99,235,0.2)' }}>
+            <span>📋 {bills.length} Total Bills Issued</span>
+          </div>
         </div>
       </div>
 

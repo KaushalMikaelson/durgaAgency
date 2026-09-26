@@ -3,7 +3,7 @@ import React from 'react';
 import { useDealership } from '../context/DealershipContext.jsx';
 import { StatCard } from '../components/common/StatCard.jsx';
 import { motion } from '../utils/motion.jsx';
-import { Receipt, Users, Tractor, Wallet, Plus, Printer, Phone, ArrowRight } from 'lucide-react';
+import { Receipt, Users, Tractor, Wallet, Plus, Printer, Phone, ArrowRight, BarChart3 } from 'lucide-react';
 import { formatToDMY } from '../utils/dateUtils.js';
 
 export function DashboardPage() {
@@ -22,6 +22,9 @@ export function DashboardPage() {
           <p>Maa Durga Engineering • Authorized VST Zetor Dealership System</p>
         </div>
         <div className="header-actions">
+          <button className="btn btn-outline" onClick={() => window.app ? window.app.switchTab('analytics') : setActiveTab('analytics')}>
+            <BarChart3 size={16} /> 📊 Summary & Stats
+          </button>
           <button className="btn btn-primary" onClick={() => openModal('billSheet')}>
             <Receipt size={16} /> + New Bill Book Entry
           </button>

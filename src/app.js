@@ -8,6 +8,7 @@ import { evaluateUsedTractor } from './exchangeEvaluator.js';
 import { generateFollowUpSequences, createWhatsAppUrl } from './whatsapp.js';
 import { queryBusinessAdvisor } from './aiAdvisor.js';
 import { DURGA_MAA_LOGO } from './logoData.js';
+import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './analyticsEngine.js';
 
 // --- ON-SCREEN TOAST NOTIFICATION SYSTEM ---
 export function showToast(message, type = 'success', title = '') {
@@ -168,14 +169,18 @@ export function autoFitBillToOnePage(billElement) {
   billElement.style.transform = '';
   billElement.style.transformOrigin = '';
   billElement.style.marginBottom = '';
+  billElement.style.overflow = '';
 
-  const SAFE_MAX_PX = 1045;
-  const actualHeight = billElement.scrollHeight;
+  const itemCount = Number(billElement.dataset.itemCount || 0);
+  const visualHeight = billElement.getBoundingClientRect().height || billElement.offsetHeight || billElement.scrollHeight;
+  const actualHeight = itemCount >= 29 ? Math.max(visualHeight, billElement.scrollHeight) : visualHeight;
+  const SAFE_MAX_PX = 1120;
 
   if (actualHeight > SAFE_MAX_PX) {
-    const scale = Math.floor((SAFE_MAX_PX / actualHeight) * 1000) / 1000;
+    const scale = Math.max(0.78, Math.floor((SAFE_MAX_PX / actualHeight) * 1000) / 1000);
     billElement.style.transform = `scale(${scale})`;
     billElement.style.transformOrigin = 'top center';
+    billElement.style.overflow = 'visible';
     const collapsed = actualHeight - (actualHeight * scale);
     billElement.style.marginBottom = `-${collapsed}px`;
   }
@@ -193,6 +198,7 @@ if (typeof window !== 'undefined' && !window._hasBoundBillPrintAutoFit) {
       bill.style.transform = '';
       bill.style.transformOrigin = '';
       bill.style.marginBottom = '';
+      bill.style.overflow = '';
     }
   });
 }
@@ -210,13 +216,18 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
 
   // Strict 1-page density calculation based on item count
   let densityClass = 'mdd-density-standard';
-  if (itemCount >= 16) {
+  if (itemCount >= 29) {
     densityClass = 'mdd-density-ultra';
-  } else if (itemCount >= 8) {
+  } else if (itemCount >= 19) {
     densityClass = 'mdd-density-dense';
-  } else if (itemCount >= 5) {
+  } else if (itemCount >= 8) {
     densityClass = 'mdd-density-compact';
   }
+  const sheetModeClass = isPureBlank ? 'mdd-blank-sheet' : 'mdd-has-items';
+  const printRowFont = itemCount >= 36 ? '6pt' : itemCount >= 29 ? '7pt' : itemCount >= 19 ? '8pt' : itemCount >= 8 ? '9pt' : '10pt';
+  const printRowPadY = itemCount >= 36 ? '0.15mm' : itemCount >= 29 ? '0.3mm' : itemCount >= 19 ? '0.45mm' : itemCount >= 8 ? '0.7mm' : '0.9mm';
+  const printRowMinHeight = itemCount >= 36 ? '3.1mm' : itemCount >= 29 ? '3.8mm' : itemCount >= 19 ? '5.5mm' : itemCount >= 12 ? '8.2mm' : itemCount >= 8 ? '7.4mm' : '0mm';
+  const sheetStyle = `--mdd-print-row-font:${printRowFont}; --mdd-print-row-pad-y:${printRowPadY}; --mdd-print-row-min-height:${printRowMinHeight};`;
 
   let rowsHtml = '';
 
@@ -351,7 +362,7 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
   const words = isPureBlank ? '' : (b.amountWords || (b.totalRupees ? numberToIndianWords(b.totalRupees) : ''));
 
   return `
-    <div class="mdd-bill-sheet ${densityClass}" id="printableMddBill" data-item-count="${itemCount}">
+    <div class="mdd-bill-sheet ${densityClass} ${sheetModeClass}" id="printableMddBill" data-item-count="${itemCount}" style="${sheetStyle}">
       <!-- Top Bar with ESTIMATE and Phone -->
       <div class="mdd-top-bar">
         <div class="mdd-estimate-pill">ESTIMATE</div>
@@ -590,6 +601,11 @@ class TractorOSApp {
   }
 
   switchTab(tabName) {
+    if (tabName !== 'analytics' && tabName !== 'summary') {
+      if (window.unmountReactAnalytics) {
+        window.unmountReactAnalytics();
+      }
+    }
     if (tabName === 'exchange' || tabName === 'recommend' || tabName === 'emi' || tabName === 'quotations') tabName = 'dashboard';
     this.currentTab = tabName;
     document.querySelectorAll('.nav-item-btn').forEach(btn => {
@@ -601,6 +617,8 @@ class TractorOSApp {
     const subtitleEl = document.getElementById('topbarSubtitle');
     const titles = {
       dashboard: { title: "Executive Command Center", sub: "Daily sales calls, today's cash flow & monthly showroom P&L" },
+      analytics: { title: "Summary Stats & Business Analytics", sub: "Comprehensive daily, weekly, monthly & yearly multi-metric intelligence" },
+      summary: { title: "Summary Stats & Business Analytics", sub: "Comprehensive daily, weekly, monthly & yearly multi-metric intelligence" },
       leads: { title: "Customer & Lead CRM", sub: "Farmer profiles, village mapping & algorithmic buying score" },
       inventory: { title: "Tractor Inventory & Landed Margins", sub: "Live showroom stock, specifications & unit profitability" },
       billing: { title: "Billing Command Center (माँ दुर्गा डीजल)", sub: "Official Maa Durga Diesel bills, estimates & customer receipts" },
@@ -681,6 +699,22 @@ class TractorOSApp {
         content.innerHTML = this.renderDashboardHTML();
         this.bindDashboardEvents();
         break;
+      case 'analytics':
+      case 'summary':
+        if (window.renderReactAnalytics) {
+          content.innerHTML = '<div id="analyticsReactRoot"></div>';
+          try {
+            window.renderReactAnalytics(document.getElementById('analyticsReactRoot'));
+          } catch (e) {
+            console.error('React analytics render error:', e);
+            content.innerHTML = this.renderAnalyticsHTML();
+            this.bindAnalyticsEvents();
+          }
+        } else {
+          content.innerHTML = this.renderAnalyticsHTML();
+          this.bindAnalyticsEvents();
+        }
+        break;
       case 'leads':
         content.innerHTML = this.renderLeadsHTML();
         this.bindLeadsEvents();
@@ -746,52 +780,104 @@ class TractorOSApp {
           <h3>${renderIcon('flame')} Today's Priority: Call ${todayCalls.length} Hot Leads First</h3>
           <p>The system has prioritized your customer queues based on purchase readiness, pricing follow-ups, and village demos.</p>
         </div>
-        <div style="display:flex; gap:10px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <button class="quick-action-btn btn-gold" id="dashStartCallingBtn">
             ${renderIcon('phone')} Start Calling Queue
           </button>
           <button class="quick-action-btn btn-outline" style="color:#fff; border-color:rgba(255,255,255,0.3);" id="dashAddLeadBtn">
             ${renderIcon('plus')} New Lead
           </button>
+          <button class="quick-action-btn btn-outline" style="color:#fff; border-color:rgba(255,255,255,0.4); background:rgba(255,255,255,0.1);" onclick="window.app.switchTab('analytics')">
+            ${renderIcon('chart')} 📊 View Summary Stats
+          </button>
         </div>
       </div>
 
       <!-- Financial & Operations Metric Grid -->
+      <!-- Financial & Operations Metric Grid -->
       <div class="metric-grid">
-        <div class="metric-card gold">
+        <!-- Sales Revenue -->
+        <div class="metric-card gold" onclick="window.app?.switchTab('billing')" style="cursor: pointer;" title="View Showroom Bills & Invoices">
+          <div class="kpi-ambient-glow"></div>
           <div class="metric-top">
-            <span class="metric-label">Sales Revenue (Sep)</span>
+            <div class="metric-title-group">
+              <span class="metric-label">Sales Revenue (Sep)</span>
+              <span class="metric-bilingual">कुल बिक्री एवं बिल</span>
+            </div>
             <div class="metric-icon-wrap gold">${renderIcon('rupee')}</div>
           </div>
-          <div class="metric-value">${formatAdaptiveRupee(snapshot.salesRevenue)}</div>
-          <div class="metric-sub">${(store.getBills ? store.getBills() : []).length} Showroom Bills & Deals</div>
+          <div class="metric-value-wrap">
+            <div class="metric-value">${formatAdaptiveRupee(snapshot.salesRevenue)}</div>
+          </div>
+          <div class="metric-footer-strip">
+            <span class="metric-chip gold">
+              <span class="chip-dot"></span> ${(store.getBills ? store.getBills() : []).length} Bills & Deals
+            </span>
+            <span class="metric-aux-badge">Active Book ➜</span>
+          </div>
         </div>
 
-        <div class="metric-card success">
+        <!-- Gross Showroom Profit -->
+        <div class="metric-card success" onclick="window.app?.switchTab('inventory')" style="cursor: pointer;" title="View Inventory & Margins">
+          <div class="kpi-ambient-glow"></div>
           <div class="metric-top">
-            <span class="metric-label">Gross Showroom Profit</span>
+            <div class="metric-title-group">
+              <span class="metric-label">Gross Showroom Profit</span>
+              <span class="metric-bilingual">सकल मुनाफा मार्जिन</span>
+            </div>
             <div class="metric-icon-wrap success">${renderIcon('calculator')}</div>
           </div>
-          <div class="metric-value">${formatAdaptiveRupee(snapshot.grossProfit)}</div>
-          <div class="metric-sub">${store.getQuotes().length > 0 ? 'Realized dealer OEM spread' : 'Awaiting delivered deals'}</div>
+          <div class="metric-value-wrap">
+            <div class="metric-value">${formatAdaptiveRupee(snapshot.grossProfit)}</div>
+          </div>
+          <div class="metric-footer-strip">
+            <span class="metric-chip success">
+              <span class="chip-dot"></span> ${snapshot.salesRevenue > 0 ? `${((snapshot.grossProfit / snapshot.salesRevenue) * 100).toFixed(0)}% Margin` : 'OEM Margin'}
+            </span>
+            <span class="metric-aux-badge">${store.getQuotes().length > 0 ? `${store.getQuotes().length} Quotes` : 'Delivered Deals ➜'}</span>
+          </div>
         </div>
 
-        <div class="metric-card danger">
+        <!-- Total Expenses -->
+        <div class="metric-card danger" onclick="window.app?.switchTab('expenses')" style="cursor: pointer;" title="View Expense Vouchers">
+          <div class="kpi-ambient-glow"></div>
           <div class="metric-top">
-            <span class="metric-label">Total Expenses</span>
+            <div class="metric-title-group">
+              <span class="metric-label">Total Expenses</span>
+              <span class="metric-bilingual">कुल शोरूम खर्च</span>
+            </div>
             <div class="metric-icon-wrap danger">${renderIcon('expense')}</div>
           </div>
-          <div class="metric-value">${formatAdaptiveRupee(snapshot.totalExpenses)}</div>
-          <div class="metric-sub">${store.getExpenses().filter(e => e.status === 'Approved').length} Approved expense vouchers</div>
+          <div class="metric-value-wrap">
+            <div class="metric-value">${formatAdaptiveRupee(snapshot.totalExpenses)}</div>
+          </div>
+          <div class="metric-footer-strip">
+            <span class="metric-chip danger">
+              <span class="chip-dot"></span> ${store.getExpenses().filter(e => e.status === 'Approved').length} Approved Vouchers
+            </span>
+            <span class="metric-aux-badge">${pendingExpenses.length > 0 ? `${pendingExpenses.length} Pending` : 'Audited ➜'}</span>
+          </div>
         </div>
 
-        <div class="metric-card info">
+        <!-- Actual Net Profit -->
+        <div class="metric-card info" onclick="window.app?.switchTab('cashflow')" style="cursor: pointer;" title="View Cash Ledger & Cash Flow">
+          <div class="kpi-ambient-glow"></div>
           <div class="metric-top">
-            <span class="metric-label">Actual Net Profit</span>
+            <div class="metric-title-group">
+              <span class="metric-label">Actual Net Profit</span>
+              <span class="metric-bilingual">शुद्ध मुनाफा एवं रोकड़</span>
+            </div>
             <div class="metric-icon-wrap info">${renderIcon('bank')}</div>
           </div>
-          <div class="metric-value" style="color:${snapshot.netProfit >= 0 ? 'var(--text-primary)' : 'var(--danger)'};">${formatAdaptiveRupee(snapshot.netProfit)}</div>
-          <div class="metric-sub" style="color:${snapshot.netCashFlow >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">Net Cash Flow: ${snapshot.netCashFlow >= 0 ? '+' : ''}${formatAdaptiveRupee(snapshot.netCashFlow)}</div>
+          <div class="metric-value-wrap">
+            <div class="metric-value" style="color:${snapshot.netProfit >= 0 ? '#059669' : '#dc2626'};">${formatAdaptiveRupee(snapshot.netProfit)}</div>
+          </div>
+          <div class="metric-footer-strip">
+            <span class="metric-chip ${snapshot.netCashFlow >= 0 ? 'info' : 'danger'}">
+              <span class="chip-dot"></span> Net Cash: ${snapshot.netCashFlow >= 0 ? '+' : ''}${formatAdaptiveRupee(snapshot.netCashFlow)}
+            </span>
+            <span class="metric-aux-badge">Reconciled ➜</span>
+          </div>
         </div>
       </div>
 
@@ -1495,49 +1581,47 @@ class TractorOSApp {
         </div>
       </div>
 
-      <!-- Metric KPI Cards: Paid, Due, Total Invoiced, Next Auto Bill No. -->
-      <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:20px;">
-        <div class="metric-card" style="border-top: 4px solid #10b981;">
+      <!-- Metric KPI Cards: Paid, Due, Total Invoiced -->
+      <div class="metric-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:24px;">
+        <div class="metric-card success">
           <div class="metric-card-header">
-            <span class="label" style="font-weight:700; color:#059669;">Total Paid (जमा राशि)</span>
-            <div class="metric-icon" style="background:rgba(16, 185, 129, 0.12); color:#059669; font-weight:800;">₹</div>
+            <div class="metric-card-title-group">
+              <span class="metric-card-title" style="color:#059669;">Total Paid</span>
+              <span class="metric-card-subtitle" style="color:#10b981;">(जमा राशि)</span>
+            </div>
+            <div class="metric-icon success">₹</div>
           </div>
-          <div class="metric-value" style="color:#059669; font-family:monospace, sans-serif;">₹${totalPaid.toLocaleString('en-IN')}</div>
-          <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
+          <div class="metric-value" style="color:#065f46;">₹${totalPaid.toLocaleString('en-IN')}</div>
+          <div class="metric-badge-pill" style="background:#ecfdf5; color:#047857; border:1px solid rgba(16,185,129,0.2);">
             <span>✅ ${paidCount} Bills Fully Paid</span>
           </div>
         </div>
 
-        <div class="metric-card" style="border-top: 4px solid #ef4444;">
+        <div class="metric-card ${dueCount > 0 ? 'danger' : 'success'}">
           <div class="metric-card-header">
-            <span class="label" style="font-weight:700; color:#dc2626;">Total Due (बकाया राशि)</span>
-            <div class="metric-icon" style="background:rgba(239, 68, 68, 0.12); color:#dc2626; font-weight:800;">⏳</div>
+            <div class="metric-card-title-group">
+              <span class="metric-card-title" style="color:${dueCount > 0 ? '#dc2626' : '#059669'};">Total Due</span>
+              <span class="metric-card-subtitle" style="color:${dueCount > 0 ? '#ef4444' : '#10b981'};">(बकाया राशि)</span>
+            </div>
+            <div class="metric-icon ${dueCount > 0 ? 'danger' : 'success'}">${dueCount > 0 ? '⏳' : '✨'}</div>
           </div>
-          <div class="metric-value" style="color:#dc2626; font-family:monospace, sans-serif;">₹${totalDue.toLocaleString('en-IN')}</div>
-          <div class="metric-change" style="color:${dueCount > 0 ? '#dc2626' : '#10b981'}; display:flex; align-items:center; gap:4px; font-weight:600;">
+          <div class="metric-value" style="color:${dueCount > 0 ? '#b91c1c' : '#059669'};">₹${totalDue.toLocaleString('en-IN')}</div>
+          <div class="metric-badge-pill" style="background:${dueCount > 0 ? '#fef2f2' : '#ecfdf5'}; color:${dueCount > 0 ? '#b91c1c' : '#047857'}; border:1px solid ${dueCount > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'};">
             <span>${dueCount > 0 ? `⚠️ ${dueCount} Bills Pending / Due` : '✨ No Pending Dues'}</span>
           </div>
         </div>
 
-        <div class="metric-card" style="border-top: 4px solid #2563eb;">
+        <div class="metric-card info">
           <div class="metric-card-header">
-            <span class="label" style="font-weight:700; color:#1d4ed8;">Total Invoiced (कुल बिल)</span>
-            <div class="metric-icon" style="background:rgba(37, 99, 235, 0.12); color:#2563eb; font-weight:800;">🧾</div>
+            <div class="metric-card-title-group">
+              <span class="metric-card-title" style="color:#1d4ed8;">Total Invoiced</span>
+              <span class="metric-card-subtitle" style="color:#3b82f6;">(कुल बिल)</span>
+            </div>
+            <div class="metric-icon info">🧾</div>
           </div>
-          <div class="metric-value" style="color:#1d4ed8; font-family:monospace, sans-serif;">₹${totalBilled.toLocaleString('en-IN')}</div>
-          <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
+          <div class="metric-value" style="color:#1e40af;">₹${totalBilled.toLocaleString('en-IN')}</div>
+          <div class="metric-badge-pill" style="background:#eff6ff; color:#1e40af; border:1px solid rgba(37,99,235,0.2);">
             <span>📋 ${bills.length} Total Bills Issued</span>
-          </div>
-        </div>
-
-        <div class="metric-card" style="border-top: 4px solid #f59e0b;">
-          <div class="metric-card-header">
-            <span class="label" style="font-weight:700; color:#d97706;">Next Unique Bill No.</span>
-            <div class="metric-icon" style="background:rgba(245, 158, 11, 0.12); color:#d97706; font-weight:800;">⚡</div>
-          </div>
-          <div class="metric-value" style="color:#b45309; font-family:monospace, sans-serif;">No. ${nextAutoNo}</div>
-          <div class="metric-change positive" style="display:flex; align-items:center; gap:4px; font-weight:600;">
-            <span>Strictly Unique Sequence</span>
           </div>
         </div>
       </div>
@@ -2842,6 +2926,528 @@ class TractorOSApp {
         this.openCashMovementModal('IN');
       });
     }
+  }
+
+  // --- Summary Stats & Business Analytics Intelligence ---
+  renderAnalyticsHTML() {
+    this.analyticsTimeframe = this.analyticsTimeframe || 'monthly';
+    const vm = getAnalyticsViewModel(this.analyticsTimeframe, store);
+    const fmt = (n) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
+
+    return `
+      <div class="analytics-container">
+        <!-- Top Controls: Timeframe segmented control & Actions -->
+        <div class="analytics-top-bar">
+          <div class="analytics-time-controls">
+            <div class="timeframe-segmented-control" role="tablist">
+              <button class="timeframe-pill-btn ${vm.timeframe === 'daily' ? 'active' : ''}" data-timeframe="daily" title="Analyze daily metrics">
+                <span class="tf-icon">📅</span> Daily (दैनिक)
+              </button>
+              <button class="timeframe-pill-btn ${vm.timeframe === 'weekly' ? 'active' : ''}" data-timeframe="weekly" title="Analyze weekly metrics">
+                <span class="tf-icon">📆</span> Weekly (साप्ताहिक)
+              </button>
+              <button class="timeframe-pill-btn ${vm.timeframe === 'monthly' ? 'active' : ''}" data-timeframe="monthly" title="Analyze monthly metrics">
+                <span class="tf-icon">🗓️</span> Monthly (मासिक)
+              </button>
+              <button class="timeframe-pill-btn ${vm.timeframe === 'yearly' ? 'active' : ''}" data-timeframe="yearly" title="Analyze yearly metrics">
+                <span class="tf-icon">📈</span> Yearly (वार्षिक)
+              </button>
+            </div>
+            <div class="analytics-period-badge">
+              <span class="analytics-pulse-dot"></span>
+              <span>Live MIS: ${vm.config.periodLabel}</span>
+            </div>
+          </div>
+
+          <div class="analytics-actions">
+            <button class="quick-action-btn btn-sm btn-outline" id="printAnalyticsBtn" title="Print MIS summary report">
+              ${renderIcon('print')} Print Report
+            </button>
+            <button class="quick-action-btn btn-sm btn-primary" id="exportAnalyticsCsvBtn" title="Export CSV spreadsheet">
+              ${renderIcon('calculator')} Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Executive Highlights Alert Banner -->
+        <div class="analytics-executive-banner">
+          <div class="analytics-banner-left">
+            <h3>${renderIcon('sparkles')} Executive MIS Overview (${vm.config.name})</h3>
+            <p>
+              Actual sales turnover for this period is <strong>${fmt(vm.revenue)}</strong> across <strong>${vm.billsCount}</strong> retail bills and <strong>${vm.totalQuotes}</strong> quotations. 
+              Net Profit stands at <strong>${fmt(vm.netProfit)}</strong> (${vm.netMarginPct}% margin) with a 
+              <strong>${vm.collectionRate}%</strong> cash collection realization on billed cash memos.
+            </p>
+          </div>
+          <div class="analytics-banner-highlights">
+            <div class="banner-highlight-box">
+              <div class="hl-label">Turnover Realized</div>
+              <div class="hl-value" style="color:#34d399;">${fmt(vm.revenue)}</div>
+            </div>
+            <div class="banner-highlight-box">
+              <div class="hl-label">Net Margin</div>
+              <div class="hl-value" style="color:${Number(vm.netMarginPct) >= 0 ? '#34d399' : '#fb7185'};">${vm.netMarginPct}%</div>
+            </div>
+            <div class="banner-highlight-box">
+              <div class="hl-label">Collection Rate</div>
+              <div class="hl-value" style="color:#60a5fa;">${vm.collectionRate}%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6 KPI Metric Summary Cards -->
+        <div class="analytics-metric-grid">
+          <!-- Revenue -->
+          <div class="analytics-kpi-card emerald">
+            <div class="analytics-kpi-header">
+              <div class="analytics-kpi-title-wrap">
+                <span class="analytics-kpi-title">Gross Turnover</span>
+                <span class="analytics-kpi-sub">कुल बिक्री / राजस्व</span>
+              </div>
+              <div class="analytics-kpi-icon-badge emerald">${renderIcon('rupee')}</div>
+            </div>
+            <div class="analytics-kpi-value" style="color:#047857;">${fmt(vm.revenue)}</div>
+            <div class="analytics-kpi-footer">
+              <span class="analytics-kpi-chip emerald">Billed: ${fmt(vm.scaledBilledRupees)}</span>
+              <span class="analytics-kpi-aux">Collected: ${fmt(vm.scaledPaidRupees)}</span>
+            </div>
+          </div>
+
+          <!-- Net Profit -->
+          <div class="analytics-kpi-card ${vm.netProfit >= 0 ? 'emerald' : 'rose'}">
+            <div class="analytics-kpi-header">
+              <div class="analytics-kpi-title-wrap">
+                <span class="analytics-kpi-title">Net Profit</span>
+                <span class="analytics-kpi-sub">शुद्ध मुनाफा</span>
+              </div>
+              <div class="analytics-kpi-icon-badge ${vm.netProfit >= 0 ? 'emerald' : 'rose'}">${renderIcon('chart')}</div>
+            </div>
+            <div class="analytics-kpi-value" style="color:${vm.netProfit >= 0 ? '#047857' : '#b91c1c'};">${fmt(vm.netProfit)}</div>
+            <div class="analytics-kpi-footer">
+              <span class="analytics-kpi-chip ${vm.netProfit >= 0 ? 'emerald' : 'rose'}">📈 ${vm.netMarginPct}% margin</span>
+              <span class="analytics-kpi-aux">Gross: ${fmt(vm.grossProfit)}</span>
+            </div>
+          </div>
+
+          <!-- Cash Flow -->
+          <div class="analytics-kpi-card blue">
+            <div class="analytics-kpi-header">
+              <div class="analytics-kpi-title-wrap">
+                <span class="analytics-kpi-title">Net Cash Balance</span>
+                <span class="analytics-kpi-sub">शुद्ध रोकड़ प्रवाह</span>
+              </div>
+              <div class="analytics-kpi-icon-badge blue">${renderIcon('bank')}</div>
+            </div>
+            <div class="analytics-kpi-value" style="color:#1d4ed8;">${fmt(vm.netCashFlow)}</div>
+            <div class="analytics-kpi-footer">
+              <span class="analytics-kpi-chip blue">In: ${fmt(vm.cashIn)}</span>
+              <span class="analytics-kpi-aux">Out: ${fmt(vm.cashOut)}</span>
+            </div>
+          </div>
+
+          <!-- Total Invoiced & Collections -->
+          <div class="analytics-kpi-card amber">
+            <div class="analytics-kpi-header">
+              <div class="analytics-kpi-title-wrap">
+                <span class="analytics-kpi-title">Bills & Collections</span>
+                <span class="analytics-kpi-sub">बिल बुक एवं रसीदें</span>
+              </div>
+              <div class="analytics-kpi-icon-badge amber">${renderIcon('quote')}</div>
+            </div>
+            <div class="analytics-kpi-value" style="color:#b45309;">${fmt(vm.scaledPaidRupees)}</div>
+            <div class="analytics-kpi-footer">
+              <span class="analytics-kpi-chip amber">✓ ${vm.collectionRate}% collected</span>
+              <span class="analytics-kpi-aux">${vm.billsCount} Bills (${vm.scaledDueRupees > 0 ? `${fmt(vm.scaledDueRupees)} Due` : 'Clear'})</span>
+            </div>
+          </div>
+
+          <!-- Tractors Sold / Movement -->
+          <div class="analytics-kpi-card emerald">
+            <div class="analytics-kpi-header">
+              <div class="analytics-kpi-title-wrap">
+                <span class="analytics-kpi-title">Tractor Deliveries</span>
+                <span class="analytics-kpi-sub">ट्रैक्टर सुपुर्दगी</span>
+              </div>
+              <div class="analytics-kpi-icon-badge emerald">${renderIcon('tractor')}</div>
+            </div>
+            <div class="analytics-kpi-value" style="color:#047857;">${vm.tractorsDelivered} Units</div>
+            <div class="analytics-kpi-footer">
+              <span class="analytics-kpi-chip emerald">📦 ${vm.inStockUnits} In Showroom Yard</span>
+              <span class="analytics-kpi-aux">Live Stock</span>
+            </div>
+          </div>
+
+          <!-- Conversion Pipeline -->
+          <div class="analytics-kpi-card purple">
+            <div class="analytics-kpi-header">
+              <div class="analytics-kpi-title-wrap">
+                <span class="analytics-kpi-title">Customer Pipeline</span>
+                <span class="analytics-kpi-sub">लीड्स एवं डेमो रूपांतरण</span>
+              </div>
+              <div class="analytics-kpi-icon-badge purple">${renderIcon('users')}</div>
+            </div>
+            <div class="analytics-kpi-value" style="color:#6d28d9;">${vm.totalLeads} Farmers</div>
+            <div class="analytics-kpi-footer">
+              <span class="analytics-kpi-chip" style="background:rgba(139,92,246,0.1); color:#6d28d9; border:1px solid rgba(139,92,246,0.25);">🚜 ${vm.totalDemos} Demos</span>
+              <span class="analytics-kpi-aux">Hot Leads Active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Multi-Series Bar & Profit Trend Chart -->
+        <div class="analytics-card">
+          <div class="analytics-card-header">
+            <div>
+              <div class="analytics-card-title">${renderIcon('chart')} Financial Trajectory: Revenue vs Showroom Expenses vs Net Profit</div>
+              <div class="analytics-card-subtitle">Detailed breakdown across ${vm.config.name} with net margin trend curve</div>
+            </div>
+            <div class="analytics-period-badge">
+              <span>● ${vm.config.intervals ? vm.config.intervals.length : vm.chartIntervals.length} Data Points</span>
+            </div>
+          </div>
+
+          <div class="svg-bar-chart-container">
+            ${renderBarChartSVG(vm.chartIntervals)}
+          </div>
+
+          <div class="chart-legend-row">
+            <div class="chart-legend-item">
+              <span class="chart-legend-dot" style="background:#10b981;"></span>
+              <span>Sales Turnover (राजस्व)</span>
+            </div>
+            <div class="chart-legend-item">
+              <span class="chart-legend-dot" style="background:#ef4444;"></span>
+              <span>Showroom Expenses (खर्च)</span>
+            </div>
+            <div class="chart-legend-item">
+              <span class="chart-legend-dot" style="background:#2563eb; border-radius:50%;"></span>
+              <span>Net Profit Trend Line (शुद्ध लाभ)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Two Donut / Pie Charts Side-by-Side -->
+        <div class="analytics-grid-equal-2col">
+          <!-- Donut 1: Revenue by Tractor / Product Segment -->
+          <div class="analytics-card">
+            <div class="analytics-card-header">
+              <div>
+                <div class="analytics-card-title">${renderIcon('pie')} Revenue by Tractor & Product Segment</div>
+                <div class="analytics-card-subtitle">Sales contribution percentage by model series & bills</div>
+              </div>
+            </div>
+            <div class="donut-layout">
+              ${vm.revenueCategories.length > 0 ? `
+                ${renderDonutSVG(vm.revenueCategories, fmt(vm.revenue), 'Total Sales')}
+                <div class="donut-legend-list">
+                  ${vm.revenueCategories.map(cat => `
+                    <div class="donut-legend-row">
+                      <div class="donut-legend-top">
+                        <div class="donut-legend-title">
+                          <span class="donut-legend-dot" style="background:${cat.color};"></span>
+                          <span>${cat.label}</span>
+                        </div>
+                        <div class="donut-legend-metrics">
+                          <span class="donut-legend-amt">${fmt(cat.value)}</span>
+                          <span class="donut-legend-pct">${cat.pct}%</span>
+                        </div>
+                      </div>
+                      <div class="donut-micro-track">
+                        <div class="donut-micro-fill" style="width:${cat.pct}%; background:${cat.color};"></div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : `
+                <div style="padding:40px 20px; text-align:center; width:100%; color:var(--text-muted);">
+                  <p style="margin:0; font-size:13px; font-weight:600;">No bills or quotations recorded in this period</p>
+                </div>
+              `}
+            </div>
+          </div>
+
+          <!-- Donut 2: Showroom Operating Expense Distribution -->
+          <div class="analytics-card">
+            <div class="analytics-card-header">
+              <div>
+                <div class="analytics-card-title">${renderIcon('expense')} Operating Expense Distribution</div>
+                <div class="analytics-card-subtitle">Where dealership capital is deployed across operations</div>
+              </div>
+            </div>
+            <div class="donut-layout">
+              ${vm.expenseCategories.length > 0 ? `
+                ${renderDonutSVG(vm.expenseCategories, fmt(vm.totalExpenses), 'Total Opex')}
+                <div class="donut-legend-list">
+                  ${vm.expenseCategories.map(cat => `
+                    <div class="donut-legend-row">
+                      <div class="donut-legend-top">
+                        <div class="donut-legend-title">
+                          <span class="donut-legend-dot" style="background:${cat.color};"></span>
+                          <span>${cat.label}</span>
+                        </div>
+                        <div class="donut-legend-metrics">
+                          <span class="donut-legend-amt">${fmt(cat.value)}</span>
+                          <span class="donut-legend-pct" style="background:rgba(239,68,68,0.1); color:#dc2626;">${cat.pct}%</span>
+                        </div>
+                      </div>
+                      <div class="donut-micro-track">
+                        <div class="donut-micro-fill" style="width:${cat.pct}%; background:${cat.color};"></div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : `
+                <div style="padding:40px 20px; text-align:center; width:100%; color:var(--text-muted);">
+                  <p style="margin:0; font-size:13px; font-weight:600;">No approved expenses recorded in this period</p>
+                </div>
+              `}
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: Operations, Funnels & Top Models Progress Bars -->
+        <div class="analytics-grid-2col">
+          <!-- Progress Meters & Lead Funnel -->
+          <div class="analytics-card">
+            <div class="analytics-card-header">
+              <div>
+                <div class="analytics-card-title">${renderIcon('flame')} Performance Progress & Conversion Funnel</div>
+                <div class="analytics-card-subtitle">Sales realization, collection efficiency & inquiry lifecycle</div>
+              </div>
+            </div>
+
+            <div class="progress-meters-list" style="margin-bottom:24px;">
+              <!-- Realization Meter -->
+              <div class="meter-item">
+                <div class="meter-header">
+                  <span class="meter-title">💵 Payment Realization Efficiency (${fmt(vm.scaledPaidRupees)} of ${fmt(vm.scaledBilledRupees)})</span>
+                  <span class="meter-stat" style="color:#047857;">${vm.collectionRate}%</span>
+                </div>
+                <div class="meter-track">
+                  <div class="meter-fill" style="width:${Math.min(100, vm.collectionRate)}%; background:linear-gradient(90deg, #34d399, #059669);"></div>
+                </div>
+              </div>
+
+              <!-- Cash Counter Flow Meter -->
+              <div class="meter-item">
+                <div class="meter-header">
+                  <span class="meter-title">🪙 Cash Counter Flow (In: ${fmt(vm.cashIn)} | Out: ${fmt(vm.cashOut)})</span>
+                  <span class="meter-stat" style="color:#2563eb;">${vm.cashIn > 0 ? `${Math.round(Math.min(100, Math.max(0, (vm.netCashFlow / vm.cashIn) * 100)))}% Net` : 'Balanced'}</span>
+                </div>
+                <div class="meter-track">
+                  <div class="meter-fill" style="width:${vm.cashIn > 0 ? Math.min(100, Math.max(0, (vm.netCashFlow / vm.cashIn) * 100)) : 0}%; background:linear-gradient(90deg, #60a5fa, #1d4ed8);"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer Funnel -->
+            <div style="font-size:13.5px; font-weight:800; color:var(--text-primary); margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+              ${renderIcon('users')} Farmer Purchase Journey Funnel
+            </div>
+            <div class="funnel-container">
+              ${vm.funnelSteps.map(fn => `
+                <div class="funnel-step">
+                  <div class="funnel-step-badge">${fn.step}</div>
+                  <span class="funnel-step-label">${fn.label}</span>
+                  <div class="funnel-step-bar-wrap">
+                    <div class="funnel-step-bar-fill" style="width:${fn.pct}%; background:${fn.bg};">${fn.pct}%</div>
+                  </div>
+                  <span class="funnel-step-count">${fn.count}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Top Selling Models & Village Demand Clusters -->
+          <div class="analytics-card">
+            <div class="analytics-card-header">
+              <div>
+                <div class="analytics-card-title">${renderIcon('tractor')} Top Tractor Models & Village Demand</div>
+                <div class="analytics-card-subtitle">Volume ranking from live quotes and customer inquiries</div>
+              </div>
+            </div>
+
+            <!-- Top Models -->
+            <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:22px;">
+              ${vm.topModels.length > 0 ? vm.topModels.map((tm, idx) => `
+                <div class="model-rank-card">
+                  <div class="model-rank-header">
+                    <div class="model-rank-title">
+                      <span class="model-rank-tag">#${idx + 1}</span>
+                      <strong>${tm.model}</strong>
+                    </div>
+                    <span class="model-rank-metrics">${tm.units} Units (${fmt(tm.rev)})</span>
+                  </div>
+                  <div class="meter-track" style="height:7px;">
+                    <div class="meter-fill" style="width:${tm.pct}%; background:${tm.color};"></div>
+                  </div>
+                </div>
+              `).join('') : `
+                <div style="padding:18px 12px; text-align:center; color:var(--text-muted); border:1px dashed var(--border-color); borderRadius:10px;">
+                  <p style="margin:0; font-size:12px; font-weight:600;">No tractor quote or delivery records in this period</p>
+                </div>
+              `}
+            </div>
+
+            <!-- Territory Villages -->
+            <div style="font-size:13.5px; font-weight:800; color:var(--text-primary); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+              ${renderIcon('map')} Territory Village Rankings
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              ${vm.topVillages.length > 0 ? vm.topVillages.map((tv, idx) => {
+                const medals = ['🥇', '🥈', '🥉', '🔹', '🔹'];
+                return `
+                  <div class="village-rank-card">
+                    <div class="village-rank-left">
+                      <span class="village-medal">${medals[idx] || '🔹'}</span>
+                      <span class="village-name">${tv.village}</span>
+                    </div>
+                    <div class="village-rank-right">
+                      <span class="village-deals-badge">${tv.deals} Deals</span>
+                      <span class="village-vol-chip">${fmt(tv.vol)}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('') : `
+                <div style="padding:18px 12px; text-align:center; color:var(--text-muted); border:1px dashed var(--border-color); borderRadius:10px;">
+                  <p style="margin:0; font-size:12px; font-weight:600;">No village customer records for this period</p>
+                </div>
+              `}
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 4: Consolidated Executive Statement Table -->
+        <div class="statement-panel-card">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">${renderIcon('calculator')} Consolidated MIS Financial Statement (${vm.config.periodLabel})</div>
+              <div class="panel-subtitle">Official dealership summary statement computed strictly from actual transactions</div>
+            </div>
+            <button class="quick-action-btn btn-sm btn-outline" onclick="window.print()">
+              ${renderIcon('print')} Print Statement
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Stream / Activity</th>
+                  <th>Category</th>
+                  <th>Volume / Units</th>
+                  <th class="text-right">Inflow / Revenue (₹)</th>
+                  <th class="text-right">Outflow / Cost (₹)</th>
+                  <th class="text-right">Net Contribution (₹)</th>
+                  <th class="text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${vm.statementRows.map(row => `
+                  <tr>
+                    <td><strong>${row.activity}</strong></td>
+                    <td>${row.category}</td>
+                    <td>${row.volume}</td>
+                    <td class="text-right" style="color:var(--success); font-weight:800;">${row.inflow > 0 ? fmt(row.inflow) : '-'}</td>
+                    <td class="text-right" style="color:var(--danger);">${row.outflow > 0 ? fmt(row.outflow) : '-'}</td>
+                    <td class="text-right" style="color:${row.net >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:800;">
+                      ${row.net !== 0 ? `${row.net > 0 ? '+' : ''}${fmt(row.net)}` : '₹0'}
+                    </td>
+                    <td class="text-center"><span class="badge ${row.statusBadge}">${row.status}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+              <tfoot>
+                <tr style="background:var(--bg-main); font-weight:900;">
+                  <td colspan="3"><strong>Consolidated Totals (${vm.config.name})</strong></td>
+                  <td class="text-right" style="color:var(--success); font-size:15px;">${fmt(vm.revenue)}</td>
+                  <td class="text-right" style="color:var(--danger); font-size:15px;">${fmt(vm.totalExpenses + (vm.cogs || 0))}</td>
+                  <td class="text-right" style="color:${vm.netProfit >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-size:16px;">
+                    ${vm.netProfit >= 0 ? '+' : ''}${fmt(vm.netProfit)}
+                  </td>
+                  <td class="text-center"><span class="badge badge-gold">Active</span></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  bindAnalyticsEvents() {
+    // Timeframe switch pills
+    document.querySelectorAll('.timeframe-pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tf = btn.dataset.timeframe;
+        if (tf) {
+          this.analyticsTimeframe = tf;
+          this.renderCurrentView();
+        }
+      });
+    });
+
+    // Print Button
+    const printBtn = document.getElementById('printAnalyticsBtn');
+    if (printBtn) {
+      printBtn.addEventListener('click', () => {
+        window.print();
+      });
+    }
+
+    // Export CSV Button
+    const exportBtn = document.getElementById('exportAnalyticsCsvBtn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        this.exportAnalyticsCSV();
+      });
+    }
+  }
+
+  exportAnalyticsCSV() {
+    const vm = getAnalyticsViewModel(this.analyticsTimeframe || 'monthly', store);
+    const rows = [
+      ['Maa Durga Engineering - Executive Summary Analytics MIS'],
+      ['Period', vm.config.periodLabel],
+      ['Timeframe', vm.config.name],
+      ['Generated On', new Date().toLocaleString('en-IN')],
+      [],
+      ['Metric', 'Value'],
+      ['Total Sales Turnover (Revenue)', vm.revenue],
+      ['Total Showroom Expenses', vm.totalExpenses],
+      ['Gross Profit Margin', vm.grossProfit],
+      ['Net Profit', vm.netProfit],
+      ['Net Margin (%)', `${vm.netMarginPct}%`],
+      ['Cost of Goods Sold (COGS)', vm.cogs || 0],
+      ['Total Cash Inflow', vm.cashIn],
+      ['Total Cash Outflow', vm.cashOut],
+      ['Net Cash Flow', vm.netCashFlow],
+      ['Total Billed Invoices', vm.billsCount],
+      ['Total Billed Amount (Rs)', vm.scaledBilledRupees],
+      ['Total Paid / Collected (Rs)', vm.scaledPaidRupees],
+      ['Outstanding Dues (Rs)', vm.scaledDueRupees],
+      ['Payment Collection Rate (%)', `${vm.collectionRate}%`],
+      ['Tractors Delivered (Units)', vm.tractorsDelivered],
+      ['In-Stock Yard Units', vm.inStockUnits],
+      ['Active Farmer Leads', vm.totalLeads],
+      ['Field Demos Conducted', vm.totalDemos],
+      [],
+      ['Top Tractor Model', 'Units', 'Revenue (Rs)', 'Share (%)'],
+      ...vm.topModels.map(m => [m.model, m.units, m.rev, `${m.pct}%`]),
+      [],
+      ['Top Village', 'Deals', 'Volume (Rs)', 'Share (%)'],
+      ...vm.topVillages.map(v => [v.village, v.deals, v.vol, `${v.pct}%`])
+    ];
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(e => e.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `MDE_Summary_Stats_${vm.timeframe}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Analytics summary exported as CSV spreadsheet', 'success', 'Export Complete');
   }
 
   openCashMovementModal(defaultType = 'IN') {
