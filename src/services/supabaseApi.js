@@ -2,6 +2,7 @@
 import { supabase } from '../lib/supabase.js';
 import { DEFAULT_TRACTORS, SHOWROOM_INFO } from '../data.js';
 import { formatToDMY } from '../utils/dateUtils.js';
+import { autoDetectExpenseCategory } from '../utils/expenseClassifier.js';
 
 // Helper to convert snake_case DB row to camelCase bill object
 function rowToBill(row) {
@@ -467,7 +468,19 @@ export const supabaseApi = {
           supabase.from('expenses').delete().in('id', seedIds).then(() => {});
         }
 
-        return cleaned;
+        // Auto-allocate categories for existing items (e.g. tea -> Customer & Tea/Food, pump service -> Repairs & PDI)
+        const autoAllocated = cleaned.map(e => {
+          const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''}`;
+          const autoCat = autoDetectExpenseCategory(text, e.category);
+          if (autoCat && autoCat !== e.category) {
+            const updated = { ...e, category: autoCat };
+            supabase.from('expenses').update({ category: autoCat }).eq('id', e.id).then(() => {});
+            return updated;
+          }
+          return e;
+        });
+
+        return autoAllocated;
       } catch (err) {
         console.warn('Supabase expenses.getAll failed:', err);
         return [];
@@ -475,7 +488,10 @@ export const supabaseApi = {
     },
     async create(exp) {
       try {
-        const row = expenseToRow(exp);
+        const text = `${exp.notes || ''} ${exp.paidTo || ''} ${exp.description || ''}`;
+        const autoCat = autoDetectExpenseCategory(text, exp.category || 'Miscellaneous');
+        const enrichedExp = { ...exp, category: autoCat };
+        const row = expenseToRow(enrichedExp);
         const { data, error } = await supabase
           .from('expenses')
           .upsert(row)
@@ -485,6 +501,22 @@ export const supabaseApi = {
         return rowToExpense(data || row);
       } catch (err) {
         console.error('Supabase expenses.create error:', err);
+        throw err;
+      }
+    },
+    async update(id, exp) {
+      try {
+        const row = expenseToRow(exp);
+        const { data, error } = await supabase
+          .from('expenses')
+          .update(row)
+          .eq('id', id)
+          .select()
+          .single();
+        if (error) throw error;
+        return rowToExpense(data || row);
+      } catch (err) {
+        console.error('Supabase expenses.update error:', err);
         throw err;
       }
     },

@@ -373,16 +373,21 @@ export function Modals() {
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>&lt; ₹5,000 auto-approved; &ge; ₹5,000 requires manager approval</span>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Category</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label className="form-label" style={{ margin: 0 }}>Category</label>
+                    <span id="feAutoCategoryBadge" style={{ fontSize: '11px', color: '#059669', background: 'rgba(16,185,129,0.12)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600, display: 'none', alignItems: 'center', gap: '3px' }}>
+                      ✨ Auto-allocated
+                    </span>
+                  </div>
                   <select id="feCategory" className="form-select">
+                    <option value="Customer & Tea/Food">Customer Tea / Hospitality</option>
+                    <option value="Repairs & PDI">Repairs, Teflon & PDI</option>
                     <option value="Fuel">Fuel / Diesel (Van & Demo)</option>
                     <option value="Transport">Inward Freight / Transport</option>
-                    <option value="Repairs & PDI">Repairs, Teflon & PDI</option>
                     <option value="Salaries">Staff Salaries / Advance</option>
                     <option value="Showroom Rent">Showroom & Yard Rent</option>
                     <option value="Advertising">Banners & Social Ads</option>
                     <option value="Electricity">Electricity & Utilities</option>
-                    <option value="Customer & Tea/Food">Customer Tea / Hospitality</option>
                     <option value="Miscellaneous">Miscellaneous</option>
                   </select>
                 </div>

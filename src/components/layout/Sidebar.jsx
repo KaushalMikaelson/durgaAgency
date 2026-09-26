@@ -19,7 +19,6 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'leads', label: 'Customers & Leads', icon: Users, badgeKey: 'hotLeads' },
   { id: 'recommend', label: 'Recommendation', icon: Sparkles },
-  { id: 'inventory', label: 'Inventory & Margins', icon: Tractor },
   { id: 'billing', label: 'Billing & Bills', icon: Receipt },
   { id: 'demos', label: 'Field Demos', icon: MapPin },
   { id: 'expenses', label: 'Expenses', icon: TrendingDown },

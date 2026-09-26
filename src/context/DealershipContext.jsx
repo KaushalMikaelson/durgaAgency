@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { api } from '../services/api.js';
 import { DEFAULT_TRACTORS, SHOWROOM_INFO } from '../data.js';
 import { supabase } from '../lib/supabase.js';
+import { autoDetectExpenseCategory } from '../utils/expenseClassifier.js';
 
 const DealershipContext = createContext(null);
 
@@ -56,7 +57,12 @@ export function DealershipProvider({ children }) {
         api.cashflow.getSnapshot()
       ]);
 
-      const rawExpenses = (expensesData.status === 'fulfilled' && expensesData.value) ? expensesData.value : [];
+      const fetchedExpenses = (expensesData.status === 'fulfilled' && expensesData.value) ? expensesData.value : [];
+      const rawExpenses = fetchedExpenses.map(e => {
+        const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''}`;
+        const autoCat = autoDetectExpenseCategory(text, e.category);
+        return autoCat ? { ...e, category: autoCat } : e;
+      });
       let rawCash = (cashData.status === 'fulfilled' && cashData.value) ? [...cashData.value] : [];
 
       if (rawExpenses.length > 0) {

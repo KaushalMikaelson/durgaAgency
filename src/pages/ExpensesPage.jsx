@@ -396,11 +396,19 @@ export function ExpensesPage() {
                     <td>
                       <span
                         className="badge-stage"
-                        style={{ cursor: 'pointer' }}
+                        style={{
+                          cursor: 'pointer',
+                          background: `${CATEGORY_COLORS[exp.category] || '#64748b'}22`,
+                          color: CATEGORY_COLORS[exp.category] || '#64748b',
+                          border: `1px solid ${CATEGORY_COLORS[exp.category] || '#64748b'}44`,
+                          fontWeight: 700,
+                          padding: '3px 9px',
+                          borderRadius: '12px'
+                        }}
                         onClick={() => { setDimension('category'); setActiveFilter(exp.category); }}
                         title="Filter by category"
                       >
-                        {exp.category}
+                        {exp.category === 'Customer & Tea/Food' ? '☕ ' : exp.category === 'Repairs & PDI' ? '🔧 ' : exp.category === 'Fuel' ? '⛽ ' : exp.category === 'Transport' ? '🚛 ' : ''}{exp.category}
                       </span>
                     </td>
                     <td>

@@ -9,6 +9,7 @@ import { generateFollowUpSequences, createWhatsAppUrl } from './whatsapp.js';
 import { queryBusinessAdvisor } from './aiAdvisor.js';
 import { DURGA_MAA_LOGO } from './logoData.js';
 import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './analyticsEngine.js';
+import { autoDetectExpenseCategory } from './utils/expenseClassifier.js';
 
 // --- ON-SCREEN TOAST NOTIFICATION SYSTEM ---
 export function showToast(message, type = 'success', title = '') {
@@ -724,8 +725,9 @@ class TractorOSApp {
         this.bindRecommendationEvents();
         break;
       case 'inventory':
-        content.innerHTML = this.renderInventoryHTML();
-        this.bindInventoryEvents();
+        this.currentTab = 'dashboard';
+        content.innerHTML = this.renderDashboardHTML();
+        this.bindDashboardEvents();
         break;
       case 'billing':
         content.innerHTML = this.renderBillingHTML();
@@ -818,7 +820,7 @@ class TractorOSApp {
         </div>
 
         <!-- Gross Showroom Profit -->
-        <div class="metric-card success" onclick="window.app?.switchTab('inventory')" style="cursor: pointer;" title="View Inventory & Margins">
+        <div class="metric-card success" onclick="window.app?.switchTab('analytics')" style="cursor: pointer;" title="View Summary & Analytics">
           <div class="kpi-ambient-glow"></div>
           <div class="metric-top">
             <div class="metric-title-group">
@@ -2450,6 +2452,76 @@ class TractorOSApp {
 
     const filterTotalAmount = displayExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
+    const tableRowsHTML = displayExpenses.length === 0 ? `
+      <tr>
+        <td colspan="9" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+          <div style="font-size:32px; margin-bottom:10px;">💸</div>
+          <div style="font-weight:700; font-size:15px; color:var(--text-secondary);">
+            ${this.expenseFilter ? `No expenses found for "${this.expenseFilter}"` : 'No showroom expenses recorded yet'}
+          </div>
+          <div style="font-size:12px; margin-top:4px;">
+            ${this.expenseFilter ? 'Try clearing the filter to view all entries.' : 'Use fast entry for fuel, tea, transport, rent, or maintenance. Expenses < ₹5k auto-approve; ≥ ₹5k require director sign-off.'}
+          </div>
+          ${this.expenseFilter ? `
+            <button class="quick-action-btn btn-sm btn-outline" style="margin:14px auto 0;" id="clearExpenseFilterEmptyBtn">
+              Clear Filter
+            </button>
+          ` : `
+            <div style="display:flex; justify-content:center; gap:8px; margin-top:14px;">
+              <button class="quick-action-btn btn-sm btn-primary" onclick="window.app.openFastExpenseModal()">
+                ${renderIcon('plus')} Record First Expense
+              </button>
+            </div>
+          `}
+        </td>
+      </tr>
+    ` : displayExpenses.map(e => {
+      const catBadge = this.getExpenseCategoryBadge(e.category);
+      return `
+      <tr>
+        <td><strong>${e.id}</strong></td>
+        <td>${e.date}</td>
+        <td>
+          <span class="badge" style="background:${catBadge.bg}; color:${catBadge.color}; border:1px solid ${catBadge.border}; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px; padding:3px 9px;" onclick="window.app.filterExpensesByCategory('${e.category}')" title="Click to filter by ${e.category}">
+            <span>${catBadge.icon}</span>
+            <span>${e.category}</span>
+          </span>
+        </td>
+        <td><strong style="font-size:13.5px;" class="font-mono">₹${Number(e.amount).toLocaleString('en-IN')}</strong></td>
+        <td>
+          <span class="badge ${e.paymentMode === 'Cash' ? 'badge-success' : 'badge-primary'}">
+            ${e.paymentMode || 'Cash'}
+          </span>
+        </td>
+        <td>
+          <strong>${e.paidTo || e.description || 'Showroom Expense'}</strong><br>
+          <span style="font-size:11px; color:var(--text-secondary);">${e.notes || ''}</span>
+        </td>
+        <td>
+          ${e.chassisTag ? `<span class="badge badge-warm">🏷️ ${e.chassisTag}</span>` : '<span style="color:var(--text-muted); font-size:11px;">General Showroom</span>'}
+        </td>
+        <td>
+          <span class="badge ${e.status === 'Approved' ? 'badge-success' : 'badge-pending'}">
+            ${e.status}
+          </span><br>
+          <span style="font-size:10px; color:var(--text-muted);">${e.approvedBy || 'Pending'}</span>
+        </td>
+        <td>
+          <div style="display:flex; gap:6px;">
+            ${e.status === 'Pending Approval' ? `
+              <button class="quick-action-btn btn-sm btn-primary approve-expense-btn" data-exp-id="${e.id}">
+                Approve
+              </button>
+            ` : ''}
+            <button class="quick-action-btn btn-sm btn-danger delete-expense-btn" data-exp-id="${e.id}" title="Delete Expense">
+              ${renderIcon('trash')}
+            </button>
+          </div>
+        </td>
+      </tr>
+      `;
+    }).join('');
+
     return `
       <!-- Top Action Bar -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
@@ -2634,71 +2706,7 @@ class TractorOSApp {
               </tr>
             </thead>
             <tbody>
-              ${displayExpenses.length === 0 ? `
-                <tr>
-                  <td colspan="9" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
-                    <div style="font-size:32px; margin-bottom:10px;">💸</div>
-                    <div style="font-weight:700; font-size:15px; color:var(--text-secondary);">
-                      ${this.expenseFilter ? `No expenses found for "${this.expenseFilter}"` : 'No showroom expenses recorded yet'}
-                    </div>
-                    <div style="font-size:12px; margin-top:4px;">
-                      ${this.expenseFilter ? 'Try clearing the filter to view all entries.' : 'Use fast entry for fuel, tea, transport, rent, or maintenance. Expenses < ₹5k auto-approve; ≥ ₹5k require director sign-off.'}
-                    </div>
-                    ${this.expenseFilter ? `
-                      <button class="quick-action-btn btn-sm btn-outline" style="margin:14px auto 0;" id="clearExpenseFilterEmptyBtn">
-                        Clear Filter
-                      </button>
-                    ` : `
-                      <div style="display:flex; justify-content:center; gap:8px; margin-top:14px;">
-                        <button class="quick-action-btn btn-sm btn-primary" onclick="window.app.openFastExpenseModal()">
-                          ${renderIcon('plus')} Record First Expense
-                        </button>
-                      </div>
-                    `}
-                  </td>
-                </tr>
-              ` : displayExpenses.map(e => `
-                <tr>
-                  <td><strong>${e.id}</strong></td>
-                  <td>${e.date}</td>
-                  <td>
-                    <span class="badge badge-info" style="cursor:pointer;" onclick="window.app.filterExpensesByCategory('${e.category}')" title="Click to filter by ${e.category}">
-                      ${e.category}
-                    </span>
-                  </td>
-                  <td><strong style="font-size:13.5px;" class="font-mono">₹${Number(e.amount).toLocaleString('en-IN')}</strong></td>
-                  <td>
-                    <span class="badge ${e.paymentMode === 'Cash' ? 'badge-success' : 'badge-primary'}">
-                      ${e.paymentMode || 'Cash'}
-                    </span>
-                  </td>
-                  <td>
-                    <strong>${e.paidTo || e.description || 'Showroom Expense'}</strong><br>
-                    <span style="font-size:11px; color:var(--text-secondary);">${e.notes || ''}</span>
-                  </td>
-                  <td>
-                    ${e.chassisTag ? `<span class="badge badge-warm">🏷️ ${e.chassisTag}</span>` : '<span style="color:var(--text-muted); font-size:11px;">General Showroom</span>'}
-                  </td>
-                  <td>
-                    <span class="badge ${e.status === 'Approved' ? 'badge-success' : 'badge-pending'}">
-                      ${e.status}
-                    </span><br>
-                    <span style="font-size:10px; color:var(--text-muted);">${e.approvedBy || 'Pending'}</span>
-                  </td>
-                  <td>
-                    <div style="display:flex; gap:6px;">
-                      ${e.status === 'Pending Approval' ? `
-                        <button class="quick-action-btn btn-sm btn-primary approve-expense-btn" data-exp-id="${e.id}">
-                          Approve
-                        </button>
-                      ` : ''}
-                      <button class="quick-action-btn btn-sm btn-danger delete-expense-btn" data-exp-id="${e.id}" title="Delete Expense">
-                        ${renderIcon('trash')}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              `).join('')}
+              ${tableRowsHTML}
             </tbody>
           </table>
         </div>
@@ -3833,15 +3841,62 @@ class TractorOSApp {
   openFastExpenseModal() {
     this.openModal('fastExpenseModal');
     const form = document.getElementById('fastExpenseForm');
+    const notesInput = document.getElementById('feNotes');
+    const paidToInput = document.getElementById('fePaidTo');
+    const catSelect = document.getElementById('feCategory');
+    const autoBadge = document.getElementById('feAutoCategoryBadge');
+
+    let userChangedCategory = false;
+    if (catSelect) {
+      catSelect.onchange = () => {
+        userChangedCategory = true;
+        if (autoBadge) autoBadge.style.display = 'none';
+      };
+    }
+
+    const checkAutoCategory = () => {
+      if (userChangedCategory) return;
+      const text = `${notesInput?.value || ''} ${paidToInput?.value || ''}`.trim();
+      const detected = autoDetectExpenseCategory(text, '');
+      if (detected && catSelect) {
+        catSelect.value = detected;
+        if (autoBadge) {
+          autoBadge.style.display = 'inline-flex';
+          autoBadge.textContent = `✨ Auto-allocated: ${detected}`;
+        }
+      } else if (!userChangedCategory && !text && autoBadge) {
+        autoBadge.style.display = 'none';
+      }
+    };
+
+    if (notesInput) notesInput.oninput = checkAutoCategory;
+    if (paidToInput) paidToInput.oninput = checkAutoCategory;
+
+    // Reset indicator on open
+    if (autoBadge) autoBadge.style.display = 'none';
+
     if (form) {
       form.onsubmit = (e) => {
         e.preventDefault();
         const amount = Number(document.getElementById('feAmount').value) || 0;
-        const category = document.getElementById('feCategory').value || 'Miscellaneous';
-        const paymentMode = document.getElementById('feMode').value || 'Cash';
-        const paidTo = document.getElementById('fePaidTo').value.trim() || 'Vendor / Counter';
-        const chassisTag = document.getElementById('feChassisTag').value.trim() || null;
+        const rawPaidTo = document.getElementById('fePaidTo').value.trim();
         const notes = document.getElementById('feNotes').value.trim();
+        const chassisTag = document.getElementById('feChassisTag').value.trim() || null;
+        const paymentMode = document.getElementById('feMode').value || 'Cash';
+
+        let category = document.getElementById('feCategory').value;
+        const textForDetection = `${notes} ${rawPaidTo}`.trim();
+        const autoCat = autoDetectExpenseCategory(textForDetection, '');
+        if (autoCat && (!category || category === 'Miscellaneous' || !userChangedCategory)) {
+          category = autoCat;
+        }
+
+        let paidTo = rawPaidTo;
+        if (!paidTo) {
+          if (category === 'Customer & Tea/Food') paidTo = 'Tea Vendor / Counter';
+          else if (category === 'Repairs & PDI') paidTo = 'Service Workshop';
+          else paidTo = 'Vendor / Counter';
+        }
 
         store.addExpense({
           amount,
@@ -3854,12 +3909,27 @@ class TractorOSApp {
 
         this.closeAllModals();
         if (amount >= 5000) {
-          showToast(`Expense of ₹${amount.toLocaleString('en-IN')} logged! Pending manager approval (≥ ₹5,000).`, 'warning', 'Pending Approval');
+          showToast(`Expense of ₹${amount.toLocaleString('en-IN')} [${category}] logged! Pending manager approval (≥ ₹5,000).`, 'warning', 'Pending Approval');
         } else {
-          showToast(`Expense of ₹${amount.toLocaleString('en-IN')} logged and auto-approved (< ₹5,000)!`, 'success', 'Expense Recorded');
+          showToast(`Expense of ₹${amount.toLocaleString('en-IN')} [${category}] logged and auto-approved!`, 'success', 'Expense Recorded');
         }
       };
     }
+  }
+
+  getExpenseCategoryBadge(cat) {
+    const map = {
+      'Customer & Tea/Food': { bg: 'rgba(245,158,11,0.15)', color: '#b45309', border: 'rgba(245,158,11,0.3)', icon: '☕' },
+      'Repairs & PDI': { bg: 'rgba(5,150,105,0.15)', color: '#047857', border: 'rgba(5,150,105,0.3)', icon: '🔧' },
+      'Fuel': { bg: 'rgba(217,119,6,0.15)', color: '#9a3412', border: 'rgba(217,119,6,0.3)', icon: '⛽' },
+      'Transport': { bg: 'rgba(37,99,235,0.15)', color: '#1d4ed8', border: 'rgba(37,99,235,0.3)', icon: '🚛' },
+      'Salaries': { bg: 'rgba(219,39,119,0.15)', color: '#be185d', border: 'rgba(219,39,119,0.3)', icon: '👥' },
+      'Showroom Rent': { bg: 'rgba(124,58,237,0.15)', color: '#6d28d9', border: 'rgba(124,58,237,0.3)', icon: '🏢' },
+      'Advertising': { bg: 'rgba(234,88,12,0.15)', color: '#c2410c', border: 'rgba(234,88,12,0.3)', icon: '📢' },
+      'Electricity': { bg: 'rgba(8,145,178,0.15)', color: '#0e7490', border: 'rgba(8,145,178,0.3)', icon: '⚡' },
+      'Miscellaneous': { bg: 'rgba(100,116,139,0.15)', color: '#475569', border: 'rgba(100,116,139,0.3)', icon: '📦' }
+    };
+    return map[cat] || { bg: 'rgba(100,116,139,0.15)', color: '#475569', border: 'rgba(100,116,139,0.3)', icon: '💸' };
   }
 
   filterExpensesByCategory(cat) {

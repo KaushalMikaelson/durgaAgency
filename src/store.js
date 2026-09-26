@@ -12,6 +12,7 @@ import {
 import { formatToDMY } from './utils/dateUtils.js';
 import { supabaseApi } from './services/supabaseApi.js';
 import { supabase } from './lib/supabase.js';
+import { autoDetectExpenseCategory } from './utils/expenseClassifier.js';
 
 export const isLocalhost = typeof window !== 'undefined' && 
   (window.location.hostname === 'localhost' || 
@@ -119,8 +120,18 @@ class DealershipStore {
                text.includes('CH-4211-8901');
       };
       const purged = expStored.filter(e => !isSeedExp(e));
-      if (purged.length !== expStored.length) {
-        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(purged));
+      let categoryUpdated = false;
+      const autoAllocated = purged.map(e => {
+        const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''}`;
+        const autoCat = autoDetectExpenseCategory(text, e.category);
+        if (autoCat && autoCat !== e.category) {
+          categoryUpdated = true;
+          return { ...e, category: autoCat };
+        }
+        return e;
+      });
+      if (purged.length !== expStored.length || categoryUpdated) {
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(autoAllocated));
       }
       if (supabase) {
         supabase.from('expenses').delete().in('id', ['EXP-001', 'EXP-002']).then(() => {});
@@ -303,12 +314,22 @@ class DealershipStore {
       };
 
       const cleaned = stored.filter(e => !isDemo(e));
+      let categoryUpdated = false;
+      const autoAllocated = cleaned.map(e => {
+        const text = `${e.notes || ''} ${e.paidTo || ''} ${e.description || ''}`;
+        const autoCat = autoDetectExpenseCategory(text, e.category);
+        if (autoCat && autoCat !== e.category) {
+          categoryUpdated = true;
+          return { ...e, category: autoCat };
+        }
+        return e;
+      });
 
-      if (cleaned.length !== stored.length) {
-        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(cleaned));
+      if (cleaned.length !== stored.length || categoryUpdated) {
+        localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(autoAllocated));
       }
 
-      return cleaned;
+      return autoAllocated;
     } catch {
       return DEFAULT_EXPENSES;
     }
@@ -542,12 +563,18 @@ class DealershipStore {
     const expenses = this.getExpenses();
     const newId = expenseData.id || `EXP-${800 + expenses.length + 1}`;
     const isAutoApproved = Number(expenseData.amount) < 5000;
+    
+    // Auto-allocate category from textual context if not explicitly set or if default
+    const combinedText = `${expenseData.notes || ''} ${expenseData.paidTo || ''} ${expenseData.description || ''}`;
+    const allocatedCat = autoDetectExpenseCategory(combinedText, expenseData.category || 'Miscellaneous');
+
     const newExpense = {
       id: newId,
       date: expenseData.date || new Date().toISOString().split('T')[0],
       status: isAutoApproved ? 'Approved' : 'Pending Approval',
       approvedBy: isAutoApproved ? 'System (< ₹5,000)' : null,
-      ...expenseData
+      ...expenseData,
+      category: allocatedCat
     };
     expenses.unshift(newExpense);
     localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
@@ -561,6 +588,37 @@ class DealershipStore {
       supabaseApi.expenses.create(newExpense).catch(e => console.warn('Supabase expense create failed:', e));
     }
     return newExpense;
+  }
+
+  updateExpense(expenseId, updatedFields) {
+    const expenses = this.getExpenses();
+    const index = expenses.findIndex(e => e.id === expenseId);
+    if (index !== -1) {
+      // Re-evaluate category if text fields changed and category not explicitly passed
+      let nextCategory = updatedFields.category || expenses[index].category;
+      if (!updatedFields.category && (updatedFields.notes || updatedFields.paidTo)) {
+        const text = `${updatedFields.notes || expenses[index].notes || ''} ${updatedFields.paidTo || expenses[index].paidTo || ''}`;
+        nextCategory = autoDetectExpenseCategory(text, nextCategory);
+      }
+
+      expenses[index] = {
+        ...expenses[index],
+        ...updatedFields,
+        category: nextCategory
+      };
+      localStorage.setItem(STORAGE_KEYS.EXPENSES, JSON.stringify(expenses));
+      this.notify();
+
+      if (isCloudSyncEnabled() && supabaseApi?.expenses?.update) {
+        supabaseApi.expenses.update(expenseId, expenses[index]).catch(e => console.warn('Supabase expense update failed:', e));
+      }
+      return expenses[index];
+    }
+    return null;
+  }
+
+  updateExpenseCategory(expenseId, newCategory) {
+    return this.updateExpense(expenseId, { category: newCategory });
   }
 
   approveExpense(expenseId, approverName = 'Showroom Director') {
