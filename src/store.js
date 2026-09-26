@@ -286,7 +286,25 @@ class DealershipStore {
 
   getLeads() {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADS)) || [];
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADS)) || [];
+      const today = new Date().toISOString().split('T')[0];
+      let needsSave = false;
+      const leads = stored.map(lead => {
+        const leadDate = lead.date || lead.createdAt || lead.lastContactDate || today;
+        if (!lead.date || !lead.createdAt) {
+          needsSave = true;
+          return {
+            ...lead,
+            date: lead.date || leadDate,
+            createdAt: lead.createdAt || leadDate
+          };
+        }
+        return lead;
+      });
+      if (needsSave) {
+        localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+      }
+      return leads;
     } catch {
       return DEFAULT_LEADS;
     }
@@ -519,9 +537,12 @@ class DealershipStore {
   addLead(leadData) {
     const leads = this.getLeads();
     const newId = leadData.id || `LEAD-${100 + leads.length + 1}`;
+    const today = new Date().toISOString().split('T')[0];
     const newLead = {
       id: newId,
-      lastContactDate: new Date().toISOString().split('T')[0],
+      date: leadData.date || today,
+      createdAt: leadData.createdAt || today,
+      lastContactDate: leadData.lastContactDate || today,
       ...leadData
     };
     leads.unshift(newLead);

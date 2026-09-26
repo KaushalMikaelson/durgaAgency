@@ -850,6 +850,38 @@ body {
   background-color: rgba(15, 77, 42, 0.03);
 }
 
+#leadsTable th:last-child,
+#leadsTable td:last-child {
+  text-align: right !important;
+  width: 165px !important;
+  min-width: 165px !important;
+  max-width: 175px !important;
+  white-space: nowrap !important;
+  padding-right: 14px !important;
+}
+
+#leadsTable td:last-child .quick-action-btn {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  min-height: 30px !important;
+  max-width: 30px !important;
+  max-height: 30px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  border-radius: 6px !important;
+}
+
+#leadsTable td:last-child .quick-action-btn svg {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;

@@ -1071,13 +1071,13 @@ class TractorOSApp {
               <tr>
                 <th>Farmer Name & Contact</th>
                 <th>Village & Land</th>
-                <th>Crops & Soil</th>
+                <th>Date Added</th>
                 <th>Current Tractor</th>
                 <th>Interested Model</th>
                 <th>Buying Score</th>
                 <th>Finance / Exchange</th>
                 <th>Next Action</th>
-                <th>Actions</th>
+                <th style="text-align:right; width:160px; min-width:160px; padding-right:14px;">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1092,9 +1092,7 @@ class TractorOSApp {
                 const landPart = (lead.landAcres !== null && lead.landAcres !== undefined && lead.landAcres !== '' && Number(lead.landAcres) > 0) ? `<span style="font-size:12px; color:var(--text-secondary);">${lead.landAcres} Acres</span>` : '';
                 const villageLandContent = (villagePart && landPart) ? `${villagePart}<br>${landPart}` : (villagePart || landPart || '<span style="color:var(--text-muted);">-</span>');
 
-                const cropsPart = (lead.crops && lead.crops.length > 0) ? `<span>🌾 ${lead.crops.join(', ')}</span>` : '';
-                const soilPart = lead.soilType ? `<span style="color:var(--text-muted); font-size:11px;">${lead.soilType}</span>` : '';
-                const cropsSoilContent = (cropsPart && soilPart) ? `${cropsPart}<br>${soilPart}` : (cropsPart || soilPart || '<span style="color:var(--text-muted);">-</span>');
+                const leadDate = formatToDMY(lead.date || lead.createdAt || lead.lastContactDate || new Date().toISOString().split('T')[0]);
 
                 const finPart = lead.financeRequired === true ? `<span>Finance: <strong>Yes${lead.financeBank ? ' (' + lead.financeBank + ')' : ''}</strong></span>` : (lead.financeRequired === false ? '<span>Finance: <strong>Cash</strong></span>' : '');
                 const exPart = lead.exchangeWanted === true ? '<span>Exchange: <strong>Yes</strong></span>' : (lead.exchangeWanted === false ? '<span>Exchange: <strong>No</strong></span>' : '');
@@ -1116,7 +1114,11 @@ class TractorOSApp {
                       `}
                     </td>
                     <td>${villageLandContent}</td>
-                    <td style="font-size:12px;">${cropsSoilContent}</td>
+                    <td style="white-space:nowrap; font-size:12px;">
+                      <span style="display:inline-flex; align-items:center; gap:4px; color:var(--text-secondary); font-weight:600;">
+                        <span>📅</span> ${leadDate}
+                      </span>
+                    </td>
                     <td style="font-size:12px;">
                       ${lead.currentTractor ? `<span>${lead.currentTractor}</span>` : '<span style="color:var(--text-muted);">-</span>'}
                     </td>
@@ -1140,18 +1142,18 @@ class TractorOSApp {
                     <td style="font-size:11.5px; max-width:200px;">
                       ${lead.nextAction ? `<span style="color:var(--danger); font-weight:600;">${lead.nextAction}</span>` : '<span style="color:var(--text-muted);">-</span>'}
                     </td>
-                    <td>
-                      <div style="display:flex; gap:6px;">
-                        <a href="${lead.phone && lead.phone !== '-' ? `tel:${lead.phone}` : '#'}" class="quick-action-btn btn-sm btn-primary" title="Call">
+                    <td style="text-align:right; width:160px; min-width:160px; padding-right:14px;">
+                      <div style="display:inline-flex; gap:6px; align-items:center; justify-content:flex-end; white-space:nowrap;">
+                        <a href="${lead.phone && lead.phone !== '-' ? `tel:${lead.phone}` : '#'}" class="quick-action-btn btn-sm btn-primary" title="Call" style="width:30px; height:30px; min-width:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                           ${renderIcon('phone')}
                         </a>
-                        <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="WhatsApp Follow-up">
+                        <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="WhatsApp Follow-up" style="width:30px; height:30px; min-width:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                           ${renderIcon('whatsapp')}
                         </button>
-                        <button class="quick-action-btn btn-sm btn-outline edit-lead-btn" data-lead-id="${lead.id}" title="Edit Lead Details">
+                        <button class="quick-action-btn btn-sm btn-outline edit-lead-btn" data-lead-id="${lead.id}" title="Edit Lead Details" style="width:30px; height:30px; min-width:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                           ${renderIcon('edit')}
                         </button>
-                        <button class="quick-action-btn btn-sm btn-danger delete-lead-btn" data-lead-id="${lead.id}" title="Delete">
+                        <button class="quick-action-btn btn-sm btn-danger delete-lead-btn" data-lead-id="${lead.id}" title="Delete" style="width:30px; height:30px; min-width:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                           ${renderIcon('trash')}
                         </button>
                       </div>
@@ -3810,8 +3812,8 @@ class TractorOSApp {
         const phone = document.getElementById('nlPhone').value.trim() || '-';
         const village = document.getElementById('nlVillage').value.trim() || 'Local Area';
         const acres = Number(document.getElementById('nlAcres').value) || 5;
-        const cropVal = document.getElementById('nlCrop').value.trim();
-        const crop = cropVal ? cropVal.split(',').map(c => c.trim()).filter(Boolean) : ['Wheat', 'Paddy'];
+        const cropVal = document.getElementById('nlCrop') ? document.getElementById('nlCrop').value.trim() : '';
+        const crop = cropVal ? cropVal.split(',').map(c => c.trim()).filter(Boolean) : [];
         const modelId = document.getElementById('nlModelSelect').value || null;
         const budget = Number(document.getElementById('nlBudget').value) || 750000;
         const finance = document.getElementById('nlFinance').value === 'Yes';

@@ -650,7 +650,29 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
       try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.TRACTORS)) || DEFAULT_TRACTORS; } catch { return DEFAULT_TRACTORS; }
     }
     getLeads() {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADS)) || DEFAULT_LEADS; } catch { return DEFAULT_LEADS; }
+      try {
+        const stored = JSON.parse(localStorage.getItem(STORAGE_KEYS.LEADS)) || DEFAULT_LEADS;
+        const today = new Date().toISOString().split('T')[0];
+        let needsSave = false;
+        const leads = stored.map(lead => {
+          const leadDate = lead.date || lead.createdAt || lead.lastContactDate || today;
+          if (!lead.date || !lead.createdAt) {
+            needsSave = true;
+            return {
+              ...lead,
+              date: lead.date || leadDate,
+              createdAt: lead.createdAt || leadDate
+            };
+          }
+          return lead;
+        });
+        if (needsSave) {
+          localStorage.setItem(STORAGE_KEYS.LEADS, JSON.stringify(leads));
+        }
+        return leads;
+      } catch {
+        return DEFAULT_LEADS;
+      }
     }
     getExpenses() {
       try {
@@ -858,9 +880,12 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
 
     addLead(leadData) {
       const leads = this.getLeads();
+      const today = new Date().toISOString().split('T')[0];
       const newLead = {
         id: leadData.id || `LEAD-${100 + leads.length + 1}`,
-        lastContactDate: new Date().toISOString().split('T')[0],
+        date: leadData.date || today,
+        createdAt: leadData.createdAt || today,
+        lastContactDate: leadData.lastContactDate || today,
         ...leadData
       };
       leads.unshift(newLead);
@@ -2597,13 +2622,13 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
                 <tr>
                   <th>Farmer & Phone</th>
                   <th>Village & Land</th>
-                  <th>Crops & Soil</th>
+                  <th>Date Added</th>
                   <th>Current Tractor</th>
                   <th>Interested Model</th>
                   <th>Buying Score</th>
                   <th>Finance / Exchange</th>
                   <th>Next Action</th>
-                  <th>Actions</th>
+                  <th style="text-align:right; width:160px; min-width:160px; padding-right:14px;">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -2631,9 +2656,8 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
                   const landPart = (lead.landAcres !== null && lead.landAcres !== undefined && lead.landAcres !== '' && Number(lead.landAcres) > 0) ? `<span style="font-size:11.5px; color:var(--text-secondary);">${lead.landAcres} Acres</span>` : '';
                   const villageLandContent = (villagePart && landPart) ? `${villagePart}<br>${landPart}` : (villagePart || landPart || '<span style="color:var(--text-muted);">-</span>');
 
-                  const cropsPart = (lead.crops && lead.crops.length > 0) ? `<span>🌾 ${lead.crops.join(', ')}</span>` : '';
-                  const soilPart = lead.soilType ? `<span style="color:var(--text-muted); font-size:11px;">${lead.soilType}</span>` : '';
-                  const cropsSoilContent = (cropsPart && soilPart) ? `${cropsPart}<br>${soilPart}` : (cropsPart || soilPart || '<span style="color:var(--text-muted);">-</span>');
+                  const rawDate = lead.date || lead.createdAt || lead.lastContactDate || new Date().toISOString().split('T')[0];
+                  const leadDate = formatToDMY(rawDate) || rawDate;
 
                   const finPart = lead.financeRequired === true ? `<span>Finance: <strong>Yes${lead.financeBank ? ' (' + lead.financeBank + ')' : ''}</strong></span>` : (lead.financeRequired === false ? '<span>Finance: <strong>Cash</strong></span>' : '');
                   const exPart = lead.exchangeWanted === true ? '<span>Exchange: <strong>Yes</strong></span>' : (lead.exchangeWanted === false ? '<span>Exchange: <strong>No</strong></span>' : '');
@@ -2655,7 +2679,7 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
                         `}
                       </td>
                       <td>${villageLandContent}</td>
-                      <td style="font-size:12px;">${cropsSoilContent}</td>
+                      <td style="font-size:12px; white-space:nowrap; color:var(--text-secondary); font-weight:600;"><span style="color:var(--text-muted); margin-right:4px;">📅</span>${leadDate}</td>
                       <td style="font-size:12px;">${lead.currentTractor ? `<span>${lead.currentTractor}</span>` : '<span style="color:var(--text-muted);">-</span>'}</td>
                       <td>${modelBudgetContent}</td>
                       <td>
@@ -2677,18 +2701,18 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
                       <td style="font-size:11.5px; max-width:200px;">
                         ${lead.nextAction ? `<span style="color:var(--danger); font-weight:600;">${lead.nextAction}</span>` : '<span style="color:var(--text-muted);">-</span>'}
                       </td>
-                      <td>
-                        <div style="display:flex; gap:6px;">
-                          <a href="${lead.phone && lead.phone !== '-' ? `tel:${lead.phone}` : '#'}" class="quick-action-btn btn-sm btn-primary" title="Call">
+                      <td style="text-align:right; width:160px; min-width:160px; padding-right:14px; white-space:nowrap;">
+                        <div style="display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:nowrap;">
+                          <a href="${lead.phone && lead.phone !== '-' ? `tel:${lead.phone}` : '#'}" class="quick-action-btn btn-sm btn-primary" title="Call" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                             ${renderIcon('phone')}
                           </a>
-                          <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="WhatsApp">
+                          <button class="quick-action-btn btn-sm btn-whatsapp open-wa-btn" data-lead-id="${lead.id}" title="WhatsApp" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                             ${renderIcon('whatsapp')}
                           </button>
-                          <button class="quick-action-btn btn-sm btn-outline edit-lead-btn" data-lead-id="${lead.id}" title="Edit Lead Details">
+                          <button class="quick-action-btn btn-sm btn-outline edit-lead-btn" data-lead-id="${lead.id}" title="Edit Lead Details" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                             ${renderIcon('edit')}
                           </button>
-                          <button class="quick-action-btn btn-sm btn-danger delete-lead-btn" data-lead-id="${lead.id}" title="Delete">
+                          <button class="quick-action-btn btn-sm btn-danger delete-lead-btn" data-lead-id="${lead.id}" title="Delete" style="width:30px; height:30px; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                             ${renderIcon('trash')}
                           </button>
                         </div>
@@ -5697,7 +5721,7 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
           const village = document.getElementById('nlVillage').value.trim();
           const acresVal = document.getElementById('nlAcres').value.trim();
           const acres = acresVal ? Number(acresVal) : null;
-          const cropVal = document.getElementById('nlCrop').value.trim();
+          const cropVal = document.getElementById('nlCrop') ? document.getElementById('nlCrop').value.trim() : '';
           const crop = cropVal ? cropVal.split(',').map(c => c.trim()).filter(Boolean) : [];
           const soilType = document.getElementById('nlSoilType') ? document.getElementById('nlSoilType').value.trim() : '';
           const currentTractor = document.getElementById('nlCurrentTractor') ? document.getElementById('nlCurrentTractor').value.trim() : '';
@@ -5842,8 +5866,12 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
       document.getElementById('elPhone').value = lead.phone || '';
       document.getElementById('elVillage').value = lead.village || '';
       document.getElementById('elAcres').value = (lead.landAcres !== null && lead.landAcres !== undefined) ? lead.landAcres : '';
-      document.getElementById('elCrop').value = (lead.crops && lead.crops.length > 0) ? lead.crops.join(', ') : '';
-      document.getElementById('elSoilType').value = lead.soilType || '';
+      if (document.getElementById('elCrop')) {
+        document.getElementById('elCrop').value = (lead.crops && lead.crops.length > 0) ? lead.crops.join(', ') : '';
+      }
+      if (document.getElementById('elSoilType')) {
+        document.getElementById('elSoilType').value = lead.soilType || '';
+      }
       document.getElementById('elCurrentTractor').value = lead.currentTractor || '';
       if (modelSelect) modelSelect.value = lead.interestedModelId || '';
       document.getElementById('elBudget').value = (lead.budgetMax !== null && lead.budgetMax !== undefined) ? lead.budgetMax : '';
@@ -5862,9 +5890,9 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
           const village = document.getElementById('elVillage').value.trim();
           const acresVal = document.getElementById('elAcres').value.trim();
           const acres = acresVal ? Number(acresVal) : null;
-          const cropVal = document.getElementById('elCrop').value.trim();
-          const crop = cropVal ? cropVal.split(',').map(c => c.trim()).filter(Boolean) : [];
-          const soilType = document.getElementById('elSoilType').value.trim();
+          const cropVal = document.getElementById('elCrop') ? document.getElementById('elCrop').value.trim() : '';
+          const crop = cropVal ? cropVal.split(',').map(c => c.trim()).filter(Boolean) : (lead.crops || []);
+          const soilType = document.getElementById('elSoilType') ? document.getElementById('elSoilType').value.trim() : (lead.soilType || '');
           const currentTractor = document.getElementById('elCurrentTractor').value.trim();
           const modelId = document.getElementById('elModelSelect').value || null;
           const budgetVal = document.getElementById('elBudget').value.trim();

@@ -36,17 +36,6 @@ export function Modals() {
 
               <div className="form-grid">
                 <div className="form-group">
-                  <label className="form-label">Main Crops (comma separated)</label>
-                  <input type="text" id="nlCrop" className="form-input" placeholder="e.g. Wheat, Rice, Sugarcane" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Soil Type</label>
-                  <input type="text" id="nlSoilType" className="form-input" placeholder="e.g. Medium / Black / Sandy Loam" />
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <div className="form-group">
                   <label className="form-label">Current Tractor Owned</label>
                   <input type="text" id="nlCurrentTractor" className="form-input" placeholder="e.g. Swaraj 744 / None" />
                 </div>
@@ -194,17 +183,6 @@ export function Modals() {
                 <div className="form-group">
                   <label className="form-label">Total Land Size (Acres)</label>
                   <input type="number" id="elAcres" className="form-input" placeholder="e.g. 10" min="0" max="500" />
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">Main Crops (comma separated)</label>
-                  <input type="text" id="elCrop" className="form-input" placeholder="e.g. Wheat, Rice, Sugarcane" />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Soil Type</label>
-                  <input type="text" id="elSoilType" className="form-input" placeholder="e.g. Medium / Black / Sandy Loam" />
                 </div>
               </div>
 
