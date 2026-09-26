@@ -1653,16 +1653,15 @@ class TractorOSApp {
                 <th style="width:105px;">Date (दिनांक)</th>
                 <th>Customer / M/s (मेसर्स)</th>
                 <th>Village / Address (पता)</th>
-                <th>Particulars / Summary (विवरण)</th>
                 <th style="text-align:right;">Total Amount (कुल दाम)</th>
                 <th style="text-align:center; width:120px;">Payment Status (भुगतान)</th>
-                <th style="text-align:right; width:170px;">Actions</th>
+                <th style="text-align:right; width:135px; min-width:135px;">Actions</th>
               </tr>
             </thead>
             <tbody>
               ${bills.length === 0 ? `
                 <tr>
-                  <td colspan="8" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+                  <td colspan="7" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
                     <div style="font-size:36px; margin-bottom:10px;">🧾</div>
                     <div style="font-weight:700; font-size:16px; color:var(--text-secondary);">No bills issued yet</div>
                     <div style="font-size:12.5px; margin-top:4px;">Click "+ Create Bill" to generate a bill in the authentic माँ दुर्गा डीजल template.</div>
@@ -1677,8 +1676,6 @@ class TractorOSApp {
                   </td>
                 </tr>
               ` : bills.map(item => {
-                const itemCount = (item.items || []).length;
-                const summary = (item.items || []).map(i => i.desc).filter(Boolean).slice(0, 2).join(', ');
                 const billKey = item.id || String(item.billNumber);
                 const total = Number(item.totalRupees || 0);
                 let paid = total;
@@ -1715,26 +1712,25 @@ class TractorOSApp {
                     <td>
                       <span style="font-size:12.5px;">${item.address || 'पटना'}</span>
                     </td>
-                    <td>
-                      <span style="font-size:12.5px;">${summary || 'Diesel & Spares'}</span>
-                      ${itemCount > 2 ? `<span style="font-size:11px; color:var(--text-muted);"> (+${itemCount - 2} more)</span>` : ''}
-                    </td>
                     <td style="text-align:right;">
                       <strong style="font-size:14px; color:#1e3a8a; font-family:monospace, sans-serif;">₹${total.toLocaleString('en-IN')}${item.totalPaise ? '.' + String(item.totalPaise).padStart(2, '0') : ''}</strong>
                     </td>
                     <td style="text-align:center;">
                       ${statusBadge}
                     </td>
-                    <td style="text-align:right;">
-                      <div style="display:inline-flex; gap:6px; align-items:center;">
-                        <button class="quick-action-btn btn-xs btn-outline edit-bill-btn" data-bill-id="${billKey}" onclick="window.app.editBill('${billKey}')" title="Edit this bill details & bill number">
-                          ${renderIcon('edit')} Edit
+                    <td style="text-align:right; white-space:nowrap;">
+                      <div class="bill-actions-wrap" style="display:inline-flex; gap:6px; align-items:center; justify-content:flex-end;">
+                        <button class="quick-action-btn btn-sm btn-outline bill-action-btn edit-bill-btn" data-bill-id="${billKey}" onclick="window.app.editBill('${billKey}')" title="Edit Bill">
+                          ${renderIcon('edit')}
+                          <span class="btn-label">Edit</span>
                         </button>
-                        <button class="quick-action-btn btn-xs btn-primary print-bill-btn" data-bill-id="${billKey}" onclick="window.app.openBillPreviewById('${billKey}')" title="Print / View in authentic bill book format">
-                          ${renderIcon('print')} Print
+                        <button class="quick-action-btn btn-sm btn-primary bill-action-btn print-bill-btn" data-bill-id="${billKey}" onclick="window.app.openBillPreviewById('${billKey}')" title="Print Bill">
+                          ${renderIcon('print')}
+                          <span class="btn-label">Print</span>
                         </button>
-                        <button class="quick-action-btn btn-xs btn-outline delete-bill-btn" data-bill-id="${billKey}" onclick="window.app.deleteBill('${billKey}')" title="Delete this bill" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4); font-weight:700;">
-                          🗑️ Delete
+                        <button class="quick-action-btn btn-sm btn-outline delete-bill-btn bill-action-btn" data-bill-id="${billKey}" onclick="window.app.deleteBill('${billKey}')" title="Delete Bill" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4);">
+                          ${renderIcon('trash')}
+                          <span class="btn-label">Delete</span>
                         </button>
                       </div>
                     </td>

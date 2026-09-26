@@ -882,6 +882,57 @@ body {
   min-height: 14px !important;
 }
 
+/* Bills Table Action Buttons: Icon-only by default, expand to show full label on hover / cursor scroll */
+.bill-action-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  width: 32px;
+  padding: 0 !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1), padding 0.22s ease, background-color 0.15s ease, box-shadow 0.2s ease !important;
+  cursor: pointer;
+}
+
+.bill-action-btn svg {
+  width: 15px !important;
+  height: 15px !important;
+  min-width: 15px !important;
+  min-height: 15px !important;
+  flex-shrink: 0 !important;
+}
+
+.bill-action-btn .btn-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-left: 0;
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  transition: max-width 0.22s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.18s ease, margin-left 0.22s ease;
+}
+
+.bill-action-btn:hover,
+.bill-action-btn:focus-visible {
+  width: auto !important;
+  min-width: 32px !important;
+  padding: 0 9px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+.bill-action-btn:hover .btn-label,
+.bill-action-btn:focus-visible .btn-label {
+  max-width: 60px;
+  opacity: 1;
+  margin-left: 5px;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
