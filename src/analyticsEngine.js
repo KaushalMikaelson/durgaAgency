@@ -535,88 +535,63 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
   };
 }
 
-// Generate Mathematical SVG Bar & Trend Chart with Real Visual Scaling
+// Generate Mathematical SVG Bar Chart with Capsule Track Design (Matching UI Reference)
 export function renderBarChartSVG(intervals) {
   const width = 760;
-  const height = 260;
-  const padLeft = 65;
+  const height = 270;
+  const padLeft = 55;
   const padRight = 25;
-  const padTop = 30;
-  const padBottom = 40;
+  const padTop = 25;
+  const padBottom = 42;
   const chartW = width - padLeft - padRight;
   const chartH = height - padTop - padBottom;
+  const baselineY = padTop + chartH;
 
-  const maxVal = Math.max(...intervals.map(i => Math.max(i.revenue, i.expense, 1000))) * 1.18;
+  const maxVal = Math.max(1000, ...intervals.map(i => Math.max(i.revenue || 0, 1000))) * 1.15;
 
   const numBuckets = Math.max(1, intervals.length);
   const slotW = chartW / numBuckets;
-  const barW = Math.max(14, Math.min(28, slotW * 0.32));
-  const gap = 5;
+  const barW = Math.max(28, Math.min(54, slotW * 0.54));
+  const cornerRadius = Math.min(12, Math.round(barW / 2));
 
   // Grid Lines
   const gridSteps = [0, 0.25, 0.5, 0.75, 1];
   const gridLines = gridSteps.map(step => {
-    const y = padTop + chartH - (step * chartH);
+    const y = baselineY - (step * chartH);
     const val = Math.round(step * maxVal);
     let label = val >= 10000000 ? `₹${(val / 10000000).toFixed(1)}Cr` :
                 val >= 100000 ? `₹${(val / 100000).toFixed(1)}L` :
-                val >= 1000 ? `₹${(val / 1000).toFixed(0)}k` : `₹${val}`;
+                val >= 1000 ? `${Math.round(val / 1000)}k` : `${val}`;
     return `
-      <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" class="chart-grid-line" stroke="var(--border-color)" stroke-dasharray="4 4" stroke-width="1" />
-      <text x="${padLeft - 10}" y="${y + 4}" text-anchor="end" class="chart-axis-text" fill="var(--text-muted)" font-size="11" font-weight="600">${label}</text>
+      <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="var(--border-color)" stroke-dasharray="4 4" stroke-width="1" opacity="0.6" />
+      <text x="${padLeft - 12}" y="${y + 4}" text-anchor="end" fill="var(--text-muted)" font-size="11" font-weight="600">${label}</text>
     `;
   }).join('');
 
-  // Bars & Net Profit Line points
-  const points = [];
+  // Capsule Bars
   const bars = intervals.map((intv, idx) => {
     const centerX = padLeft + idx * slotW + slotW / 2;
-    const revH = (intv.revenue / maxVal) * chartH;
-    const expH = (intv.expense / maxVal) * chartH;
-    const revY = padTop + chartH - revH;
-    const expY = padTop + chartH - expH;
-    const revX = centerX - barW - gap / 2;
-    const expX = centerX + gap / 2;
+    const barX = centerX - barW / 2;
+    const revVal = intv.revenue || 0;
+    const rawH = (revVal / maxVal) * chartH;
+    const barH = revVal > 0 ? Math.max(cornerRadius * 1.5, rawH) : 0;
+    const barY = baselineY - barH;
 
-    const netY = padTop + chartH - (Math.max(0, intv.net) / maxVal) * chartH;
-    points.push({ x: centerX, y: netY, intv, idx });
-
-    const revTooltip = `Turnover: ₹${intv.revenue.toLocaleString('en-IN')}`;
-    const expTooltip = `Expenses: ₹${intv.expense.toLocaleString('en-IN')}`;
+    const revTooltip = `Turnover: ₹${(revVal).toLocaleString('en-IN')}`;
 
     return `
-      <g class="chart-column-group" data-interval="${idx}">
-        <rect x="${centerX - slotW/2 + 2}" y="${padTop}" width="${slotW - 4}" height="${chartH}" rx="8" fill="var(--primary)" opacity="0" class="chart-column-highlight" style="transition: opacity 0.2s ease;">
-          <title>${intv.label} | Turnover: ₹${intv.revenue.toLocaleString('en-IN')} | Expenses: ₹${intv.expense.toLocaleString('en-IN')} | Net: ₹${intv.net.toLocaleString('en-IN')}</title>
-        </rect>
-        <rect x="${revX}" y="${revY}" width="${barW}" height="${revH}" rx="5" fill="url(#revGrad)" class="chart-bar-rect">
-          <title>${intv.label} - ${revTooltip}</title>
-        </rect>
-        <rect x="${expX}" y="${expY}" width="${barW}" height="${expH}" rx="5" fill="url(#expGrad)" class="chart-bar-rect">
-          <title>${intv.label} - ${expTooltip}</title>
-        </rect>
-        <text x="${centerX}" y="${height - 12}" text-anchor="middle" class="chart-axis-text" fill="var(--text-secondary)" font-size="11.5" font-weight="700">${intv.label}</text>
-      </g>
-    `;
-  }).join('');
+      <g class="chart-column-group" data-interval="${idx}" style="cursor: pointer;">
+        <!-- Full-height background track capsule -->
+        <rect x="${barX}" y="${padTop}" width="${barW}" height="${chartH}" rx="${cornerRadius}" ry="${cornerRadius}" fill="var(--chart-track, rgba(0,0,0,0.045))" />
+        
+        <!-- Active solid deep teal foreground bar -->
+        ${barH > 0 ? `
+          <rect x="${barX}" y="${barY}" width="${barW}" height="${barH}" rx="${cornerRadius}" ry="${cornerRadius}" fill="url(#tealBarGrad)" class="chart-bar-rect">
+            <title>${intv.label} - ${revTooltip}</title>
+          </rect>
+        ` : ''}
 
-  // Net Profit Line & Smooth Area Fill
-  const polylineStr = points.map(p => `${p.x},${p.y}`).join(' ');
-  const firstPt = points[0] || { x: padLeft, y: padTop + chartH };
-  const lastPt = points[points.length - 1] || { x: width - padRight, y: padTop + chartH };
-  const baselineY = padTop + chartH;
-  const areaPathStr = points.length > 0 
-    ? `M ${firstPt.x},${baselineY} L ${polylineStr} L ${lastPt.x},${baselineY} Z`
-    : '';
-
-  const nodes = points.map(pt => {
-    const netVal = pt.intv.net;
-    return `
-      <g class="chart-trend-node" style="cursor: pointer;">
-        <circle cx="${pt.x}" cy="${pt.y}" r="6" fill="#3b82f6" stroke="#ffffff" stroke-width="2.5" filter="url(#nodeShadow)">
-          <title>${pt.intv.label} Net Profit: ₹${netVal.toLocaleString('en-IN')}</title>
-        </circle>
-        <circle cx="${pt.x}" cy="${pt.y}" r="2.5" fill="#ffffff" />
+        <text x="${centerX}" y="${height - 12}" text-anchor="middle" fill="var(--text-secondary)" font-size="11.5" font-weight="600">${intv.label}</text>
       </g>
     `;
   }).join('');
@@ -624,34 +599,15 @@ export function renderBarChartSVG(intervals) {
   return `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#34d399" />
-          <stop offset="60%" stop-color="#10b981" />
-          <stop offset="100%" stop-color="#047857" />
+        <linearGradient id="tealBarGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#087f8c" />
+          <stop offset="100%" stop-color="#006672" />
         </linearGradient>
-        <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#fb7185" />
-          <stop offset="60%" stop-color="#f43f5e" />
-          <stop offset="100%" stop-color="#be123c" />
-        </linearGradient>
-        <linearGradient id="profitAreaGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.28" />
-          <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.0" />
-        </linearGradient>
-        <filter id="nodeShadow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#1d4ed8" flood-opacity="0.4" />
-        </filter>
-        <filter id="lineGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#2563eb" flood-opacity="0.35" />
-        </filter>
       </defs>
 
       ${gridLines}
-      <line x1="${padLeft}" y1="${baselineY}" x2="${width - padRight}" y2="${baselineY}" stroke="var(--border-color)" stroke-width="1.5" />
+      <line x1="${padLeft}" y1="${baselineY}" x2="${width - padRight}" y2="${baselineY}" stroke="var(--border-color)" stroke-width="1" opacity="0.8" />
       ${bars}
-      ${areaPathStr ? `<path d="${areaPathStr}" fill="url(#profitAreaGrad)" />` : ''}
-      <polyline fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${polylineStr}" filter="url(#lineGlow)" />
-      ${nodes}
     </svg>
   `;
 }

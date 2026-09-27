@@ -42,6 +42,7 @@
   --text-muted: #9ca3af;
   --border-color: #e5e7eb;
   --border-subtle: #f3f4f6;
+  --chart-track: rgba(0, 0, 0, 0.045);
 
   /* Elevation & Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -71,6 +72,7 @@
   --border-subtle: #18281e;
   --primary-light: #163622;
   --accent-light: #3d2c0b;
+  --chart-track: rgba(255, 255, 255, 0.06);
 }
 
 *, *::before, *::after {
@@ -3974,6 +3976,19 @@ body {
   font-family: var(--font-heading);
   line-height: 1.1;
   margin-top: 4px;
+}
+
+.kpi-sparkline-wrap {
+  width: 100%;
+  height: 36px;
+  margin: 6px 0 2px;
+  overflow: hidden;
+}
+
+.kpi-sparkline-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .analytics-kpi-footer {

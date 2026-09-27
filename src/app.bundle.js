@@ -4934,46 +4934,14 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
                 <span class="analytics-kpi-aux">${vm.billsCount} Bills (${vm.scaledDueRupees > 0 ? `${fmt(vm.scaledDueRupees)} Due` : 'Clear'})</span>
               </div>
             </div>
-
-            <!-- Tractors Sold / Movement -->
-            <div class="analytics-kpi-card emerald">
-              <div class="analytics-kpi-header">
-                <div class="analytics-kpi-title-wrap">
-                  <span class="analytics-kpi-title">Tractor Deliveries</span>
-                  <span class="analytics-kpi-sub">ट्रैक्टर सुपुर्दगी</span>
-                </div>
-                <div class="analytics-kpi-icon-badge emerald">${renderIcon('tractor')}</div>
-              </div>
-              <div class="analytics-kpi-value" style="color:#047857;">${vm.tractorsDelivered} Units</div>
-              <div class="analytics-kpi-footer">
-                <span class="analytics-kpi-chip emerald">📦 ${vm.inStockUnits} In Showroom Yard</span>
-                <span class="analytics-kpi-aux">Live Stock</span>
-              </div>
-            </div>
-
-            <!-- Conversion Pipeline -->
-            <div class="analytics-kpi-card purple">
-              <div class="analytics-kpi-header">
-                <div class="analytics-kpi-title-wrap">
-                  <span class="analytics-kpi-title">Customer Pipeline</span>
-                  <span class="analytics-kpi-sub">लीड्स एवं डेमो रूपांतरण</span>
-                </div>
-                <div class="analytics-kpi-icon-badge purple">${renderIcon('users')}</div>
-              </div>
-              <div class="analytics-kpi-value" style="color:#6d28d9;">${vm.totalLeads} Farmers</div>
-              <div class="analytics-kpi-footer">
-                <span class="analytics-kpi-chip" style="background:rgba(139,92,246,0.1); color:#6d28d9; border:1px solid rgba(139,92,246,0.25);">🚜 ${vm.totalDemos} Demos</span>
-                <span class="analytics-kpi-aux">Hot Leads Active</span>
-              </div>
-            </div>
           </div>
 
-          <!-- Section 1: Multi-Series Bar & Profit Trend Chart -->
+          <!-- Section 1: Revenue Summary Capsule Bar Chart -->
           <div class="analytics-card">
             <div class="analytics-card-header">
               <div>
-                <div class="analytics-card-title">${renderIcon('chart')} Financial Trajectory: Revenue vs Showroom Expenses vs Net Profit</div>
-                <div class="analytics-card-subtitle">Detailed breakdown across ${vm.config.name} with net margin trend curve</div>
+                <div class="analytics-card-title">${renderIcon('chart')} Revenue Summary</div>
+                <div class="analytics-card-subtitle">Periodic turnover distribution across ${vm.config.name}</div>
               </div>
               <div class="analytics-period-badge">
                 <span>● ${vm.config.intervals ? vm.config.intervals.length : vm.chartIntervals.length} Data Points</span>
@@ -4986,16 +4954,12 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
 
             <div class="chart-legend-row">
               <div class="chart-legend-item">
-                <span class="chart-legend-dot" style="background:#10b981;"></span>
+                <span class="chart-legend-dot" style="background: linear-gradient(135deg, #087f8c, #006672); border-radius: 4px;"></span>
                 <span>Sales Turnover (राजस्व)</span>
               </div>
               <div class="chart-legend-item">
-                <span class="chart-legend-dot" style="background:#ef4444;"></span>
-                <span>Showroom Expenses (खर्च)</span>
-              </div>
-              <div class="chart-legend-item">
-                <span class="chart-legend-dot" style="background:#2563eb; border-radius:50%;"></span>
-                <span>Net Profit Trend Line (शुद्ध लाभ)</span>
+                <span class="chart-legend-dot" style="background: var(--chart-track, #e2e8f0); border-radius: 4px;"></span>
+                <span>Capacity Track (क्षमता)</span>
               </div>
             </div>
           </div>

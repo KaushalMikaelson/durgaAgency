@@ -48,6 +48,42 @@ const itemVariants = {
   }
 };
 
+// Mini sparkline SVG component for KPI cards
+function KpiSparkline({ data, color, gradId }) {
+  if (!data || data.length < 2) return null;
+  const w = 120, h = 32, pad = 2;
+  const maxV = Math.max(...data, 1);
+  const minV = Math.min(...data, 0);
+  const range = maxV - minV || 1;
+  const points = data.map((v, i) => {
+    const x = pad + (i / (data.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((v - minV) / range) * (h - pad * 2);
+    return { x, y };
+  });
+  const lineStr = points.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const areaStr = `M ${points[0].x.toFixed(1)},${h} L ${lineStr} L ${points[points.length - 1].x.toFixed(1)},${h} Z`;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="kpi-sparkline-svg" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <path d={areaStr} fill={`url(#${gradId})`} />
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={lineStr}
+      />
+      <circle cx={points[points.length - 1].x} cy={points[points.length - 1].y} r="2.5" fill={color} stroke="#fff" strokeWidth="1" />
+    </svg>
+  );
+}
+
 export function AnalyticsPage() {
   const [timeframe, setTimeframe] = useState('monthly');
   const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
@@ -111,64 +147,53 @@ export function AnalyticsPage() {
     }
   };
 
-  // Interactive Chart Render Calculation
+  // Interactive Chart Render Calculation (Modern Capsule Track Bar Design)
   const chartProps = useMemo(() => {
     const width = 760;
-    const height = 260;
-    const padLeft = 65;
+    const height = 270;
+    const padLeft = 55;
     const padRight = 25;
-    const padTop = 30;
-    const padBottom = 40;
+    const padTop = 25;
+    const padBottom = 42;
     const chartW = width - padLeft - padRight;
     const chartH = height - padTop - padBottom;
+    const baselineY = padTop + chartH;
     const intervals = vm.chartIntervals || [];
-    const maxVal = Math.max(1000, ...intervals.map(i => Math.max(i.revenue || 0, i.expense || 0, 1000))) * 1.18;
+    const maxVal = Math.max(1000, ...intervals.map(i => Math.max(i.revenue || 0, 1000))) * 1.15;
 
-    const slotW = chartW / Math.max(1, intervals.length);
-    const barW = Math.max(14, Math.min(28, slotW * 0.32));
-    const gap = 5;
+    const numBuckets = Math.max(1, intervals.length);
+    const slotW = chartW / numBuckets;
+    const barW = Math.max(28, Math.min(54, slotW * 0.54));
+    const cornerRadius = Math.min(12, Math.round(barW / 2));
 
-    const points = [];
     const barsData = intervals.map((intv, idx) => {
       const centerX = padLeft + idx * slotW + slotW / 2;
-      const revH = Math.max(4, ((intv.revenue || 0) / maxVal) * chartH);
-      const expH = Math.max(4, ((intv.expense || 0) / maxVal) * chartH);
-      const revY = padTop + chartH - revH;
-      const expY = padTop + chartH - expH;
-      const revX = centerX - barW - gap / 2;
-      const expX = centerX + gap / 2;
-      const netY = padTop + chartH - (Math.max(0, intv.net || 0) / maxVal) * chartH;
-      points.push({ x: centerX, y: netY, intv, idx });
+      const barX = centerX - barW / 2;
+      const revVal = intv.revenue || 0;
+      const rawH = (revVal / maxVal) * chartH;
+      const barH = revVal > 0 ? Math.max(cornerRadius * 2, rawH) : 0;
+      const barY = baselineY - barH;
 
       return {
         centerX,
+        barX,
+        barY,
+        barW,
+        barH,
         slotW,
-        revX,
-        revY,
-        revH,
-        expX,
-        expY,
-        expH,
+        cornerRadius,
         intv,
         idx
       };
     });
 
-    const polylineStr = points.map(p => `${p.x},${p.y}`).join(' ');
-    const firstPt = points[0] || { x: padLeft, y: padTop + chartH };
-    const lastPt = points[points.length - 1] || { x: width - padRight, y: padTop + chartH };
-    const baselineY = padTop + chartH;
-    const areaPathStr = points.length > 0 
-      ? `M ${firstPt.x},${baselineY} L ${polylineStr} L ${lastPt.x},${baselineY} Z`
-      : '';
-
     const gridSteps = [0, 0.25, 0.5, 0.75, 1];
     const gridLines = gridSteps.map(step => {
-      const y = padTop + chartH - (step * chartH);
+      const y = baselineY - (step * chartH);
       const val = Math.round(step * maxVal);
       let label = val >= 10000000 ? `₹${(val / 10000000).toFixed(1)}Cr` :
                   val >= 100000 ? `₹${(val / 100000).toFixed(1)}L` :
-                  val >= 1000 ? `₹${(val / 1000).toFixed(0)}k` : `₹${val}`;
+                  val >= 1000 ? `${(val / 1000).toFixed(0)}k` : `${val}`;
       return { y, label };
     });
 
@@ -177,12 +202,13 @@ export function AnalyticsPage() {
       height,
       padLeft,
       padRight,
+      padTop,
+      chartH,
       baselineY,
       gridLines,
       barsData,
-      points,
-      polylineStr,
-      areaPathStr
+      barW,
+      cornerRadius
     };
   }, [vm.chartIntervals]);
 
@@ -302,7 +328,7 @@ export function AnalyticsPage() {
           </div>
         </motion.div>
 
-        {/* 6 Ultra-Sleek KPI Metric Cards */}
+        {/* 4 Ultra-Sleek KPI Metric Cards with Sparklines */}
         <motion.div className="analytics-metric-grid" variants={itemVariants}>
           {/* Revenue */}
           <motion.div 
@@ -320,6 +346,9 @@ export function AnalyticsPage() {
               </div>
             </div>
             <div className="analytics-kpi-value" style={{ color: '#047857' }}>{fmt(vm.revenue)}</div>
+            <div className="kpi-sparkline-wrap">
+              <KpiSparkline data={(vm.chartIntervals || []).map(i => i.revenue || 0)} color="#10b981" gradId="sparkRevGrad" />
+            </div>
             <div className="analytics-kpi-footer">
               <span className="analytics-kpi-chip emerald">
                 <Receipt size={12} /> Billed: {fmt(vm.scaledBilledRupees)}
@@ -346,6 +375,9 @@ export function AnalyticsPage() {
             <div className="analytics-kpi-value" style={{ color: vm.netProfit >= 0 ? '#047857' : '#b91c1c' }}>
               {fmt(vm.netProfit)}
             </div>
+            <div className="kpi-sparkline-wrap">
+              <KpiSparkline data={(vm.chartIntervals || []).map(i => i.net || 0)} color={vm.netProfit >= 0 ? '#10b981' : '#f43f5e'} gradId="sparkProfitGrad" />
+            </div>
             <div className="analytics-kpi-footer">
               <span className={`analytics-kpi-chip ${vm.netProfit >= 0 ? 'emerald' : 'rose'}`}>
                 <ArrowUpRight size={12} /> {vm.netMarginPct}% net margin
@@ -370,6 +402,9 @@ export function AnalyticsPage() {
               </div>
             </div>
             <div className="analytics-kpi-value" style={{ color: '#1d4ed8' }}>{fmt(vm.netCashFlow)}</div>
+            <div className="kpi-sparkline-wrap">
+              <KpiSparkline data={(vm.chartIntervals || []).map(i => (i.revenue || 0) - (i.expense || 0))} color="#3b82f6" gradId="sparkCashGrad" />
+            </div>
             <div className="analytics-kpi-footer">
               <span className="analytics-kpi-chip blue">
                 <Coins size={12} /> In: {fmt(vm.cashIn)}
@@ -394,6 +429,9 @@ export function AnalyticsPage() {
               </div>
             </div>
             <div className="analytics-kpi-value" style={{ color: '#b45309' }}>{fmt(vm.scaledPaidRupees)}</div>
+            <div className="kpi-sparkline-wrap">
+              <KpiSparkline data={(vm.chartIntervals || []).map(i => i.expense || 0)} color="#f59e0b" gradId="sparkBillGrad" />
+            </div>
             <div className="analytics-kpi-footer">
               <span className="analytics-kpi-chip amber">
                 <CheckCircle2 size={12} /> {vm.collectionRate}% collected
@@ -401,64 +439,16 @@ export function AnalyticsPage() {
               <span className="analytics-kpi-aux">{vm.billsCount} Bills ({vm.scaledDueRupees > 0 ? `${fmt(vm.scaledDueRupees)} Due` : 'Clear'})</span>
             </div>
           </motion.div>
-
-          {/* Tractor Deliveries */}
-          <motion.div 
-            className="analytics-kpi-card emerald"
-            whileHover={{ y: -4, scale: 1.01 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="analytics-kpi-header">
-              <div className="analytics-kpi-title-wrap">
-                <span className="analytics-kpi-title">Tractor Deliveries</span>
-                <span className="analytics-kpi-sub">ट्रैक्टर सुपुर्दगी</span>
-              </div>
-              <div className="analytics-kpi-icon-badge emerald">
-                <Tractor size={20} />
-              </div>
-            </div>
-            <div className="analytics-kpi-value" style={{ color: '#047857' }}>{vm.tractorsDelivered} Units</div>
-            <div className="analytics-kpi-footer">
-              <span className="analytics-kpi-chip emerald">
-                <ShieldCheck size={12} /> Live Showroom Stock
-              </span>
-              <span className="analytics-kpi-aux">{vm.inStockUnits} in Yard</span>
-            </div>
-          </motion.div>
-
-          {/* Customer Pipeline */}
-          <motion.div 
-            className="analytics-kpi-card purple"
-            whileHover={{ y: -4, scale: 1.01 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="analytics-kpi-header">
-              <div className="analytics-kpi-title-wrap">
-                <span className="analytics-kpi-title">Customer Pipeline</span>
-                <span className="analytics-kpi-sub">लीड्स एवं डेमो रूपांतरण</span>
-              </div>
-              <div className="analytics-kpi-icon-badge purple">
-                <Users size={20} />
-              </div>
-            </div>
-            <div className="analytics-kpi-value" style={{ color: '#6d28d9' }}>{vm.totalLeads} Farmers</div>
-            <div className="analytics-kpi-footer">
-              <span className="analytics-kpi-chip" style={{ background: 'rgba(139,92,246,0.1)', color: '#6d28d9', border: '1px solid rgba(139,92,246,0.25)' }}>
-                <Flame size={12} /> {vm.hotLeads || 0} Hot Leads
-              </span>
-              <span className="analytics-kpi-aux">CRM Active</span>
-            </div>
-          </motion.div>
         </motion.div>
 
-        {/* Section 1: Multi-Series Bar & Profit Trend Interactive Chart */}
+        {/* Section 1: Revenue Summary Capsule Bar Chart */}
         <motion.div className="analytics-card" variants={itemVariants}>
           <div className="analytics-card-header">
             <div>
               <div className="analytics-card-title">
-                <BarChart3 size={19} color="#059669" /> Financial Trajectory: Revenue vs Showroom Expenses vs Net Profit
+                <BarChart3 size={19} color="#087f8c" /> Revenue Summary
               </div>
-              <div className="analytics-card-subtitle">Detailed breakdown across {vm.config.name} with net margin trend curve</div>
+              <div className="analytics-card-subtitle">Periodic turnover distribution across {vm.config.name}</div>
             </div>
             <div className="analytics-period-badge">
               <span>● {vm.chartIntervals ? vm.chartIntervals.length : 0} Data Points</span>
@@ -478,48 +468,36 @@ export function AnalyticsPage() {
                 >
                   <div className="tt-title">{chartProps.barsData[hoveredBarIndex].intv.label}</div>
                   <div className="tt-row">
-                    <span style={{ color: '#34d399' }}>Turnover:</span>
+                    <span style={{ color: '#087f8c' }}>Turnover:</span>
                     <span>{fmt(chartProps.barsData[hoveredBarIndex].intv.revenue)}</span>
                   </div>
-                  <div className="tt-row">
-                    <span style={{ color: '#fb7185' }}>Expenses:</span>
-                    <span>{fmt(chartProps.barsData[hoveredBarIndex].intv.expense)}</span>
-                  </div>
-                  <div className="tt-row" style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '3px' }}>
-                    <span style={{ color: '#60a5fa' }}>Net Profit:</span>
-                    <span style={{ color: chartProps.barsData[hoveredBarIndex].intv.net >= 0 ? '#34d399' : '#fb7185' }}>
-                      {fmt(chartProps.barsData[hoveredBarIndex].intv.net)}
-                    </span>
-                  </div>
+                  {chartProps.barsData[hoveredBarIndex].intv.expense > 0 && (
+                    <div className="tt-row">
+                      <span style={{ color: '#9ca3af' }}>Expenses:</span>
+                      <span>{fmt(chartProps.barsData[hoveredBarIndex].intv.expense)}</span>
+                    </div>
+                  )}
+                  {chartProps.barsData[hoveredBarIndex].intv.net !== undefined && (
+                    <div className="tt-row" style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '3px' }}>
+                      <span style={{ color: '#34d399' }}>Net Profit:</span>
+                      <span style={{ color: chartProps.barsData[hoveredBarIndex].intv.net >= 0 ? '#34d399' : '#fb7185' }}>
+                        {fmt(chartProps.barsData[hoveredBarIndex].intv.net)}
+                      </span>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
 
             <svg viewBox={`0 0 ${chartProps.width} ${chartProps.height}`} preserveAspectRatio="xMidYMid meet">
               <defs>
-                <linearGradient id="revGradReact" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#34d399" />
-                  <stop offset="60%" stopColor="#10b981" />
-                  <stop offset="100%" stopColor="#047857" />
+                <linearGradient id="tealBarGradReact" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#087f8c" />
+                  <stop offset="100%" stopColor="#006672" />
                 </linearGradient>
-                <linearGradient id="expGradReact" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#fb7185" />
-                  <stop offset="60%" stopColor="#f43f5e" />
-                  <stop offset="100%" stopColor="#be123c" />
-                </linearGradient>
-                <linearGradient id="profitAreaGradReact" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.0" />
-                </linearGradient>
-                <filter id="nodeShadowReact" x="-30%" y="-30%" width="160%" height="160%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#1d4ed8" floodOpacity="0.4" />
-                </filter>
-                <filter id="lineGlowReact" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#2563eb" floodOpacity="0.35" />
-                </filter>
               </defs>
 
-              {/* Grid Lines */}
+              {/* Horizontal Grid Lines */}
               {chartProps.gridLines.map((gl, i) => (
                 <g key={i}>
                   <line 
@@ -530,9 +508,10 @@ export function AnalyticsPage() {
                     stroke="var(--border-color)" 
                     strokeDasharray="4 4" 
                     strokeWidth="1" 
+                    opacity="0.6"
                   />
                   <text 
-                    x={chartProps.padLeft - 10} 
+                    x={chartProps.padLeft - 12} 
                     y={gl.y + 4} 
                     textAnchor="end" 
                     fill="var(--text-muted)" 
@@ -551,15 +530,11 @@ export function AnalyticsPage() {
                 x2={chartProps.width - chartProps.padRight} 
                 y2={chartProps.baselineY} 
                 stroke="var(--border-color)" 
-                strokeWidth="1.5" 
+                strokeWidth="1" 
+                opacity="0.8"
               />
 
-              {/* Area Fill */}
-              {chartProps.areaPathStr && (
-                <path d={chartProps.areaPathStr} fill="url(#profitAreaGradReact)" />
-              )}
-
-              {/* Bars */}
+              {/* Modern Rounded Capsule Bars */}
               {chartProps.barsData.map((bar, idx) => {
                 const isHovered = hoveredBarIndex === idx;
                 return (
@@ -569,39 +544,34 @@ export function AnalyticsPage() {
                     onMouseLeave={() => setHoveredBarIndex(null)}
                     style={{ cursor: 'pointer' }}
                   >
-                    {/* Hover column background */}
+                    {/* Full-height Background Track Capsule */}
                     <rect 
-                      x={bar.centerX - bar.slotW / 2 + 2} 
-                      y={30} 
-                      width={bar.slotW - 4} 
-                      height={chartProps.baselineY - 30} 
-                      rx={8} 
-                      fill="var(--primary)" 
-                      opacity={isHovered ? 0.08 : 0} 
-                      style={{ transition: 'opacity 0.2s ease' }}
+                      x={bar.barX} 
+                      y={chartProps.padTop} 
+                      width={bar.barW} 
+                      height={chartProps.chartH} 
+                      rx={bar.cornerRadius} 
+                      ry={bar.cornerRadius}
+                      fill="var(--chart-track, rgba(0, 0, 0, 0.045))" 
+                      style={{ transition: 'fill 0.2s ease' }}
                     />
-                    {/* Revenue Bar */}
-                    <rect 
-                      x={bar.revX} 
-                      y={bar.revY} 
-                      width={Math.max(14, bar.slotW * 0.32)} 
-                      height={bar.revH} 
-                      rx={5} 
-                      fill="url(#revGradReact)" 
-                      opacity={isHovered ? 1 : 0.9}
-                      style={{ transition: 'opacity 0.2s ease, filter 0.2s ease', filter: isHovered ? 'brightness(1.1)' : 'none' }}
-                    />
-                    {/* Expense Bar */}
-                    <rect 
-                      x={bar.expX} 
-                      y={bar.expY} 
-                      width={Math.max(14, bar.slotW * 0.32)} 
-                      height={bar.expH} 
-                      rx={5} 
-                      fill="url(#expGradReact)" 
-                      opacity={isHovered ? 1 : 0.9}
-                      style={{ transition: 'opacity 0.2s ease, filter 0.2s ease', filter: isHovered ? 'brightness(1.1)' : 'none' }}
-                    />
+
+                    {/* Active Solid Deep Teal Foreground Bar */}
+                    {bar.barH > 0 && (
+                      <rect 
+                        x={bar.barX} 
+                        y={bar.barY} 
+                        width={bar.barW} 
+                        height={bar.barH} 
+                        rx={bar.cornerRadius} 
+                        ry={bar.cornerRadius}
+                        fill="url(#tealBarGradReact)" 
+                        opacity={isHovered ? 1 : 0.95}
+                        filter={isHovered ? 'drop-shadow(0 4px 10px rgba(8, 127, 140, 0.4))' : 'none'}
+                        style={{ transition: 'opacity 0.2s ease, filter 0.2s ease' }}
+                      />
+                    )}
+
                     {/* X Axis Text */}
                     <text 
                       x={bar.centerX} 
@@ -609,46 +579,10 @@ export function AnalyticsPage() {
                       textAnchor="middle" 
                       fill={isHovered ? 'var(--text-primary)' : 'var(--text-secondary)'} 
                       fontSize="11.5" 
-                      fontWeight={isHovered ? '800' : '600'}
+                      fontWeight={isHovered ? '700' : '600'}
                     >
                       {bar.intv.label}
                     </text>
-                  </g>
-                );
-              })}
-
-              {/* Net Profit Connecting Curve */}
-              <polyline 
-                fill="none" 
-                stroke="#2563eb" 
-                strokeWidth="3" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                points={chartProps.polylineStr} 
-                filter="url(#lineGlowReact)" 
-              />
-
-              {/* Net Profit Nodes */}
-              {chartProps.points.map((pt, i) => {
-                const isHovered = hoveredBarIndex === i;
-                return (
-                  <g 
-                    key={i} 
-                    onMouseEnter={() => setHoveredBarIndex(i)}
-                    onMouseLeave={() => setHoveredBarIndex(null)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <circle 
-                      cx={pt.x} 
-                      cy={pt.y} 
-                      r={isHovered ? 8 : 6} 
-                      fill="#3b82f6" 
-                      stroke="#ffffff" 
-                      strokeWidth={isHovered ? 3 : 2.5} 
-                      filter="url(#nodeShadowReact)" 
-                      style={{ transition: 'r 0.2s ease' }}
-                    />
-                    <circle cx={pt.x} cy={pt.y} r={isHovered ? 3.5 : 2.5} fill="#ffffff" />
                   </g>
                 );
               })}
@@ -657,16 +591,12 @@ export function AnalyticsPage() {
 
           <div className="chart-legend-row">
             <div className="chart-legend-item">
-              <span className="chart-legend-dot" style={{ background: 'linear-gradient(135deg, #10b981, #047857)' }}></span>
+              <span className="chart-legend-dot" style={{ background: 'linear-gradient(135deg, #087f8c, #006672)', borderRadius: '4px' }}></span>
               <span>Sales Turnover (राजस्व)</span>
             </div>
             <div className="chart-legend-item">
-              <span className="chart-legend-dot" style={{ background: 'linear-gradient(135deg, #f43f5e, #be123c)' }}></span>
-              <span>Showroom Expenses (खर्च)</span>
-            </div>
-            <div className="chart-legend-item">
-              <span className="chart-legend-dot" style={{ background: '#2563eb', borderRadius: '50%' }}></span>
-              <span>Net Profit Trend Curve (शुद्ध लाभ)</span>
+              <span className="chart-legend-dot" style={{ background: 'var(--chart-track, #e2e8f0)', borderRadius: '4px' }}></span>
+              <span>Capacity Track (क्षमता)</span>
             </div>
           </div>
         </motion.div>
