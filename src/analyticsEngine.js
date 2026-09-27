@@ -102,7 +102,50 @@ function getPreviousPeriodLabel(tf) {
   return 'Previous Period';
 }
 
-export function getAnalyticsViewModel(timeframe = 'monthly', store) {
+// Helper: Check if two dates represent the exact same calendar day
+function isSameDay(d1, d2) {
+  if (!d1 || !d2) return false;
+  return d1.getDate() === d2.getDate() &&
+         d1.getMonth() === d2.getMonth() &&
+         d1.getFullYear() === d2.getFullYear();
+}
+
+// Helper: Calculate the 7 days for a given week selection (current, prev, week1, week2, week3, week4)
+function getDaysForWeekSelection(selectedWeek, monthIdx, year) {
+  const now = new Date();
+  const targetYear = year || now.getFullYear();
+  const targetMonth = monthIdx !== null && monthIdx !== undefined ? monthIdx : now.getMonth();
+
+  if (selectedWeek === 'current') {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      days.push(new Date(now.getTime() - i * 24 * 60 * 60 * 1000));
+    }
+    return days;
+  }
+
+  if (selectedWeek === 'prev') {
+    const days = [];
+    for (let i = 13; i >= 7; i--) {
+      days.push(new Date(now.getTime() - i * 24 * 60 * 60 * 1000));
+    }
+    return days;
+  }
+
+  let startDay = 1;
+  let endDay = 7;
+  if (selectedWeek === 'week2') { startDay = 8; endDay = 14; }
+  else if (selectedWeek === 'week3') { startDay = 15; endDay = 21; }
+  else if (selectedWeek === 'week4') { startDay = 22; endDay = 28; }
+
+  const days = [];
+  for (let d = startDay; d <= endDay; d++) {
+    days.push(new Date(targetYear, targetMonth, d));
+  }
+  return days;
+}
+
+export function getAnalyticsViewModel(timeframe = 'monthly', store, customOptions = {}) {
   const validTimeframes = ['daily', 'weekly', 'monthly', 'yearly'];
   const tf = validTimeframes.includes(timeframe) ? timeframe : 'monthly';
 
@@ -155,6 +198,45 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
   // 6. Compute Real Showroom Operating Expenses
   const totalExpenses = approvedExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
 
+  // Helper: Cumulative Net Balance of the dealership up to a specific date
+  function getCumulativeBalanceTill(targetDate) {
+    if (!targetDate) return 0;
+    const cutoff = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999);
+
+    const histBills = bills.filter(b => {
+      const bd = parseItemDate(b.date);
+      return bd && bd.getTime() <= cutoff.getTime();
+    });
+    const histPaid = histBills.reduce((sum, b) => {
+      const tot = Number(b.totalRupees || 0);
+      if (b.paymentStatus === 'Due') return sum;
+      if (b.paymentStatus === 'Partial' && b.paidAmount !== undefined) {
+        return sum + Math.min(tot, Math.max(0, Number(b.paidAmount) || 0));
+      }
+      return sum + (b.paidAmount ? Number(b.paidAmount) : tot);
+    }, 0);
+    const histCashIn = cashTxns.filter(t => {
+      const td = parseItemDate(t.date);
+      return td && td.getTime() <= cutoff.getTime() && t.type === 'IN';
+    }).reduce((s, t) => s + Number(t.amount || 0), 0);
+    const histInflows = Math.max(histPaid, histCashIn);
+
+    const histExp = expenses.filter(e => {
+      const ed = parseItemDate(e.date);
+      return ed && ed.getTime() <= cutoff.getTime() && e.status === 'Approved';
+    }).reduce((s, e) => s + Number(e.amount || 0), 0);
+    const histCashOut = cashTxns.filter(t => {
+      const td = parseItemDate(t.date);
+      return td && td.getTime() <= cutoff.getTime() && t.type === 'OUT';
+    }).reduce((s, t) => s + Number(t.amount || 0), 0);
+    const histOutflows = Math.max(histExp, histCashOut);
+
+    return Math.max(0, histInflows - histOutflows);
+  }
+
+  const now = new Date();
+  const currentNetBalanceTillDate = getCumulativeBalanceTill(now);
+
   // 7. Overall Sales Turnover (Revenue)
   // Real sales from bills + quotes (or cashIn if bills/quotes not yet made)
   const revenue = Math.max(quoteRevenue + billedRupees, cashIn);
@@ -180,7 +262,6 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
     periodBills.filter(b => b.vehicle || (b.items && b.items.some(i => (i.description || '').toLowerCase().includes('tractor')))).length;
 
   // 10. Timeframe Metadata & Display Labels
-  const now = new Date();
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   const monthNamesHi = ['जनवरी', 'फ़रवरी', 'मार्च', 'अप्रैल', 'मई', 'जून', 'जुलाई', 'अगस्त', 'सितंबर', 'अक्टूबर', 'नवंबर', 'दिसंबर'];
 
@@ -268,10 +349,11 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
         label: b.label,
         income: intvRev,
         expense: intvExp,
-        profit: intvRev - intvExp,
+        profit: intvRev,
+        netprofit: Math.max(0, intvRev - intvExp),
         balance: Math.max(0, finalCashIn - intvExp),
         revenue: intvRev,
-        net: intvRev - intvExp,
+        net: Math.max(0, intvRev - intvExp),
         cashIn: finalCashIn
       };
     });
@@ -284,11 +366,12 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
       chartIntervals[1].income = revenue;
       chartIntervals[1].revenue = revenue;
       chartIntervals[1].profit += revenue;
+      chartIntervals[1].netprofit += revenue;
       chartIntervals[1].net += revenue;
     }
     if (totalBucketedExp === 0 && totalExpenses > 0) {
       chartIntervals[1].expense = totalExpenses;
-      chartIntervals[1].profit -= totalExpenses;
+      chartIntervals[1].netprofit -= totalExpenses;
       chartIntervals[1].net -= totalExpenses;
     }
     if (totalBucketedCash === 0 && cashIn > 0) {
@@ -296,26 +379,45 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
       chartIntervals[1].balance = Math.max(0, cashIn - totalExpenses);
     }
   } else if (tf === 'weekly') {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    chartIntervals = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const dayLabel = `${days[d.getDay()]} (${d.getDate()})`;
-      const dayBills = periodBills.filter(b => {
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const primDays = getDaysForWeekSelection(
+      customOptions.selectedWeek || 'current',
+      customOptions.selectedMonth,
+      customOptions.selectedYear
+    );
+
+    // Determine comparison week days if requested
+    let compDays = null;
+    if (customOptions.comparisonWeek && customOptions.comparisonWeek !== 'none') {
+      let compWkKey = customOptions.comparisonWeek;
+      if (compWkKey === 'prev') {
+        const primKey = customOptions.selectedWeek || 'current';
+        if (primKey === 'current') compWkKey = 'prev';
+        else if (primKey === 'week4') compWkKey = 'week3';
+        else if (primKey === 'week3') compWkKey = 'week2';
+        else if (primKey === 'week2') compWkKey = 'week1';
+        else compWkKey = 'prev';
+      }
+      compDays = getDaysForWeekSelection(compWkKey, customOptions.selectedMonth, customOptions.selectedYear);
+    }
+
+    chartIntervals = primDays.map((primDate, idx) => {
+      const dayLabel = `${dayNames[primDate.getDay()]} (${primDate.getDate()})`;
+      const dayBills = bills.filter(b => {
         const bd = parseItemDate(b.date);
-        return bd && bd.getDate() === d.getDate() && bd.getMonth() === d.getMonth() && bd.getFullYear() === d.getFullYear();
+        return bd && isSameDay(bd, primDate);
       });
       const dayExp = approvedExpenses.filter(e => {
         const ed = parseItemDate(e.date);
-        return ed && ed.getDate() === d.getDate() && ed.getMonth() === d.getMonth() && ed.getFullYear() === d.getFullYear();
+        return ed && isSameDay(ed, primDate);
       });
-      const dayQuotes = periodQuotes.filter(q => {
+      const dayQuotes = quotes.filter(q => {
         const qd = parseItemDate(q.date);
-        return qd && qd.getDate() === d.getDate() && qd.getMonth() === d.getMonth() && qd.getFullYear() === d.getFullYear();
+        return qd && isSameDay(qd, primDate);
       });
-      const dayCash = periodCashTxns.filter(t => {
+      const dayCash = cashTxns.filter(t => {
         const td = parseItemDate(t.date);
-        return td && td.getDate() === d.getDate() && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear();
+        return td && isSameDay(td, primDate);
       });
 
       const dayRev = dayBills.reduce((s, b) => s + Number(b.totalRupees || 0), 0) +
@@ -324,59 +426,128 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
       const dayCashIn = dayCash.filter(t => t.type === 'IN').reduce((s, t) => s + Number(t.amount || 0), 0);
       const dayPaid = dayBills.reduce((s, b) => s + (Number(b.paidAmount) || (b.paymentStatus !== 'Due' ? Number(b.totalRupees || 0) : 0)), 0);
       const finalCash = Math.max(dayCashIn, dayPaid);
+      const dayProfit = dayRev;
+      const dayNetProfit = Math.max(0, dayProfit - dayExpenses);
 
-      chartIntervals.push({
+      // Comparison metrics
+      let compRev = 0;
+      let compExpenses = 0;
+      let compProfit = 0;
+      let compNetProfit = 0;
+      let compLabel = null;
+
+      if (compDays && compDays[idx]) {
+        const compDate = compDays[idx];
+        compLabel = `${dayNames[compDate.getDay()]} (${compDate.getDate()})`;
+        const cBills = bills.filter(b => {
+          const bd = parseItemDate(b.date);
+          return bd && isSameDay(bd, compDate);
+        });
+        const cExp = approvedExpenses.filter(e => {
+          const ed = parseItemDate(e.date);
+          return ed && isSameDay(ed, compDate);
+        });
+        const cQuotes = quotes.filter(q => {
+          const qd = parseItemDate(q.date);
+          return qd && isSameDay(qd, compDate);
+        });
+        compRev = cBills.reduce((s, b) => s + Number(b.totalRupees || 0), 0) +
+          cQuotes.reduce((s, q) => s + Number(q.grandTotal || 0), 0);
+        compExpenses = cExp.reduce((s, e) => s + Number(e.amount || 0), 0);
+        compProfit = compRev;
+        compNetProfit = Math.max(0, compProfit - compExpenses);
+      }
+
+      const dayNetBalanceTillDate = getCumulativeBalanceTill(primDate);
+
+      return {
         label: dayLabel,
+        dayName: dayNames[primDate.getDay()],
         income: dayRev,
         expense: dayExpenses,
-        profit: dayRev - dayExpenses,
-        balance: Math.max(0, finalCash - dayExpenses),
+        profit: dayRev,
+        netprofit: dayNetProfit,
+        netBalanceTillDate: dayNetBalanceTillDate,
+        balance: dayNetBalanceTillDate,
         revenue: dayRev,
-        net: dayRev - dayExpenses,
-        cashIn: finalCash
-      });
-    }
+        net: dayNetProfit,
+        cashIn: finalCash,
+        compIncome: compRev,
+        compExpense: compExpenses,
+        compProfit: compProfit,
+        compNetProfit: compNetProfit,
+        compLabel: compLabel
+      };
+    });
   } else if (tf === 'monthly') {
+    const targetMonth = customOptions.selectedMonth !== null && customOptions.selectedMonth !== undefined ? customOptions.selectedMonth : now.getMonth();
+    const targetYear = customOptions.selectedYear || now.getFullYear();
+    const prevMonth = targetMonth === 0 ? 11 : targetMonth - 1;
+    const prevYear = targetMonth === 0 ? targetYear - 1 : targetYear;
+
     const weeks = [
       { label: 'Week 1 (1-7)', startDay: 1, endDay: 7 },
       { label: 'Week 2 (8-14)', startDay: 8, endDay: 14 },
       { label: 'Week 3 (15-21)', startDay: 15, endDay: 21 },
       { label: 'Week 4 (22-31)', startDay: 22, endDay: 31 }
     ];
+
     chartIntervals = weeks.map(w => {
-      const wBills = periodBills.filter(b => {
+      const wBills = bills.filter(b => {
         const d = parseItemDate(b.date);
-        return d && d.getDate() >= w.startDay && d.getDate() <= w.endDay;
+        return d && d.getFullYear() === targetYear && d.getMonth() === targetMonth && d.getDate() >= w.startDay && d.getDate() <= w.endDay;
       });
       const wExp = approvedExpenses.filter(e => {
         const d = parseItemDate(e.date);
-        return d && d.getDate() >= w.startDay && d.getDate() <= w.endDay;
+        return d && d.getFullYear() === targetYear && d.getMonth() === targetMonth && d.getDate() >= w.startDay && d.getDate() <= w.endDay;
       });
-      const wQuotes = periodQuotes.filter(q => {
+      const wQuotes = quotes.filter(q => {
         const d = parseItemDate(q.date);
-        return d && d.getDate() >= w.startDay && d.getDate() <= w.endDay;
+        return d && d.getFullYear() === targetYear && d.getMonth() === targetMonth && d.getDate() >= w.startDay && d.getDate() <= w.endDay;
       });
-      const wCash = periodCashTxns.filter(t => {
-        const td = parseItemDate(t.date);
-        return td && td.getDate() >= w.startDay && td.getDate() <= w.endDay;
-      });
-
       const wRev = wBills.reduce((s, b) => s + Number(b.totalRupees || 0), 0) +
         wQuotes.reduce((s, q) => s + Number(q.grandTotal || 0), 0);
       const wExpenses = wExp.reduce((s, e) => s + Number(e.amount || 0), 0);
-      const wCashIn = wCash.filter(t => t.type === 'IN').reduce((s, t) => s + Number(t.amount || 0), 0);
-      const wPaid = wBills.reduce((s, b) => s + (Number(b.paidAmount) || (b.paymentStatus !== 'Due' ? Number(b.totalRupees || 0) : 0)), 0);
-      const finalWCash = Math.max(wCashIn, wPaid);
+      const wProfit = wRev;
+      const wNetProfit = Math.max(0, wProfit - wExpenses);
+
+      // Previous month comparison for this week
+      let cRev = 0;
+      let cExpenses = 0;
+      let cNetProfit = 0;
+      if (customOptions.comparisonMonth !== 'none') {
+        const cBills = bills.filter(b => {
+          const d = parseItemDate(b.date);
+          return d && d.getFullYear() === prevYear && d.getMonth() === prevMonth && d.getDate() >= w.startDay && d.getDate() <= w.endDay;
+        });
+        const cExp = approvedExpenses.filter(e => {
+          const d = parseItemDate(e.date);
+          return d && d.getFullYear() === prevYear && d.getMonth() === prevMonth && d.getDate() >= w.startDay && d.getDate() <= w.endDay;
+        });
+        cRev = cBills.reduce((s, b) => s + Number(b.totalRupees || 0), 0);
+        cExpenses = cExp.reduce((s, e) => s + Number(e.amount || 0), 0);
+        cNetProfit = Math.max(0, cRev - cExpenses);
+      }
+
+      const weekEndDate = new Date(targetYear, targetMonth, Math.min(w.endDay, 28));
+      const wNetBalanceTillDate = getCumulativeBalanceTill(weekEndDate);
 
       return {
         label: w.label,
         income: wRev,
         expense: wExpenses,
-        profit: wRev - wExpenses,
-        balance: Math.max(0, finalWCash - wExpenses),
+        profit: wRev,
+        netprofit: wNetProfit,
+        netBalanceTillDate: wNetBalanceTillDate,
+        balance: wNetBalanceTillDate,
         revenue: wRev,
-        net: wRev - wExpenses,
-        cashIn: finalWCash
+        net: wNetProfit,
+        cashIn: wRev,
+        compIncome: cRev,
+        compExpense: cExpenses,
+        compProfit: cRev,
+        compNetProfit: cNetProfit,
+        compLabel: `${w.label} (Prev Mo)`
       };
     });
   } else {
@@ -712,6 +883,7 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
     prevCashIn,
     prevCashOut,
     prevNetCashFlow,
+    netBalanceTillDate: currentNetBalanceTillDate,
   };
 }
 

@@ -88,14 +88,21 @@ function KpiSparkline({ data, color, gradId }) {
 
 export function AnalyticsPage() {
   const [timeframe, setTimeframe] = useState('monthly');
-  const [trendTf, setTrendTf] = useState('monthly'); // 'daily', 'weekly', 'monthly'
+  const [trendTf, setTrendTf] = useState('weekly'); // Default to weekly for intuitive day-by-day comparison
   const [hoveredTrendIdx, setHoveredTrendIdx] = useState(null);
+  const [selectedPointIdx, setSelectedPointIdx] = useState(null); // Click on a dot to open detailed card
   const [activeFocus, setActiveFocus] = useState(null); // Click to highlight a curve
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedWeek, setSelectedWeek] = useState('current');
+  const [comparisonWeek, setComparisonWeek] = useState('prev');
+  const [comparisonMonth, setComparisonMonth] = useState('prev');
   const [visibleLines, setVisibleLines] = useState({
     income: true,
     expense: true,
-    balance: true,
-    profit: true
+    netprofit: true,
+    netBalanceTillDate: true,
+    comparison: true
   });
   const [hoveredRevenueCat, setHoveredRevenueCat] = useState(null);
   const [hoveredExpenseCat, setHoveredExpenseCat] = useState(null);
@@ -103,25 +110,57 @@ export function AnalyticsPage() {
   // Compute view model for global page KPIs
   const vm = useMemo(() => {
     return getAnalyticsViewModel(timeframe, store);
-  }, [timeframe]);
+  }, [timeframe, store]);
+
+  // Available months for dropdown selector (last 6 months)
+  const availableMonths = useMemo(() => {
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const now = new Date();
+    const curM = now.getMonth();
+    const curY = now.getFullYear();
+    const res = [];
+    for (let i = 0; i < 6; i++) {
+      let m = curM - i;
+      let y = curY;
+      if (m < 0) {
+        m += 12;
+        y -= 1;
+      }
+      res.push({
+        value: m,
+        year: y,
+        label: `${monthNames[m]} ${y}${i === 0 ? ' (Current)' : ''}`
+      });
+    }
+    return res;
+  }, []);
 
   // Compute trend & comparison view model for the multi-line chart & comparison cards
   const trendVm = useMemo(() => {
-    return getAnalyticsViewModel(trendTf, store);
-  }, [trendTf]);
+    return getAnalyticsViewModel(trendTf, store, {
+      selectedWeek,
+      selectedMonth,
+      selectedYear,
+      comparisonWeek,
+      comparisonMonth
+    });
+  }, [trendTf, store, selectedWeek, selectedMonth, selectedYear, comparisonWeek, comparisonMonth]);
 
-  // Aggregated totals for the active trend period (Income, Expense, Balance, Profit)
+  // Aggregated totals for the active trend period (Income, Expense, Net Profit, Net Balance Till Date)
   const trendTotals = useMemo(() => {
     const intervals = trendVm.chartIntervals || [];
     const inc = intervals.reduce((s, i) => s + (i.income || i.revenue || 0), 0);
     const exp = intervals.reduce((s, i) => s + (i.expense || 0), 0);
-    const prof = intervals.reduce((s, i) => s + (i.profit !== undefined ? i.profit : (i.net || 0)), 0);
-    const bal = intervals.reduce((s, i) => s + (i.balance !== undefined ? i.balance : 0), 0);
+    const netp = intervals.reduce((s, i) => s + (i.netprofit !== undefined ? i.netprofit : (i.net || 0)), 0);
+    const lastInterval = intervals[intervals.length - 1];
+    const tillDateBal = lastInterval?.netBalanceTillDate !== undefined
+      ? lastInterval.netBalanceTillDate
+      : (trendVm.netBalanceTillDate || 0);
     return {
       income: inc || trendVm.revenue || 0,
       expense: exp || trendVm.totalExpenses || 0,
-      profit: prof || trendVm.netProfit || 0,
-      balance: bal || Math.max(0, (trendVm.cashIn || trendVm.revenue || 0) - (trendVm.totalExpenses || 0))
+      netprofit: netp || trendVm.netProfit || Math.max(0, (inc || trendVm.revenue || 0) - (exp || trendVm.totalExpenses || 0)),
+      netBalanceTillDate: tillDateBal
     };
   }, [trendVm]);
 
@@ -180,10 +219,10 @@ export function AnalyticsPage() {
   // Multi-Line Trend Chart Render Calculation - Fritsch-Carlson Monotone Spline (No-Overshoot)
   const lineChartProps = useMemo(() => {
     const width = 840;
-    const height = 300;
+    const height = 310;
     const padLeft = 60;
     const padRight = 30;
-    const padTop = 25;
+    const padTop = 32;
     const padBottom = 45;
     const plotW = width - padLeft - padRight;
     const plotH = height - padTop - padBottom;
@@ -193,13 +232,14 @@ export function AnalyticsPage() {
     intervals.forEach(i => {
       const inc = i.income || i.revenue || 0;
       const exp = i.expense || 0;
-      const bal = i.balance !== undefined ? i.balance : Math.max(0, (i.cashIn || i.revenue || 0) - exp);
-      const prof = i.profit !== undefined ? i.profit : (i.net || 0);
+      const netp = i.netprofit !== undefined ? i.netprofit : (i.net || 0);
+      const bal = i.netBalanceTillDate !== undefined ? i.netBalanceTillDate : (i.balance || 0);
 
       if (visibleLines.income) allVals.push(inc);
       if (visibleLines.expense) allVals.push(exp);
-      if (visibleLines.balance) allVals.push(bal);
-      if (visibleLines.profit) allVals.push(prof);
+      if (visibleLines.netprofit) allVals.push(netp);
+      if (visibleLines.netBalanceTillDate) allVals.push(bal);
+      if (visibleLines.comparison && i.compIncome) allVals.push(i.compIncome);
     });
 
     const maxDataVal = Math.max(1000, ...allVals);
@@ -236,10 +276,10 @@ export function AnalyticsPage() {
         name: 'Income',
         nameHi: 'आय',
         color: '#10b981', // Emerald Green
-        strokeWidth: 3.8, // Solid base line
+        strokeWidth: 3, // Clean solid line
         strokeDash: '',
-        pointRadius: 6,
-        gradId: 'trendGradIncome',
+        pointRadius: 5,
+        gradId: null, // Zero area fill
         active: visibleLines.income,
         data: intervals.map((intv, idx) => {
           const v = intv.income || intv.revenue || 0;
@@ -251,10 +291,10 @@ export function AnalyticsPage() {
         name: 'Expense',
         nameHi: 'खर्च',
         color: '#ef4444', // Coral / Red
-        strokeWidth: 2.8,
+        strokeWidth: 2.5,
         strokeDash: '',
-        pointRadius: 4.5,
-        gradId: 'trendGradExpense',
+        pointRadius: 4,
+        gradId: null,
         active: visibleLines.expense,
         data: intervals.map((intv, idx) => {
           const v = intv.expense || 0;
@@ -262,36 +302,59 @@ export function AnalyticsPage() {
         })
       },
       {
-        key: 'balance',
-        name: 'Balance',
-        nameHi: 'बैलेंस',
-        color: '#f59e0b', // Amber / Gold
-        strokeWidth: 2.8,
-        strokeDash: '3 4', // Dotted pattern
-        pointRadius: 4,
-        gradId: 'trendGradBalance',
-        active: visibleLines.balance,
+        key: 'netprofit',
+        name: 'Net Profit',
+        nameHi: 'शुद्ध लाभ',
+        color: '#2563eb', // Royal Blue
+        strokeWidth: 3,
+        strokeDash: '',
+        pointRadius: 4.5,
+        gradId: null,
+        active: visibleLines.netprofit,
         data: intervals.map((intv, idx) => {
-          const v = intv.balance !== undefined ? intv.balance : Math.max(0, (intv.cashIn || intv.revenue || 0) - (intv.expense || 0));
+          const v = intv.netprofit !== undefined ? intv.netprofit : Math.max(0, (intv.income || 0) - (intv.expense || 0));
           return { x: getX(idx), y: getY(v), val: v, label: intv.label };
         })
       },
       {
-        key: 'profit',
-        name: 'Profit',
-        nameHi: 'लाभ',
-        color: '#2563eb', // Royal Cobalt Blue
+        key: 'netBalanceTillDate',
+        name: 'Net Balance Till Date',
+        nameHi: 'कुल बैलेंस (अब तक)',
+        color: '#f59e0b', // Amber Gold
         strokeWidth: 2.8,
-        strokeDash: '8 5', // Long dashed pattern so solid income line shines through when values match
-        pointRadius: 3.5,
-        gradId: 'trendGradProfit',
-        active: visibleLines.profit,
+        strokeDash: '5 3', // Dotted / dashed pattern for distinction
+        pointRadius: 4,
+        gradId: null,
+        active: visibleLines.netBalanceTillDate,
         data: intervals.map((intv, idx) => {
-          const v = intv.profit !== undefined ? intv.profit : (intv.net || 0);
+          const v = intv.netBalanceTillDate !== undefined ? intv.netBalanceTillDate : (intv.balance || 0);
           return { x: getX(idx), y: getY(v), val: v, label: intv.label };
         })
       }
     ];
+
+    // Optional comparison reference curve
+    const hasComparison = (trendTf === 'weekly' && comparisonWeek !== 'none') || (trendTf === 'monthly' && comparisonMonth !== 'none');
+    if (hasComparison) {
+      const compLabelName = trendTf === 'weekly' 
+        ? (comparisonWeek === 'prev' ? 'Prev Week' : comparisonWeek.toUpperCase())
+        : 'Prev Month';
+      series.push({
+        key: 'comparison',
+        name: `Comp (${compLabelName})`,
+        nameHi: 'तुलना',
+        color: '#0ea5e9', // Sky Blue / Cyan
+        strokeWidth: 2.4,
+        strokeDash: '4 4', // Dashed reference line
+        pointRadius: 4,
+        gradId: null,
+        active: visibleLines.comparison !== false,
+        data: intervals.map((intv, idx) => {
+          const v = intv.compIncome || 0;
+          return { x: getX(idx), y: getY(v), val: v, label: intv.compLabel || intv.label };
+        })
+      });
+    }
 
     const formatVal = (v) => {
       const abs = Math.abs(v);
@@ -617,23 +680,16 @@ export function AnalyticsPage() {
           <div className="analytics-card-header">
             <div>
               <div className="analytics-card-title">
-                <TrendingUp size={20} color="#059669" /> Income, Expense, Balance & Profit Trends (आय, खर्च, बैलेंस एवं लाभ)
+                <TrendingUp size={20} color="#059669" /> Income, Expense, Net Profit & Net Balance Trends (आय, खर्च, शुद्ध लाभ एवं कुल बैलेंस)
               </div>
               <div className="analytics-card-subtitle">
-                Clear multi-line performance across <strong>{trendVm.config.name}</strong> • {trendVm.config.periodLabel}
+                Clear performance across <strong>{trendVm.config.name}</strong> • {trendVm.config.periodLabel}
               </div>
             </div>
 
-            {/* Timeframe Selector: Day, Week, Month */}
+            {/* Timeframe & Custom Selection Controls: Month, Week & Comparison */}
             <div className="trend-header-controls">
               <div className="trend-tf-btn-group">
-                <button
-                  type="button"
-                  className={`trend-tf-btn ${trendTf === 'daily' ? 'active' : ''}`}
-                  onClick={() => setTrendTf('daily')}
-                >
-                  Day (दैनिक)
-                </button>
                 <button
                   type="button"
                   className={`trend-tf-btn ${trendTf === 'weekly' ? 'active' : ''}`}
@@ -648,11 +704,84 @@ export function AnalyticsPage() {
                 >
                   Month (मासिक)
                 </button>
+                <button
+                  type="button"
+                  className={`trend-tf-btn ${trendTf === 'daily' ? 'active' : ''}`}
+                  onClick={() => setTrendTf('daily')}
+                >
+                  Day (दैनिक)
+                </button>
+              </div>
+
+              {/* Selectors for Month, Week & Comparison */}
+              <div className="trend-selectors-wrap">
+                {/* Month Dropdown Selector */}
+                <div className="trend-select-group" title="Select Month for analytics">
+                  <label className="trend-select-label">Month:</label>
+                  <select 
+                    value={selectedMonth} 
+                    onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                    className="trend-dropdown-select"
+                  >
+                    {availableMonths.map(m => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Week Dropdown Selector (Active when in weekly mode) */}
+                {trendTf === 'weekly' && (
+                  <div className="trend-select-group" title="Select specific week to view">
+                    <label className="trend-select-label">Week:</label>
+                    <select 
+                      value={selectedWeek} 
+                      onChange={(e) => setSelectedWeek(e.target.value)}
+                      className="trend-dropdown-select"
+                    >
+                      <option value="current">Current (Last 7 Days)</option>
+                      <option value="prev">Previous 7 Days</option>
+                      <option value="week3">Week 3 (15-21)</option>
+                      <option value="week2">Week 2 (8-14)</option>
+                      <option value="week1">Week 1 (1-7)</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Comparison Selector */}
+                {trendTf === 'weekly' && (
+                  <div className="trend-select-group comparison" title="Compare current week with selected week">
+                    <label className="trend-select-label">Compare with:</label>
+                    <select 
+                      value={comparisonWeek} 
+                      onChange={(e) => setComparisonWeek(e.target.value)}
+                      className="trend-dropdown-select comparison-select"
+                    >
+                      <option value="prev">Previous Week</option>
+                      <option value="week2">Week 2 (8-14)</option>
+                      <option value="week1">Week 1 (1-7)</option>
+                      <option value="none">None (Off)</option>
+                    </select>
+                  </div>
+                )}
+
+                {trendTf === 'monthly' && (
+                  <div className="trend-select-group comparison" title="Compare with previous month">
+                    <label className="trend-select-label">Compare with:</label>
+                    <select 
+                      value={comparisonMonth} 
+                      onChange={(e) => setComparisonMonth(e.target.value)}
+                      className="trend-dropdown-select comparison-select"
+                    >
+                      <option value="prev">Previous Month</option>
+                      <option value="none">None (Off)</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Interactive KPI Summary Badges for immediate clarity */}
+          {/* Interactive KPI Summary Badges */}
           <div className="trend-kpi-summary-strip">
             <div 
               className={`trend-kpi-pill ${activeFocus === 'income' ? 'focused' : ''} ${!visibleLines.income ? 'disabled' : ''}`}
@@ -679,35 +808,39 @@ export function AnalyticsPage() {
             </div>
 
             <div 
-              className={`trend-kpi-pill ${activeFocus === 'balance' ? 'focused' : ''} ${!visibleLines.balance ? 'disabled' : ''}`}
-              onClick={() => setActiveFocus(prev => prev === 'balance' ? null : 'balance')}
-              title="Click to highlight Balance curve"
-            >
-              <div className="kpi-pill-header">
-                <span className="kpi-pill-dot" style={{ background: '#f59e0b' }}></span>
-                <span className="kpi-pill-label">Balance (बैलेंस)</span>
-              </div>
-              <div className="kpi-pill-val" style={{ color: '#b45309' }}>{fmt(trendTotals.balance)}</div>
-            </div>
-
-            <div 
-              className={`trend-kpi-pill ${activeFocus === 'profit' ? 'focused' : ''} ${!visibleLines.profit ? 'disabled' : ''}`}
-              onClick={() => setActiveFocus(prev => prev === 'profit' ? null : 'profit')}
-              title="Click to highlight Profit curve"
+              className={`trend-kpi-pill ${activeFocus === 'netprofit' ? 'focused' : ''} ${!visibleLines.netprofit ? 'disabled' : ''}`}
+              onClick={() => setActiveFocus(prev => prev === 'netprofit' ? null : 'netprofit')}
+              title="Click to highlight Net Profit curve"
             >
               <div className="kpi-pill-header">
                 <span className="kpi-pill-dot" style={{ background: '#2563eb' }}></span>
-                <span className="kpi-pill-label">Profit (लाभ)</span>
+                <span className="kpi-pill-label">Net Profit (शुद्ध लाभ)</span>
               </div>
-              <div className="kpi-pill-val" style={{ color: '#1d4ed8' }}>{fmt(trendTotals.profit)}</div>
+              <div className="kpi-pill-val" style={{ color: '#1d4ed8' }}>{fmt(trendTotals.netprofit)}</div>
+            </div>
+
+            <div 
+              className={`trend-kpi-pill ${activeFocus === 'netBalanceTillDate' ? 'focused' : ''} ${!visibleLines.netBalanceTillDate ? 'disabled' : ''}`}
+              onClick={() => setActiveFocus(prev => prev === 'netBalanceTillDate' ? null : 'netBalanceTillDate')}
+              title="Click to highlight Net Balance Till Date curve"
+            >
+              <div className="kpi-pill-header">
+                <span className="kpi-pill-dot" style={{ background: '#f59e0b' }}></span>
+                <span className="kpi-pill-label">Net Balance Till Date (कुल बैलेंस)</span>
+              </div>
+              <div className="kpi-pill-val" style={{ color: '#b45309' }}>{fmt(trendTotals.netBalanceTillDate)}</div>
             </div>
           </div>
 
-          {/* Clean, Premium SVG Chart */}
-          <div className="svg-line-chart-container" style={{ position: 'relative' }}>
-            {/* Floating Hover Tooltip */}
+          {/* Clean, Premium SVG Chart (Zero Area Fill - Lines & Numbers Only) */}
+          <div 
+            className="svg-line-chart-container" 
+            style={{ position: 'relative' }}
+            onMouseLeave={() => setHoveredTrendIdx(null)}
+          >
+            {/* Detailed Point Breakdown Card (Shown ONLY when clicking on one of the dots) */}
             <AnimatePresence>
-              {hoveredTrendIdx !== null && lineChartProps.intervals[hoveredTrendIdx] && (
+              {selectedPointIdx !== null && lineChartProps.intervals[selectedPointIdx] && (
                 <motion.div
                   className="analytics-chart-tooltip trend-line-tooltip"
                   initial={{ opacity: 0, y: -6, scale: 0.96 }}
@@ -715,13 +848,45 @@ export function AnalyticsPage() {
                   exit={{ opacity: 0, y: -6, scale: 0.96 }}
                   transition={{ duration: 0.15 }}
                   style={{
-                    left: `${Math.min(lineChartProps.width - 210, Math.max(70, lineChartProps.getX(hoveredTrendIdx) - 80))}px`,
-                    top: '12px'
+                    left: `${lineChartProps.getX(selectedPointIdx) < lineChartProps.width / 2
+                      ? Math.min(lineChartProps.width - 245, lineChartProps.getX(selectedPointIdx) + 20)
+                      : Math.max(lineChartProps.padLeft, lineChartProps.getX(selectedPointIdx) - 245)
+                    }px`,
+                    top: '12px',
+                    pointerEvents: 'auto',
+                    zIndex: 30,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.35)'
                   }}
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="tt-title">{lineChartProps.intervals[hoveredTrendIdx].label}</div>
-                  {lineChartProps.series.filter(s => s.active).map(s => {
-                    const pt = s.data[hoveredTrendIdx];
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.12)' }}>
+                    <span className="tt-title" style={{ fontWeight: 800, fontSize: 13, margin: 0 }}>
+                      {lineChartProps.intervals[selectedPointIdx].label}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPointIdx(null)}
+                      style={{
+                        background: 'rgba(255,255,255,0.14)',
+                        border: 'none',
+                        color: '#ffffff',
+                        borderRadius: '50%',
+                        width: 20,
+                        height: 20,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        padding: 0
+                      }}
+                      title="Close details (बंद करें)"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {lineChartProps.series.filter(s => s.active && s.key !== 'comparison').map(s => {
+                    const pt = s.data[selectedPointIdx];
                     return (
                       <div key={s.key} className="tt-row">
                         <span style={{ color: s.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -732,30 +897,42 @@ export function AnalyticsPage() {
                       </div>
                     );
                   })}
+                  {/* Dedicated Comparison Line Info in Tooltip */}
+                  {(() => {
+                    const compS = lineChartProps.series.find(s => s.key === 'comparison' && s.active);
+                    if (!compS) return null;
+                    const compPt = compS.data[selectedPointIdx];
+                    const incPt = (lineChartProps.series.find(s => s.key === 'income')?.data || [])[selectedPointIdx];
+                    const curVal = incPt ? incPt.val : 0;
+                    const compVal = compPt ? compPt.val : 0;
+                    const diffPct = compVal > 0 ? Math.round(((curVal - compVal) / compVal) * 100) : (curVal > 0 ? 100 : 0);
+                    return (
+                      <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px dashed rgba(255,255,255,0.18)' }}>
+                        <div className="tt-row">
+                          <span style={{ color: '#0ea5e9', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ width: 8, height: 2, background: '#0ea5e9', display: 'inline-block' }}></span>
+                            {compPt?.label ? `Comp (${compPt.label})` : 'Comp Income'}:
+                          </span>
+                          <strong style={{ color: '#0ea5e9' }}>{fmt(compVal)}</strong>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, marginTop: 4 }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Comparison Variance:</span>
+                          <span style={{ color: diffPct >= 0 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+                            {diffPct >= 0 ? `+${diffPct}% ▲` : `${diffPct}% ▼`}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <svg viewBox={`0 0 ${lineChartProps.width} ${lineChartProps.height}`} preserveAspectRatio="xMidYMid meet">
-              <defs>
-                <linearGradient id="trendGradIncome" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.12" />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="trendGradExpense" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ef4444" stopOpacity="0.10" />
-                  <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="trendGradBalance" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.12" />
-                  <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="trendGradProfit" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2563eb" stopOpacity="0.12" />
-                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-
+            <svg 
+              viewBox={`0 0 ${lineChartProps.width} ${lineChartProps.height}`} 
+              preserveAspectRatio="xMidYMid meet"
+              onMouseLeave={() => setHoveredTrendIdx(null)}
+            >
               {/* Horizontal Grid Lines */}
               {lineChartProps.gridLines.map((gl, i) => (
                 <g key={i}>
@@ -793,28 +970,7 @@ export function AnalyticsPage() {
                 opacity="0.8"
               />
 
-              {/* Single Subtle Area Glow under primary / focused curve only */}
-              {(() => {
-                const targetSeries = activeFocus
-                  ? lineChartProps.series.find(s => s.key === activeFocus && s.active)
-                  : lineChartProps.series.find(s => s.key === 'income' && s.active);
-                if (!targetSeries) return null;
-                const gradMap = {
-                  income: 'url(#trendGradIncome)',
-                  expense: 'url(#trendGradExpense)',
-                  balance: 'url(#trendGradBalance)',
-                  profit: 'url(#trendGradProfit)'
-                };
-                return (
-                  <path
-                    d={lineChartProps.buildArea(targetSeries.data)}
-                    fill={gradMap[targetSeries.key] || 'url(#trendGradIncome)'}
-                    style={{ transition: 'all 0.3s ease' }}
-                  />
-                );
-              })()}
-
-              {/* Render Smooth Lines with Clear Hierarchy */}
+              {/* Render Clean Lines (Zero Area Fills) */}
               {lineChartProps.series.map(s => {
                 if (!s.active) return null;
                 const isDimmed = activeFocus && activeFocus !== s.key;
@@ -836,31 +992,32 @@ export function AnalyticsPage() {
                 );
               })}
 
-              {/* Vertical Hover Tracking Guideline */}
-              {hoveredTrendIdx !== null && (
+              {/* Vertical Selected / Hover Tracking Guideline */}
+              {(selectedPointIdx !== null || hoveredTrendIdx !== null) && (
                 <line
-                  x1={lineChartProps.getX(hoveredTrendIdx)}
+                  x1={lineChartProps.getX(selectedPointIdx !== null ? selectedPointIdx : hoveredTrendIdx)}
                   y1={lineChartProps.padTop}
-                  x2={lineChartProps.getX(hoveredTrendIdx)}
+                  x2={lineChartProps.getX(selectedPointIdx !== null ? selectedPointIdx : hoveredTrendIdx)}
                   y2={lineChartProps.zeroY}
-                  stroke="var(--primary)"
-                  strokeDasharray="3 3"
-                  strokeWidth="1.5"
-                  opacity="0.6"
+                  stroke={selectedPointIdx !== null ? "var(--primary)" : "rgba(16, 185, 129, 0.5)"}
+                  strokeDasharray={selectedPointIdx !== null ? "4 2" : "3 3"}
+                  strokeWidth={selectedPointIdx !== null ? "2" : "1.5"}
+                  opacity="0.8"
                 />
               )}
 
-              {/* Data Point Markers on Lines */}
+              {/* Data Point Markers (Click any dot to open detailed breakdown card) */}
               {lineChartProps.series.map(s => {
                 if (!s.active) return null;
                 const isDimmed = activeFocus && activeFocus !== s.key;
                 return (
                   <g key={`dots-${s.key}`} opacity={isDimmed ? 0.25 : 1}>
                     {s.data.map((pt, idx) => {
+                      const isSelected = selectedPointIdx === idx;
                       const isHovered = hoveredTrendIdx === idx;
-                      const r = isHovered 
-                        ? (s.pointRadius ? s.pointRadius + 2.5 : 6.5) 
-                        : (s.pointRadius || 4);
+                      const r = isSelected 
+                        ? (s.pointRadius ? s.pointRadius + 3 : 7) 
+                        : (isHovered ? (s.pointRadius ? s.pointRadius + 2 : 6) : (s.pointRadius || 4));
                       return (
                         <circle
                           key={idx}
@@ -869,9 +1026,139 @@ export function AnalyticsPage() {
                           r={r}
                           fill={s.color}
                           stroke="#ffffff"
-                          strokeWidth={isHovered ? 2 : 1.2}
-                          style={{ transition: 'r 0.15s ease, stroke-width 0.15s ease' }}
+                          strokeWidth={isSelected ? 2.8 : (isHovered ? 2 : 1.2)}
+                          style={{ transition: 'r 0.15s ease, stroke-width 0.15s ease', cursor: 'pointer' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPointIdx(prev => prev === idx ? null : idx);
+                          }}
+                          onMouseEnter={() => setHoveredTrendIdx(idx)}
+                          onMouseMove={() => setHoveredTrendIdx(idx)}
                         />
+                      );
+                    })}
+                  </g>
+                );
+              })}
+
+              {/* Exact Numerical Data Value Labels for Each Point & Each Line (ALWAYS VISIBLE) */}
+              {lineChartProps.intervals.map((intv, idx) => {
+                // Collect active points with visible data for this column
+                const ptsAtIdx = [];
+                lineChartProps.series.forEach(s => {
+                  if (!s.active) return;
+                  const pt = s.data[idx];
+                  if (!pt) return;
+
+                  // Show if value > 0, or if currently focused on this specific line
+                  const shouldShow = pt.val > 0 || (activeFocus === s.key);
+                  if (!shouldShow) return;
+
+                  let textColor = s.color;
+                  if (s.key === 'income') textColor = '#047857';
+                  else if (s.key === 'expense') textColor = '#dc2626';
+                  else if (s.key === 'netprofit') textColor = '#1d4ed8';
+                  else if (s.key === 'netBalanceTillDate') textColor = '#b45309';
+                  else if (s.key === 'comparison') textColor = '#0284c7';
+
+                  ptsAtIdx.push({
+                    key: s.key,
+                    name: s.name,
+                    val: pt.val,
+                    x: pt.x,
+                    y: pt.y,
+                    color: s.color,
+                    textColor,
+                    isFocused: activeFocus === s.key,
+                    isDimmed: activeFocus && activeFocus !== s.key
+                  });
+                });
+
+                if (ptsAtIdx.length === 0) return null;
+
+                // Smart Cluster-Based Vertical Positioning:
+                // Sort from top of chart (lowest y) to bottom of chart (highest y)
+                const sorted = [...ptsAtIdx].sort((a, b) => a.y - b.y);
+
+                // Cluster points that are close to each other (within 16px)
+                const clusters = [];
+                let currentCluster = [sorted[0]];
+                for (let i = 1; i < sorted.length; i++) {
+                  const prev = sorted[i - 1];
+                  const cur = sorted[i];
+                  if (cur.y - prev.y <= 16) {
+                    currentCluster.push(cur);
+                  } else {
+                    clusters.push(currentCluster);
+                    currentCluster = [cur];
+                  }
+                }
+                clusters.push(currentCluster);
+
+                // Assign clean non-overlapping labelY coordinates
+                const positionedLabels = [];
+                clusters.forEach(cluster => {
+                  if (cluster.length === 1) {
+                    cluster[0].labelY = cluster[0].y - 10;
+                    positionedLabels.push(cluster[0]);
+                  } else if (cluster.length === 2) {
+                    const isNearBaseline = cluster[1].y >= lineChartProps.zeroY - 24;
+                    if (!isNearBaseline) {
+                      cluster[0].labelY = cluster[0].y - 10;
+                      cluster[1].labelY = cluster[1].y + 16;
+                    } else {
+                      cluster[0].labelY = cluster[0].y - 24;
+                      cluster[1].labelY = cluster[1].y - 10;
+                    }
+                    positionedLabels.push(...cluster);
+                  } else {
+                    const isNearBaseline = cluster[cluster.length - 1].y >= lineChartProps.zeroY - 24;
+                    cluster[0].labelY = cluster[0].y - 25;
+                    cluster[1].labelY = cluster[1].y - 10;
+                    if (!isNearBaseline) {
+                      cluster[2].labelY = cluster[2].y + 16;
+                    } else {
+                      cluster[2].labelY = cluster[0].y - 39;
+                    }
+                    for (let k = 3; k < cluster.length; k++) {
+                      cluster[k].labelY = cluster[k].y + 16 + (k - 2) * 14;
+                    }
+                    positionedLabels.push(...cluster);
+                  }
+                });
+
+                // Clamp top so labels never clip outside the chart viewBox
+                positionedLabels.forEach(item => {
+                  item.labelY = Math.max(lineChartProps.padTop - 12, item.labelY);
+                });
+
+                return (
+                  <g key={`data-labels-col-${idx}`}>
+                    {positionedLabels.map(lbl => {
+                      const isSelected = selectedPointIdx === idx;
+                      const isHovered = hoveredTrendIdx === idx;
+                      return (
+                        <text
+                          key={`lbl-${lbl.key}-${idx}`}
+                          x={lbl.x}
+                          y={lbl.labelY}
+                          textAnchor="middle"
+                          fill={lbl.textColor}
+                          stroke="#ffffff"
+                          strokeWidth={isSelected ? "4.2" : "3.6"}
+                          strokeLinejoin="round"
+                          paintOrder="stroke fill"
+                          fontSize={isSelected ? "12" : (isHovered ? "11.5" : "11")}
+                          fontWeight={isSelected ? "900" : "800"}
+                          opacity={lbl.isDimmed ? 0.25 : 1}
+                          style={{
+                            pointerEvents: 'none',
+                            userSelect: 'none',
+                            transition: 'opacity 0.2s ease, font-size 0.15s ease'
+                          }}
+                        >
+                          {fmt(lbl.val)}
+                        </text>
                       );
                     })}
                   </g>
@@ -881,6 +1168,7 @@ export function AnalyticsPage() {
               {/* X Axis Interval Labels */}
               {lineChartProps.intervals.map((intv, idx) => {
                 const x = lineChartProps.getX(idx);
+                const isSelected = selectedPointIdx === idx;
                 const isHovered = hoveredTrendIdx === idx;
                 return (
                   <text
@@ -888,16 +1176,18 @@ export function AnalyticsPage() {
                     x={x}
                     y={lineChartProps.height - 14}
                     textAnchor="middle"
-                    fill={isHovered ? 'var(--text-primary)' : 'var(--text-secondary)'}
-                    fontSize="11.5"
-                    fontWeight={isHovered ? '700' : '600'}
+                    fill={isSelected ? 'var(--primary)' : (isHovered ? 'var(--text-primary)' : 'var(--text-secondary)')}
+                    fontSize={isSelected ? "12" : "11.5"}
+                    fontWeight={isSelected ? '800' : (isHovered ? '700' : '600')}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => setSelectedPointIdx(prev => prev === idx ? null : idx)}
                   >
                     {intv.label}
                   </text>
                 );
               })}
 
-              {/* Interactive Hover Catcher Slices */}
+              {/* Interactive Hover & Click Catcher Slices */}
               {lineChartProps.intervals.map((intv, idx) => {
                 const colW = lineChartProps.intervals.length > 1
                   ? lineChartProps.plotW / (lineChartProps.intervals.length - 1)
@@ -912,8 +1202,14 @@ export function AnalyticsPage() {
                     height={lineChartProps.plotH + 30}
                     fill="transparent"
                     style={{ cursor: 'pointer' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedPointIdx(prev => prev === idx ? null : idx);
+                    }}
                     onMouseEnter={() => setHoveredTrendIdx(idx)}
+                    onMouseMove={() => setHoveredTrendIdx(idx)}
                     onMouseLeave={() => setHoveredTrendIdx(null)}
+                    onTouchStart={() => setSelectedPointIdx(prev => prev === idx ? null : idx)}
                   />
                 );
               })}

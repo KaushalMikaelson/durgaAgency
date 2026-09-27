@@ -5245,5 +5245,81 @@ body {
   .trend-kpi-summary-strip {
     grid-template-columns: repeat(2, 1fr);
   }
+  .trend-selectors-wrap {
+    width: 100%;
+    margin-top: 8px;
+  }
 }
+
+/* Trend Header Selectors: Month, Week & Comparison */
+.trend-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.trend-selectors-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.trend-select-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-hover, rgba(0, 0, 0, 0.03));
+  padding: 3px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.trend-select-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted, #64748b);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.trend-dropdown-select {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  border-radius: 7px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.trend-dropdown-select:hover {
+  border-color: var(--primary, #0f4d2a);
+}
+
+.trend-dropdown-select:focus {
+  border-color: var(--primary, #0f4d2a);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.trend-select-group.comparison {
+  background: rgba(14, 165, 233, 0.06);
+  border-color: rgba(14, 165, 233, 0.25);
+}
+
+.trend-select-group.comparison .trend-select-label {
+  color: #0284c7;
+}
+
+.trend-dropdown-select.comparison-select {
+  border-color: rgba(14, 165, 233, 0.35);
+  color: #0369a1;
+  font-weight: 700;
+}
+
 
