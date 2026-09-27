@@ -25,7 +25,9 @@ import {
   ShieldCheck,
   CheckCircle2,
   Flame,
-  Award
+  Award,
+  Scale,
+  Activity
 } from 'lucide-react';
 
 const containerVariants = {
@@ -86,14 +88,42 @@ function KpiSparkline({ data, color, gradId }) {
 
 export function AnalyticsPage() {
   const [timeframe, setTimeframe] = useState('monthly');
-  const [hoveredBarIndex, setHoveredBarIndex] = useState(null);
+  const [trendTf, setTrendTf] = useState('monthly'); // 'daily', 'weekly', 'monthly'
+  const [hoveredTrendIdx, setHoveredTrendIdx] = useState(null);
+  const [activeFocus, setActiveFocus] = useState(null); // Click to highlight a curve
+  const [visibleLines, setVisibleLines] = useState({
+    income: true,
+    expense: true,
+    balance: true,
+    profit: true
+  });
   const [hoveredRevenueCat, setHoveredRevenueCat] = useState(null);
   const [hoveredExpenseCat, setHoveredExpenseCat] = useState(null);
 
-  // Compute view model
+  // Compute view model for global page KPIs
   const vm = useMemo(() => {
     return getAnalyticsViewModel(timeframe, store);
   }, [timeframe]);
+
+  // Compute trend & comparison view model for the multi-line chart & comparison cards
+  const trendVm = useMemo(() => {
+    return getAnalyticsViewModel(trendTf, store);
+  }, [trendTf]);
+
+  // Aggregated totals for the active trend period (Income, Expense, Balance, Profit)
+  const trendTotals = useMemo(() => {
+    const intervals = trendVm.chartIntervals || [];
+    const inc = intervals.reduce((s, i) => s + (i.income || i.revenue || 0), 0);
+    const exp = intervals.reduce((s, i) => s + (i.expense || 0), 0);
+    const prof = intervals.reduce((s, i) => s + (i.profit !== undefined ? i.profit : (i.net || 0)), 0);
+    const bal = intervals.reduce((s, i) => s + (i.balance !== undefined ? i.balance : 0), 0);
+    return {
+      income: inc || trendVm.revenue || 0,
+      expense: exp || trendVm.totalExpenses || 0,
+      profit: prof || trendVm.netProfit || 0,
+      balance: bal || Math.max(0, (trendVm.cashIn || trendVm.revenue || 0) - (trendVm.totalExpenses || 0))
+    };
+  }, [trendVm]);
 
   const fmt = (n) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
 
@@ -147,55 +177,191 @@ export function AnalyticsPage() {
     }
   };
 
-  // Interactive Chart Render Calculation (Modern Capsule Track Bar Design)
-  const chartProps = useMemo(() => {
-    const width = 760;
-    const height = 270;
-    const padLeft = 55;
-    const padRight = 25;
+  // Multi-Line Trend Chart Render Calculation - Fritsch-Carlson Monotone Spline (No-Overshoot)
+  const lineChartProps = useMemo(() => {
+    const width = 840;
+    const height = 300;
+    const padLeft = 60;
+    const padRight = 30;
     const padTop = 25;
-    const padBottom = 42;
-    const chartW = width - padLeft - padRight;
-    const chartH = height - padTop - padBottom;
-    const baselineY = padTop + chartH;
-    const intervals = vm.chartIntervals || [];
-    const maxVal = Math.max(1000, ...intervals.map(i => Math.max(i.revenue || 0, 1000))) * 1.15;
+    const padBottom = 45;
+    const plotW = width - padLeft - padRight;
+    const plotH = height - padTop - padBottom;
+    const intervals = trendVm.chartIntervals || [];
 
-    const numBuckets = Math.max(1, intervals.length);
-    const slotW = chartW / numBuckets;
-    const barW = Math.max(28, Math.min(54, slotW * 0.54));
-    const cornerRadius = Math.min(12, Math.round(barW / 2));
+    const allVals = [];
+    intervals.forEach(i => {
+      const inc = i.income || i.revenue || 0;
+      const exp = i.expense || 0;
+      const bal = i.balance !== undefined ? i.balance : Math.max(0, (i.cashIn || i.revenue || 0) - exp);
+      const prof = i.profit !== undefined ? i.profit : (i.net || 0);
 
-    const barsData = intervals.map((intv, idx) => {
-      const centerX = padLeft + idx * slotW + slotW / 2;
-      const barX = centerX - barW / 2;
-      const revVal = intv.revenue || 0;
-      const rawH = (revVal / maxVal) * chartH;
-      const barH = revVal > 0 ? Math.max(cornerRadius * 2, rawH) : 0;
-      const barY = baselineY - barH;
-
-      return {
-        centerX,
-        barX,
-        barY,
-        barW,
-        barH,
-        slotW,
-        cornerRadius,
-        intv,
-        idx
-      };
+      if (visibleLines.income) allVals.push(inc);
+      if (visibleLines.expense) allVals.push(exp);
+      if (visibleLines.balance) allVals.push(bal);
+      if (visibleLines.profit) allVals.push(prof);
     });
 
+    const maxDataVal = Math.max(1000, ...allVals);
+    // Find clean, round ceiling for Y-axis intervals (no weird numbers like 22k)
+    let niceMax = 10000;
+    if (maxDataVal <= 1000) niceMax = 1000;
+    else if (maxDataVal <= 2500) niceMax = 2500;
+    else if (maxDataVal <= 5000) niceMax = 5000;
+    else if (maxDataVal <= 10000) niceMax = 10000;
+    else if (maxDataVal <= 20000) niceMax = 20000;
+    else if (maxDataVal <= 30000) niceMax = 30000;
+    else if (maxDataVal <= 50000) niceMax = 50000;
+    else if (maxDataVal <= 100000) niceMax = 100000;
+    else niceMax = Math.ceil(maxDataVal / 25000) * 25000;
+
+    const minVal = 0; // Clean baseline at zero
+    const range = (niceMax - minVal) || 1;
+
+    const getY = (v) => {
+      const val = Math.max(0, Math.min(niceMax, v || 0));
+      return padTop + plotH - ((val - minVal) / range) * plotH;
+    };
+
+    const getX = (idx) => {
+      if (intervals.length <= 1) return padLeft + plotW / 2;
+      return padLeft + (idx / (intervals.length - 1)) * plotW;
+    };
+
+    const zeroY = getY(0);
+
+    const series = [
+      {
+        key: 'income',
+        name: 'Income',
+        nameHi: 'आय',
+        color: '#10b981', // Emerald Green
+        strokeWidth: 3.8, // Solid base line
+        strokeDash: '',
+        pointRadius: 6,
+        gradId: 'trendGradIncome',
+        active: visibleLines.income,
+        data: intervals.map((intv, idx) => {
+          const v = intv.income || intv.revenue || 0;
+          return { x: getX(idx), y: getY(v), val: v, label: intv.label };
+        })
+      },
+      {
+        key: 'expense',
+        name: 'Expense',
+        nameHi: 'खर्च',
+        color: '#ef4444', // Coral / Red
+        strokeWidth: 2.8,
+        strokeDash: '',
+        pointRadius: 4.5,
+        gradId: 'trendGradExpense',
+        active: visibleLines.expense,
+        data: intervals.map((intv, idx) => {
+          const v = intv.expense || 0;
+          return { x: getX(idx), y: getY(v), val: v, label: intv.label };
+        })
+      },
+      {
+        key: 'balance',
+        name: 'Balance',
+        nameHi: 'बैलेंस',
+        color: '#f59e0b', // Amber / Gold
+        strokeWidth: 2.8,
+        strokeDash: '3 4', // Dotted pattern
+        pointRadius: 4,
+        gradId: 'trendGradBalance',
+        active: visibleLines.balance,
+        data: intervals.map((intv, idx) => {
+          const v = intv.balance !== undefined ? intv.balance : Math.max(0, (intv.cashIn || intv.revenue || 0) - (intv.expense || 0));
+          return { x: getX(idx), y: getY(v), val: v, label: intv.label };
+        })
+      },
+      {
+        key: 'profit',
+        name: 'Profit',
+        nameHi: 'लाभ',
+        color: '#2563eb', // Royal Cobalt Blue
+        strokeWidth: 2.8,
+        strokeDash: '8 5', // Long dashed pattern so solid income line shines through when values match
+        pointRadius: 3.5,
+        gradId: 'trendGradProfit',
+        active: visibleLines.profit,
+        data: intervals.map((intv, idx) => {
+          const v = intv.profit !== undefined ? intv.profit : (intv.net || 0);
+          return { x: getX(idx), y: getY(v), val: v, label: intv.label };
+        })
+      }
+    ];
+
+    const formatVal = (v) => {
+      const abs = Math.abs(v);
+      if (abs >= 10000000) return `₹${(v / 10000000).toFixed(1)}Cr`;
+      if (abs >= 100000) return `₹${(v / 100000).toFixed(1)}L`;
+      if (abs >= 1000) return `₹${(v / 1000).toFixed(0)}k`;
+      return `₹${Math.round(v)}`;
+    };
+
+    // 4 clean, evenly spaced grid levels
     const gridSteps = [0, 0.25, 0.5, 0.75, 1];
     const gridLines = gridSteps.map(step => {
-      const y = baselineY - (step * chartH);
-      const val = Math.round(step * maxVal);
-      let label = val >= 10000000 ? `₹${(val / 10000000).toFixed(1)}Cr` :
-                  val >= 100000 ? `₹${(val / 100000).toFixed(1)}L` :
-                  val >= 1000 ? `${(val / 1000).toFixed(0)}k` : `${val}`;
-      return { y, label };
+      const v = minVal + step * range;
+      const y = getY(v);
+      return { y, label: formatVal(v), v };
     });
+
+    // Fritsch-Carlson Monotone Cubic Spline (Guarantees zero overshoot/undershoot)
+    const buildMonotonePath = (pts) => {
+      if (!pts || pts.length === 0) return '';
+      if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+      if (pts.length === 2) return `M ${pts[0].x} ${pts[0].y} L ${pts[1].x} ${pts[1].y}`;
+
+      const n = pts.length;
+      const deltas = [];
+      for (let i = 0; i < n - 1; i++) {
+        const dx = pts[i + 1].x - pts[i].x;
+        const dy = pts[i + 1].y - pts[i].y;
+        deltas.push(dx !== 0 ? dy / dx : 0);
+      }
+
+      const slopes = new Array(n);
+      slopes[0] = deltas[0];
+      slopes[n - 1] = deltas[n - 2];
+      for (let i = 1; i < n - 1; i++) {
+        if (deltas[i - 1] * deltas[i] <= 0) {
+          // Local extrema -> zero tangent prevents artificial overshoot/dip
+          slopes[i] = 0;
+        } else {
+          slopes[i] = (deltas[i - 1] + deltas[i]) / 2;
+        }
+      }
+
+      let path = `M ${pts[0].x} ${pts[0].y}`;
+      for (let i = 0; i < n - 1; i++) {
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const dx = (p2.x - p1.x) / 3;
+        const cp1x = p1.x + dx;
+        const cp1y = p1.y + slopes[i] * dx;
+        const cp2x = p2.x - dx;
+        const cp2y = p2.y - slopes[i + 1] * dx;
+
+        const minY = Math.min(p1.y, p2.y);
+        const maxY = Math.max(p1.y, p2.y);
+        const clampedCp1y = Math.max(minY, Math.min(maxY, cp1y));
+        const clampedCp2y = Math.max(minY, Math.min(maxY, cp2y));
+
+        path += ` C ${cp1x.toFixed(1)} ${clampedCp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${clampedCp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      return path;
+    };
+
+    const buildArea = (pts) => {
+      if (!pts || pts.length === 0) return '';
+      const curve = buildMonotonePath(pts);
+      const lastX = pts[pts.length - 1].x;
+      const firstX = pts[0].x;
+      return `${curve} L ${lastX} ${zeroY} L ${firstX} ${zeroY} Z`;
+    };
 
     return {
       width,
@@ -203,14 +369,19 @@ export function AnalyticsPage() {
       padLeft,
       padRight,
       padTop,
-      chartH,
-      baselineY,
+      padBottom,
+      plotW,
+      plotH,
+      zeroY,
+      getX,
+      getY,
+      intervals,
+      series,
       gridLines,
-      barsData,
-      barW,
-      cornerRadius
+      buildMonotonePath,
+      buildArea
     };
-  }, [vm.chartIntervals]);
+  }, [trendVm.chartIntervals, visibleLines]);
 
   // Donut 1 & 2 circles calculation
   const getDonutSlices = (categories = [], hoveredIdx) => {
@@ -441,81 +612,169 @@ export function AnalyticsPage() {
           </motion.div>
         </motion.div>
 
-        {/* Section 1: Revenue Summary Capsule Bar Chart */}
-        <motion.div className="analytics-card" variants={itemVariants}>
+        {/* Section 1: Financial Performance Multi-Line Trend Chart */}
+        <motion.div className="analytics-card trend-chart-card" variants={itemVariants}>
           <div className="analytics-card-header">
             <div>
               <div className="analytics-card-title">
-                <BarChart3 size={19} color="#087f8c" /> Revenue Summary
+                <TrendingUp size={20} color="#059669" /> Income, Expense, Balance & Profit Trends (आय, खर्च, बैलेंस एवं लाभ)
               </div>
-              <div className="analytics-card-subtitle">Periodic turnover distribution across {vm.config.name}</div>
+              <div className="analytics-card-subtitle">
+                Clear multi-line performance across <strong>{trendVm.config.name}</strong> • {trendVm.config.periodLabel}
+              </div>
             </div>
-            <div className="analytics-period-badge">
-              <span>● {vm.chartIntervals ? vm.chartIntervals.length : 0} Data Points</span>
+
+            {/* Timeframe Selector: Day, Week, Month */}
+            <div className="trend-header-controls">
+              <div className="trend-tf-btn-group">
+                <button
+                  type="button"
+                  className={`trend-tf-btn ${trendTf === 'daily' ? 'active' : ''}`}
+                  onClick={() => setTrendTf('daily')}
+                >
+                  Day (दैनिक)
+                </button>
+                <button
+                  type="button"
+                  className={`trend-tf-btn ${trendTf === 'weekly' ? 'active' : ''}`}
+                  onClick={() => setTrendTf('weekly')}
+                >
+                  Week (साप्ताहिक)
+                </button>
+                <button
+                  type="button"
+                  className={`trend-tf-btn ${trendTf === 'monthly' ? 'active' : ''}`}
+                  onClick={() => setTrendTf('monthly')}
+                >
+                  Month (मासिक)
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="svg-bar-chart-container" style={{ position: 'relative' }}>
-            {/* Interactive Hover Tooltip */}
+          {/* Interactive KPI Summary Badges for immediate clarity */}
+          <div className="trend-kpi-summary-strip">
+            <div 
+              className={`trend-kpi-pill ${activeFocus === 'income' ? 'focused' : ''} ${!visibleLines.income ? 'disabled' : ''}`}
+              onClick={() => setActiveFocus(prev => prev === 'income' ? null : 'income')}
+              title="Click to highlight Income curve"
+            >
+              <div className="kpi-pill-header">
+                <span className="kpi-pill-dot" style={{ background: '#10b981' }}></span>
+                <span className="kpi-pill-label">Income (आय)</span>
+              </div>
+              <div className="kpi-pill-val" style={{ color: '#047857' }}>{fmt(trendTotals.income)}</div>
+            </div>
+
+            <div 
+              className={`trend-kpi-pill ${activeFocus === 'expense' ? 'focused' : ''} ${!visibleLines.expense ? 'disabled' : ''}`}
+              onClick={() => setActiveFocus(prev => prev === 'expense' ? null : 'expense')}
+              title="Click to highlight Expense curve"
+            >
+              <div className="kpi-pill-header">
+                <span className="kpi-pill-dot" style={{ background: '#ef4444' }}></span>
+                <span className="kpi-pill-label">Expense (खर्च)</span>
+              </div>
+              <div className="kpi-pill-val" style={{ color: '#b91c1c' }}>{fmt(trendTotals.expense)}</div>
+            </div>
+
+            <div 
+              className={`trend-kpi-pill ${activeFocus === 'balance' ? 'focused' : ''} ${!visibleLines.balance ? 'disabled' : ''}`}
+              onClick={() => setActiveFocus(prev => prev === 'balance' ? null : 'balance')}
+              title="Click to highlight Balance curve"
+            >
+              <div className="kpi-pill-header">
+                <span className="kpi-pill-dot" style={{ background: '#f59e0b' }}></span>
+                <span className="kpi-pill-label">Balance (बैलेंस)</span>
+              </div>
+              <div className="kpi-pill-val" style={{ color: '#b45309' }}>{fmt(trendTotals.balance)}</div>
+            </div>
+
+            <div 
+              className={`trend-kpi-pill ${activeFocus === 'profit' ? 'focused' : ''} ${!visibleLines.profit ? 'disabled' : ''}`}
+              onClick={() => setActiveFocus(prev => prev === 'profit' ? null : 'profit')}
+              title="Click to highlight Profit curve"
+            >
+              <div className="kpi-pill-header">
+                <span className="kpi-pill-dot" style={{ background: '#2563eb' }}></span>
+                <span className="kpi-pill-label">Profit (लाभ)</span>
+              </div>
+              <div className="kpi-pill-val" style={{ color: '#1d4ed8' }}>{fmt(trendTotals.profit)}</div>
+            </div>
+          </div>
+
+          {/* Clean, Premium SVG Chart */}
+          <div className="svg-line-chart-container" style={{ position: 'relative' }}>
+            {/* Floating Hover Tooltip */}
             <AnimatePresence>
-              {hoveredBarIndex !== null && chartProps.barsData[hoveredBarIndex] && (
-                <motion.div 
-                  className="analytics-chart-tooltip"
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
+              {hoveredTrendIdx !== null && lineChartProps.intervals[hoveredTrendIdx] && (
+                <motion.div
+                  className="analytics-chart-tooltip trend-line-tooltip"
+                  initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.96 }}
                   transition={{ duration: 0.15 }}
+                  style={{
+                    left: `${Math.min(lineChartProps.width - 210, Math.max(70, lineChartProps.getX(hoveredTrendIdx) - 80))}px`,
+                    top: '12px'
+                  }}
                 >
-                  <div className="tt-title">{chartProps.barsData[hoveredBarIndex].intv.label}</div>
-                  <div className="tt-row">
-                    <span style={{ color: '#087f8c' }}>Turnover:</span>
-                    <span>{fmt(chartProps.barsData[hoveredBarIndex].intv.revenue)}</span>
-                  </div>
-                  {chartProps.barsData[hoveredBarIndex].intv.expense > 0 && (
-                    <div className="tt-row">
-                      <span style={{ color: '#9ca3af' }}>Expenses:</span>
-                      <span>{fmt(chartProps.barsData[hoveredBarIndex].intv.expense)}</span>
-                    </div>
-                  )}
-                  {chartProps.barsData[hoveredBarIndex].intv.net !== undefined && (
-                    <div className="tt-row" style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '3px' }}>
-                      <span style={{ color: '#34d399' }}>Net Profit:</span>
-                      <span style={{ color: chartProps.barsData[hoveredBarIndex].intv.net >= 0 ? '#34d399' : '#fb7185' }}>
-                        {fmt(chartProps.barsData[hoveredBarIndex].intv.net)}
-                      </span>
-                    </div>
-                  )}
+                  <div className="tt-title">{lineChartProps.intervals[hoveredTrendIdx].label}</div>
+                  {lineChartProps.series.filter(s => s.active).map(s => {
+                    const pt = s.data[hoveredTrendIdx];
+                    return (
+                      <div key={s.key} className="tt-row">
+                        <span style={{ color: s.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ width: 7, height: 7, borderRadius: '50%', background: s.color, display: 'inline-block' }}></span>
+                          {s.name}:
+                        </span>
+                        <strong style={{ color: s.color }}>{fmt(pt ? pt.val : 0)}</strong>
+                      </div>
+                    );
+                  })}
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <svg viewBox={`0 0 ${chartProps.width} ${chartProps.height}`} preserveAspectRatio="xMidYMid meet">
+            <svg viewBox={`0 0 ${lineChartProps.width} ${lineChartProps.height}`} preserveAspectRatio="xMidYMid meet">
               <defs>
-                <linearGradient id="tealBarGradReact" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#087f8c" />
-                  <stop offset="100%" stopColor="#006672" />
+                <linearGradient id="trendGradIncome" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="trendGradExpense" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#ef4444" stopOpacity="0.10" />
+                  <stop offset="100%" stopColor="#ef4444" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="trendGradBalance" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.0" />
+                </linearGradient>
+                <linearGradient id="trendGradProfit" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2563eb" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0.0" />
                 </linearGradient>
               </defs>
 
               {/* Horizontal Grid Lines */}
-              {chartProps.gridLines.map((gl, i) => (
+              {lineChartProps.gridLines.map((gl, i) => (
                 <g key={i}>
-                  <line 
-                    x1={chartProps.padLeft} 
-                    y1={gl.y} 
-                    x2={chartProps.width - chartProps.padRight} 
-                    y2={gl.y} 
-                    stroke="var(--border-color)" 
-                    strokeDasharray="4 4" 
-                    strokeWidth="1" 
-                    opacity="0.6"
+                  <line
+                    x1={lineChartProps.padLeft}
+                    y1={gl.y}
+                    x2={lineChartProps.width - lineChartProps.padRight}
+                    y2={gl.y}
+                    stroke="var(--border-color)"
+                    strokeDasharray="4 4"
+                    strokeWidth="1"
+                    opacity="0.5"
                   />
-                  <text 
-                    x={chartProps.padLeft - 12} 
-                    y={gl.y + 4} 
-                    textAnchor="end" 
-                    fill="var(--text-muted)" 
-                    fontSize="11" 
+                  <text
+                    x={lineChartProps.padLeft - 12}
+                    y={gl.y + 4}
+                    textAnchor="end"
+                    fill="var(--text-muted)"
+                    fontSize="11"
                     fontWeight="600"
                   >
                     {gl.label}
@@ -524,79 +783,256 @@ export function AnalyticsPage() {
               ))}
 
               {/* Baseline Axis */}
-              <line 
-                x1={chartProps.padLeft} 
-                y1={chartProps.baselineY} 
-                x2={chartProps.width - chartProps.padRight} 
-                y2={chartProps.baselineY} 
-                stroke="var(--border-color)" 
-                strokeWidth="1" 
+              <line
+                x1={lineChartProps.padLeft}
+                y1={lineChartProps.zeroY}
+                x2={lineChartProps.width - lineChartProps.padRight}
+                y2={lineChartProps.zeroY}
+                stroke="var(--border-color)"
+                strokeWidth="1.2"
                 opacity="0.8"
               />
 
-              {/* Modern Rounded Capsule Bars */}
-              {chartProps.barsData.map((bar, idx) => {
-                const isHovered = hoveredBarIndex === idx;
+              {/* Single Subtle Area Glow under primary / focused curve only */}
+              {(() => {
+                const targetSeries = activeFocus
+                  ? lineChartProps.series.find(s => s.key === activeFocus && s.active)
+                  : lineChartProps.series.find(s => s.key === 'income' && s.active);
+                if (!targetSeries) return null;
+                const gradMap = {
+                  income: 'url(#trendGradIncome)',
+                  expense: 'url(#trendGradExpense)',
+                  balance: 'url(#trendGradBalance)',
+                  profit: 'url(#trendGradProfit)'
+                };
                 return (
-                  <g 
-                    key={idx} 
-                    onMouseEnter={() => setHoveredBarIndex(idx)}
-                    onMouseLeave={() => setHoveredBarIndex(null)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {/* Full-height Background Track Capsule */}
-                    <rect 
-                      x={bar.barX} 
-                      y={chartProps.padTop} 
-                      width={bar.barW} 
-                      height={chartProps.chartH} 
-                      rx={bar.cornerRadius} 
-                      ry={bar.cornerRadius}
-                      fill="var(--chart-track, rgba(0, 0, 0, 0.045))" 
-                      style={{ transition: 'fill 0.2s ease' }}
-                    />
+                  <path
+                    d={lineChartProps.buildArea(targetSeries.data)}
+                    fill={gradMap[targetSeries.key] || 'url(#trendGradIncome)'}
+                    style={{ transition: 'all 0.3s ease' }}
+                  />
+                );
+              })()}
 
-                    {/* Active Solid Deep Teal Foreground Bar */}
-                    {bar.barH > 0 && (
-                      <rect 
-                        x={bar.barX} 
-                        y={bar.barY} 
-                        width={bar.barW} 
-                        height={bar.barH} 
-                        rx={bar.cornerRadius} 
-                        ry={bar.cornerRadius}
-                        fill="url(#tealBarGradReact)" 
-                        opacity={isHovered ? 1 : 0.95}
-                        filter={isHovered ? 'drop-shadow(0 4px 10px rgba(8, 127, 140, 0.4))' : 'none'}
-                        style={{ transition: 'opacity 0.2s ease, filter 0.2s ease' }}
-                      />
-                    )}
+              {/* Render Smooth Lines with Clear Hierarchy */}
+              {lineChartProps.series.map(s => {
+                if (!s.active) return null;
+                const isDimmed = activeFocus && activeFocus !== s.key;
+                const isFocused = activeFocus === s.key;
+                return (
+                  <path
+                    key={`line-${s.key}`}
+                    d={lineChartProps.buildMonotonePath(s.data)}
+                    fill="none"
+                    stroke={s.color}
+                    strokeWidth={isFocused ? 3.5 : s.strokeWidth}
+                    strokeDasharray={s.strokeDash || undefined}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={isDimmed ? 0.25 : 1}
+                    filter={isFocused ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.18))' : 'none'}
+                    style={{ transition: 'all 0.25s ease' }}
+                  />
+                );
+              })}
 
-                    {/* X Axis Text */}
-                    <text 
-                      x={bar.centerX} 
-                      y={chartProps.height - 12} 
-                      textAnchor="middle" 
-                      fill={isHovered ? 'var(--text-primary)' : 'var(--text-secondary)'} 
-                      fontSize="11.5" 
-                      fontWeight={isHovered ? '700' : '600'}
-                    >
-                      {bar.intv.label}
-                    </text>
+              {/* Vertical Hover Tracking Guideline */}
+              {hoveredTrendIdx !== null && (
+                <line
+                  x1={lineChartProps.getX(hoveredTrendIdx)}
+                  y1={lineChartProps.padTop}
+                  x2={lineChartProps.getX(hoveredTrendIdx)}
+                  y2={lineChartProps.zeroY}
+                  stroke="var(--primary)"
+                  strokeDasharray="3 3"
+                  strokeWidth="1.5"
+                  opacity="0.6"
+                />
+              )}
+
+              {/* Data Point Markers on Lines */}
+              {lineChartProps.series.map(s => {
+                if (!s.active) return null;
+                const isDimmed = activeFocus && activeFocus !== s.key;
+                return (
+                  <g key={`dots-${s.key}`} opacity={isDimmed ? 0.25 : 1}>
+                    {s.data.map((pt, idx) => {
+                      const isHovered = hoveredTrendIdx === idx;
+                      const r = isHovered 
+                        ? (s.pointRadius ? s.pointRadius + 2.5 : 6.5) 
+                        : (s.pointRadius || 4);
+                      return (
+                        <circle
+                          key={idx}
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={r}
+                          fill={s.color}
+                          stroke="#ffffff"
+                          strokeWidth={isHovered ? 2 : 1.2}
+                          style={{ transition: 'r 0.15s ease, stroke-width 0.15s ease' }}
+                        />
+                      );
+                    })}
                   </g>
+                );
+              })}
+
+              {/* X Axis Interval Labels */}
+              {lineChartProps.intervals.map((intv, idx) => {
+                const x = lineChartProps.getX(idx);
+                const isHovered = hoveredTrendIdx === idx;
+                return (
+                  <text
+                    key={idx}
+                    x={x}
+                    y={lineChartProps.height - 14}
+                    textAnchor="middle"
+                    fill={isHovered ? 'var(--text-primary)' : 'var(--text-secondary)'}
+                    fontSize="11.5"
+                    fontWeight={isHovered ? '700' : '600'}
+                  >
+                    {intv.label}
+                  </text>
+                );
+              })}
+
+              {/* Interactive Hover Catcher Slices */}
+              {lineChartProps.intervals.map((intv, idx) => {
+                const colW = lineChartProps.intervals.length > 1
+                  ? lineChartProps.plotW / (lineChartProps.intervals.length - 1)
+                  : lineChartProps.plotW;
+                const colX = lineChartProps.getX(idx) - colW / 2;
+                return (
+                  <rect
+                    key={idx}
+                    x={Math.max(lineChartProps.padLeft, colX)}
+                    y={lineChartProps.padTop}
+                    width={colW}
+                    height={lineChartProps.plotH + 30}
+                    fill="transparent"
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={() => setHoveredTrendIdx(idx)}
+                    onMouseLeave={() => setHoveredTrendIdx(null)}
+                  />
                 );
               })}
             </svg>
           </div>
 
-          <div className="chart-legend-row">
-            <div className="chart-legend-item">
-              <span className="chart-legend-dot" style={{ background: 'linear-gradient(135deg, #087f8c, #006672)', borderRadius: '4px' }}></span>
-              <span>Sales Turnover (राजस्व)</span>
+          {/* Clean Legend Toggles */}
+          <div className="trend-lines-legend">
+            {lineChartProps.series.map(s => (
+              <button
+                key={s.key}
+                type="button"
+                className={`trend-legend-pill ${s.active ? 'active' : 'inactive'}`}
+                style={{ '--pill-color': s.color }}
+                onClick={() => setVisibleLines(prev => ({ ...prev, [s.key]: !prev[s.key] }))}
+              >
+                <span 
+                  className="trend-legend-swatch-line" 
+                  style={{ display: 'inline-flex', alignItems: 'center', width: 22, height: 10 }}
+                >
+                  <svg width="22" height="10" viewBox="0 0 22 10">
+                    <line 
+                      x1="1" y1="5" x2="21" y2="5" 
+                      stroke={s.active ? s.color : 'var(--text-muted)'} 
+                      strokeWidth={s.strokeWidth >= 3.5 ? 3.5 : 2.5} 
+                      strokeDasharray={s.strokeDash || undefined} 
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                <span className="trend-legend-text">{s.name} ({s.nameHi})</span>
+                <span className="trend-legend-status">{s.active ? 'VISIBLE' : 'HIDDEN'}</span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Section 2: Period Comparison Value Cards Grid (Picture 2) responding dynamically to Day / Week / Month */}
+        <motion.div className="analytics-card comparison-chart-section" variants={itemVariants}>
+          <div className="analytics-card-header">
+            <div>
+              <div className="analytics-card-title">
+                <Scale size={19} color="#8b5cf6" /> Financial Metrics Comparison — {trendVm.config.name}
+              </div>
+              <div className="analytics-card-subtitle">
+                Comparing <strong>{trendVm.config.periodLabel}</strong> (Current) vs <strong>{trendVm.previousPeriodLabel}</strong> (Previous)
+              </div>
             </div>
-            <div className="chart-legend-item">
-              <span className="chart-legend-dot" style={{ background: 'var(--chart-track, #e2e8f0)', borderRadius: '4px' }}></span>
-              <span>Capacity Track (क्षमता)</span>
+            <div className="comp-timeframe-tag">
+              <span>● Showing {trendTf === 'daily' ? 'Day-over-Day' : trendTf === 'weekly' ? 'Week-over-Week' : 'Month-over-Month'} Comparison</span>
+            </div>
+          </div>
+
+          {/* Comparison Value Cards Grid (Picture 2) */}
+          <div className="comparison-values-grid">
+            {(trendVm.comparisonBars || []).map((bar, idx) => {
+              const changePct = bar.previous !== 0
+                ? Math.round(((bar.current - bar.previous) / Math.abs(bar.previous)) * 100)
+                : (bar.current > 0 ? 100 : 0);
+              const isUp = changePct >= 0;
+              return (
+                <div key={idx} className="comparison-value-card" style={{ '--comp-accent': bar.color }}>
+                  <div className="comp-val-header">
+                    <span className="comp-val-label">{bar.label}</span>
+                    <span className={`comp-change-badge ${isUp ? 'up' : 'down'}`}>
+                      {isUp ? '↑' : '↓'} {Math.abs(changePct)}%
+                    </span>
+                  </div>
+                  <div className="comp-val-row">
+                    <div className="comp-val-block current">
+                      <span className="comp-val-tag">Current</span>
+                      <span className="comp-val-amount">{fmt(bar.current)}</span>
+                    </div>
+                    <div className="comp-val-divider"></div>
+                    <div className="comp-val-block previous">
+                      <span className="comp-val-tag">Previous</span>
+                      <span className="comp-val-amount">{fmt(bar.previous)}</span>
+                    </div>
+                  </div>
+                  <div className="comp-mini-bar-track">
+                    <motion.div className="comp-mini-bar-current"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, Math.max(bar.current, bar.previous) > 0 ? (Math.abs(bar.current) / Math.max(Math.abs(bar.current), Math.abs(bar.previous))) * 100 : 0)}%` }}
+                      style={{ background: bar.color }}
+                    />
+                    <motion.div className="comp-mini-bar-previous"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, Math.max(bar.current, bar.previous) > 0 ? (Math.abs(bar.previous) / Math.max(Math.abs(bar.current), Math.abs(bar.previous))) * 100 : 0)}%` }}
+                      style={{ background: bar.color, opacity: 0.3 }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Activity Counts Comparison Row */}
+          <div className="comparison-stats-strip">
+            <div className="comp-strip-title">
+              <Users size={15} color="#059669" /> Activity Counts Comparison
+            </div>
+            <div className="comp-stats-row">
+              {(trendVm.comparisonStats || []).map((stat, idx) => {
+                const diff = stat.current - stat.previous;
+                const isUp = diff >= 0;
+                return (
+                  <div key={idx} className="comp-stat-cell">
+                    <span className="comp-stat-label">{stat.label}</span>
+                    <div className="comp-stat-values">
+                      <span className="comp-stat-cur">{stat.isPercent ? `${stat.current}%` : stat.current}</span>
+                      <span className="comp-stat-vs">vs</span>
+                      <span className="comp-stat-prev">{stat.isPercent ? `${stat.previous}%` : stat.previous}</span>
+                    </div>
+                    <span className={`comp-stat-delta ${isUp ? 'up' : 'down'}`}>
+                      {isUp ? '+' : ''}{stat.isPercent ? `${diff}pp` : diff}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </motion.div>

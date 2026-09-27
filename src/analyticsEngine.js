@@ -48,6 +48,60 @@ function isDateInTimeframe(itemDate, tf) {
   return true;
 }
 
+// Helper: Check if an item's date falls within the PREVIOUS period (for comparison)
+function isDateInPreviousTimeframe(itemDate, tf) {
+  if (!itemDate) return false;
+  const now = new Date();
+
+  if (tf === 'daily') {
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return (
+      itemDate.getDate() === yesterday.getDate() &&
+      itemDate.getMonth() === yesterday.getMonth() &&
+      itemDate.getFullYear() === yesterday.getFullYear()
+    );
+  }
+
+  if (tf === 'weekly') {
+    const diffMs = now.getTime() - itemDate.getTime();
+    return diffMs > 7 * 24 * 60 * 60 * 1000 && diffMs <= 14 * 24 * 60 * 60 * 1000;
+  }
+
+  if (tf === 'monthly') {
+    const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    return (
+      itemDate.getMonth() === prevMonth &&
+      itemDate.getFullYear() === prevYear
+    );
+  }
+
+  if (tf === 'yearly') {
+    return itemDate.getFullYear() === now.getFullYear() - 1;
+  }
+
+  return false;
+}
+
+// Helper: Get label for the previous period
+function getPreviousPeriodLabel(tf) {
+  const now = new Date();
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  if (tf === 'daily') {
+    const y = new Date(now); y.setDate(y.getDate() - 1);
+    return `Yesterday (${y.getDate()} ${monthNames[y.getMonth()]})`;
+  }
+  if (tf === 'weekly') return 'Previous 7 Days';
+  if (tf === 'monthly') {
+    const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    return `${monthNames[prevMonth]} ${prevYear}`;
+  }
+  if (tf === 'yearly') return `Year ${now.getFullYear() - 1}`;
+  return 'Previous Period';
+}
+
 export function getAnalyticsViewModel(timeframe = 'monthly', store) {
   const validTimeframes = ['daily', 'weekly', 'monthly', 'yearly'];
   const tf = validTimeframes.includes(timeframe) ? timeframe : 'monthly';
@@ -198,29 +252,48 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
         const h = getItemHour(exp);
         return h !== null ? (h >= b.start && h < b.end) : false;
       });
+      const bCash = periodCashTxns.filter(t => {
+        const h = getItemHour(t);
+        return h !== null ? (h >= b.start && h < b.end) : false;
+      });
 
       const intvRev = bBills.reduce((s, bill) => s + Number(bill.totalRupees || 0), 0) +
                       bQuotes.reduce((s, q) => s + Number(q.grandTotal || 0), 0);
       const intvExp = bExpenses.reduce((s, exp) => s + Number(exp.amount || 0), 0);
+      const intvCash = bCash.filter(t => t.type === 'IN').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const intvPaid = bBills.reduce((s, b) => s + (Number(b.paidAmount) || (b.paymentStatus !== 'Due' ? Number(b.totalRupees || 0) : 0)), 0);
+      const finalCashIn = Math.max(intvCash, intvPaid);
 
       return {
         label: b.label,
-        revenue: intvRev,
+        income: intvRev,
         expense: intvExp,
-        net: intvRev - intvExp
+        profit: intvRev - intvExp,
+        balance: Math.max(0, finalCashIn - intvExp),
+        revenue: intvRev,
+        net: intvRev - intvExp,
+        cashIn: finalCashIn
       };
     });
 
     // If items had no hourly timestamps, attribute to first business bucket rather than losing data
     const totalBucketedRev = chartIntervals.reduce((s, i) => s + i.revenue, 0);
     const totalBucketedExp = chartIntervals.reduce((s, i) => s + i.expense, 0);
+    const totalBucketedCash = chartIntervals.reduce((s, i) => s + (i.cashIn || 0), 0);
     if (totalBucketedRev === 0 && revenue > 0) {
+      chartIntervals[1].income = revenue;
       chartIntervals[1].revenue = revenue;
+      chartIntervals[1].profit += revenue;
       chartIntervals[1].net += revenue;
     }
     if (totalBucketedExp === 0 && totalExpenses > 0) {
       chartIntervals[1].expense = totalExpenses;
+      chartIntervals[1].profit -= totalExpenses;
       chartIntervals[1].net -= totalExpenses;
+    }
+    if (totalBucketedCash === 0 && cashIn > 0) {
+      chartIntervals[1].cashIn = cashIn;
+      chartIntervals[1].balance = Math.max(0, cashIn - totalExpenses);
     }
   } else if (tf === 'weekly') {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -240,16 +313,27 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
         const qd = parseItemDate(q.date);
         return qd && qd.getDate() === d.getDate() && qd.getMonth() === d.getMonth() && qd.getFullYear() === d.getFullYear();
       });
+      const dayCash = periodCashTxns.filter(t => {
+        const td = parseItemDate(t.date);
+        return td && td.getDate() === d.getDate() && td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear();
+      });
 
       const dayRev = dayBills.reduce((s, b) => s + Number(b.totalRupees || 0), 0) +
         dayQuotes.reduce((s, q) => s + Number(q.grandTotal || 0), 0);
       const dayExpenses = dayExp.reduce((s, e) => s + Number(e.amount || 0), 0);
+      const dayCashIn = dayCash.filter(t => t.type === 'IN').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const dayPaid = dayBills.reduce((s, b) => s + (Number(b.paidAmount) || (b.paymentStatus !== 'Due' ? Number(b.totalRupees || 0) : 0)), 0);
+      const finalCash = Math.max(dayCashIn, dayPaid);
 
       chartIntervals.push({
         label: dayLabel,
-        revenue: dayRev,
+        income: dayRev,
         expense: dayExpenses,
-        net: dayRev - dayExpenses
+        profit: dayRev - dayExpenses,
+        balance: Math.max(0, finalCash - dayExpenses),
+        revenue: dayRev,
+        net: dayRev - dayExpenses,
+        cashIn: finalCash
       });
     }
   } else if (tf === 'monthly') {
@@ -272,16 +356,27 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
         const d = parseItemDate(q.date);
         return d && d.getDate() >= w.startDay && d.getDate() <= w.endDay;
       });
+      const wCash = periodCashTxns.filter(t => {
+        const td = parseItemDate(t.date);
+        return td && td.getDate() >= w.startDay && td.getDate() <= w.endDay;
+      });
 
       const wRev = wBills.reduce((s, b) => s + Number(b.totalRupees || 0), 0) +
         wQuotes.reduce((s, q) => s + Number(q.grandTotal || 0), 0);
       const wExpenses = wExp.reduce((s, e) => s + Number(e.amount || 0), 0);
+      const wCashIn = wCash.filter(t => t.type === 'IN').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const wPaid = wBills.reduce((s, b) => s + (Number(b.paidAmount) || (b.paymentStatus !== 'Due' ? Number(b.totalRupees || 0) : 0)), 0);
+      const finalWCash = Math.max(wCashIn, wPaid);
 
       return {
         label: w.label,
-        revenue: wRev,
+        income: wRev,
         expense: wExpenses,
-        net: wRev - wExpenses
+        profit: wRev - wExpenses,
+        balance: Math.max(0, finalWCash - wExpenses),
+        revenue: wRev,
+        net: wRev - wExpenses,
+        cashIn: finalWCash
       };
     });
   } else {
@@ -300,16 +395,27 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
         const d = parseItemDate(q.date);
         return d && d.getMonth() === mIdx;
       });
+      const mCash = periodCashTxns.filter(t => {
+        const td = parseItemDate(t.date);
+        return td && td.getMonth() === mIdx;
+      });
 
       const mRev = mBills.reduce((s, b) => s + Number(b.totalRupees || 0), 0) +
         mQuotes.reduce((s, q) => s + Number(q.grandTotal || 0), 0);
       const mExpenses = mExp.reduce((s, e) => s + Number(e.amount || 0), 0);
+      const mCashIn = mCash.filter(t => t.type === 'IN').reduce((s, t) => s + Number(t.amount || 0), 0);
+      const mPaid = mBills.reduce((s, b) => s + (Number(b.paidAmount) || (b.paymentStatus !== 'Due' ? Number(b.totalRupees || 0) : 0)), 0);
+      const finalMCash = Math.max(mCashIn, mPaid);
 
       return {
         label: mName,
-        revenue: mRev,
+        income: mRev,
         expense: mExpenses,
-        net: mRev - mExpenses
+        profit: mRev - mExpenses,
+        balance: Math.max(0, finalMCash - mExpenses),
+        revenue: mRev,
+        net: mRev - mExpenses,
+        cashIn: finalMCash
       };
     });
   }
@@ -500,6 +606,70 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
     }
   ];
 
+  // 18. Period-over-Period Comparison Data
+  // Compute the same KPIs for the PREVIOUS period to enable comparison charts
+  const prevBills = bills.filter(b => isDateInPreviousTimeframe(parseItemDate(b.date), tf));
+  const prevExpensesAll = expenses.filter(e => isDateInPreviousTimeframe(parseItemDate(e.date), tf));
+  const prevApprovedExpenses = prevExpensesAll.filter(e => e.status === 'Approved');
+  const prevCashTxns = cashTxns.filter(t => isDateInPreviousTimeframe(parseItemDate(t.date), tf));
+  const prevLeadsAll = leads.filter(l => isDateInPreviousTimeframe(parseItemDate(l.lastContactDate || l.createdAt), tf));
+  const prevQuotesAll = quotes.filter(q => isDateInPreviousTimeframe(parseItemDate(q.date), tf));
+  const prevDemosAll = demos.filter(d => isDateInPreviousTimeframe(parseItemDate(d.date), tf));
+
+  const prevBilledRupees = prevBills.reduce((sum, b) => sum + Number(b.totalRupees || 0), 0);
+  const prevPaidRupees = prevBills.reduce((sum, b) => {
+    const tot = Number(b.totalRupees || 0);
+    if (b.paymentStatus === 'Due') return sum;
+    if (b.paymentStatus === 'Partial' && b.paidAmount !== undefined) {
+      return sum + Math.min(tot, Math.max(0, Number(b.paidAmount) || 0));
+    }
+    return sum + (b.paidAmount ? Number(b.paidAmount) : tot);
+  }, 0);
+  const prevQuoteRevenue = prevQuotesAll.reduce((sum, q) => sum + Number(q.grandTotal || 0), 0);
+  const prevRevenue = Math.max(prevQuoteRevenue + prevBilledRupees,
+    prevCashTxns.filter(t => t.type === 'IN').reduce((sum, t) => sum + Number(t.amount || 0), 0));
+  const prevTotalExpenses = prevApprovedExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+
+  let prevCOGS = 0;
+  for (const q of prevQuotesAll) {
+    const tr = tractors.find(t => t.id === q.tractorId || t.model === q.tractorModel || (q.tractorName && q.tractorName.includes(t.model)));
+    if (tr && tr.dealerPurchaseCost) prevCOGS += Number(tr.dealerPurchaseCost);
+  }
+  const prevGrossProfit = Math.max(0, prevRevenue - prevCOGS);
+  const prevNetProfit = prevGrossProfit - prevTotalExpenses;
+
+  const prevCashIn = prevCashTxns.filter(t => t.type === 'IN').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const prevCashOut = prevCashTxns.filter(t => t.type === 'OUT').reduce((sum, t) => sum + Number(t.amount || 0), 0);
+  const prevNetCashFlow = prevCashIn - prevCashOut;
+
+  const prevCollectionRate = prevBilledRupees > 0 ? Math.round((prevPaidRupees / prevBilledRupees) * 100) : (prevBills.length > 0 ? 100 : 0);
+  const prevTractorsDelivered = prevQuotesAll.filter(q => q.status === 'Delivered' || q.status === 'Closed' || q.delivered === true).length +
+    prevBills.filter(b => b.vehicle || (b.items && b.items.some(i => (i.description || '').toLowerCase().includes('tractor')))).length;
+
+  const previousPeriodLabel = getPreviousPeriodLabel(tf);
+
+  // Comparison bars data: each metric has current vs previous
+  const comparisonBars = [
+    { label: 'Revenue', labelHi: 'राजस्व', current: revenue, previous: prevRevenue, color: '#10b981', icon: 'revenue' },
+    { label: 'Expenses', labelHi: 'खर्चे', current: totalExpenses, previous: prevTotalExpenses, color: '#ef4444', icon: 'expenses' },
+    { label: 'Net Profit', labelHi: 'शुद्ध लाभ', current: netProfit, previous: prevNetProfit, color: '#3b82f6', icon: 'profit' },
+    { label: 'Cash Inflow', labelHi: 'नकद आमद', current: cashIn, previous: prevCashIn, color: '#06b6d4', icon: 'cashIn' },
+    { label: 'Cash Outflow', labelHi: 'नकद निकासी', current: cashOut, previous: prevCashOut, color: '#f97316', icon: 'cashOut' },
+    { label: 'Billed Amount', labelHi: 'बिल राशि', current: billedRupees, previous: prevBilledRupees, color: '#8b5cf6', icon: 'billed' },
+    { label: 'Collected', labelHi: 'वसूली', current: paidRupees, previous: prevPaidRupees, color: '#14b8a6', icon: 'collected' },
+    { label: 'Gross Profit', labelHi: 'सकल लाभ', current: grossProfit, previous: prevGrossProfit, color: '#22c55e', icon: 'gross' },
+  ];
+
+  // Comparison stats summary
+  const comparisonStats = [
+    { label: 'Bills', current: billsCount, previous: prevBills.length },
+    { label: 'Leads', current: totalLeads, previous: prevLeadsAll.length },
+    { label: 'Demos', current: totalDemos, previous: prevDemosAll.length },
+    { label: 'Quotes', current: totalQuotes, previous: prevQuotesAll.length },
+    { label: 'Deliveries', current: tractorsDelivered, previous: prevTractorsDelivered },
+    { label: 'Collection %', current: collectionRate, previous: prevCollectionRate, isPercent: true },
+  ];
+
   return {
     timeframe: tf,
     config: conf,
@@ -531,7 +701,17 @@ export function getAnalyticsViewModel(timeframe = 'monthly', store) {
     topVillages,
     funnelSteps,
     statementRows,
-    cogs: costOfGoodsSold
+    cogs: costOfGoodsSold,
+    // Comparison data
+    previousPeriodLabel,
+    comparisonBars,
+    comparisonStats,
+    prevRevenue,
+    prevTotalExpenses,
+    prevNetProfit,
+    prevCashIn,
+    prevCashOut,
+    prevNetCashFlow,
   };
 }
 
