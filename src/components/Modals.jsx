@@ -1,4 +1,5 @@
 import React from 'react';
+import { printBillWithUniqueTitle } from '../utils/billPrintUtils.js';
 
 export function Modals() {
   return (
@@ -595,9 +596,9 @@ export function Modals() {
                 }
               }
               document.body.classList.add('is-printing-bill', 'bill-modal-active', 'modal-open');
-              window.print();
+              printBillWithUniqueTitle(billEl);
             }} style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)' }}>
-              🖨️ Print Bill (प्रिंट करें)
+              🖨️ Print / Download PDF (प्रिंट / डाउनलोड करें)
             </button>
           </div>
         </div>

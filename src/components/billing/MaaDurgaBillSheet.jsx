@@ -160,7 +160,13 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
       </div>
 
       {/* Authentic Physical Bill Slip Card */}
-      <div className="maa-durga-slip" id="printableBillSlip">
+      <div 
+        className="maa-durga-slip" 
+        id="printableBillSlip"
+        data-bill-number={billNumber}
+        data-customer-name={customerName}
+        data-bill-date={date}
+      >
         {/* Slip Top Header */}
         <div className="slip-ganesh">|| श्री गणेशाय नमः ||</div>
         <div className="slip-tag-estimate">ESTIMATE / CASH MEMO</div>

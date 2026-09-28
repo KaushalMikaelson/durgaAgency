@@ -1,6 +1,7 @@
 import { supabaseApi } from './services/supabaseApi.js';
 import { supabase } from './lib/supabase.js';
 import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './analyticsEngine.js';
+import { getBillUniqueFileName, printBillWithUniqueTitle } from './utils/billPrintUtils.js';
 
 // Maa Durga Engineering - Unified Self-Contained Bundle
 // Works seamlessly in both HTTP and local file:// browser modes without CORS limitations
@@ -1765,9 +1766,16 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
 
   if (typeof window !== 'undefined' && !window._hasBoundBillPrintAutoFit) {
     window._hasBoundBillPrintAutoFit = true;
+    let savedDocTitle = '';
     window.addEventListener('beforeprint', () => {
       const bill = document.getElementById('printableMddBill');
-      if (bill) autoFitBillToOnePage(bill);
+      if (bill) {
+        autoFitBillToOnePage(bill);
+        if (!document.title.startsWith('Bill_')) {
+          savedDocTitle = document.title;
+          document.title = getBillUniqueFileName(bill);
+        }
+      }
     });
     window.addEventListener('afterprint', () => {
       const bill = document.getElementById('printableMddBill');
@@ -1776,6 +1784,10 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
         bill.style.transformOrigin = '';
         bill.style.marginBottom = '';
         bill.style.overflow = '';
+      }
+      if (savedDocTitle) {
+        document.title = savedDocTitle;
+        savedDocTitle = '';
       }
     });
   }
@@ -1939,7 +1951,7 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
     const words = isPureBlank ? '' : (b.amountWords || (b.totalRupees ? numberToIndianWords(b.totalRupees) : ''));
 
     return `
-      <div class="mdd-bill-sheet ${densityClass} ${sheetModeClass}" id="printableMddBill" data-item-count="${itemCount}" style="${sheetStyle}">
+      <div class="mdd-bill-sheet ${densityClass} ${sheetModeClass}" id="printableMddBill" data-item-count="${itemCount}" data-bill-number="${billNumber}" data-customer-name="${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}" data-bill-date="${rawDate}" data-bill-name="${billName}" style="${sheetStyle}">
         <!-- Top Bar with ESTIMATE and Phone -->
         <div class="mdd-top-bar">
           <div class="mdd-estimate-pill">ESTIMATE</div>
@@ -3694,8 +3706,8 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
               <button class="quick-action-btn btn-sm btn-primary" id="tsbSaveBillBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
                 💾 Save Bill
               </button>
-              <button class="quick-action-btn btn-sm btn-outline" id="tsbPrintBillBtn" style="background:#ffffff; color:#1e3a8a; border-color:#2563eb; font-weight:700;">
-                🖨️ Print Official Bill
+              <button class="quick-action-btn btn-sm btn-outline" id="tsbPrintBillBtn" style="background:#ffffff; color:#1e3a8a; border-color:#2563eb; font-weight:700;" title="Print or Download as PDF with unique filename">
+                🖨️ Print / Download PDF
               </button>
             </div>
           </div>
@@ -3765,7 +3777,7 @@ import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './anal
             const billEl = document.getElementById('printableMddBill');
             if (billEl) autoFitBillToOnePage(billEl);
             document.body.classList.add('is-printing-bill', 'bill-modal-active', 'modal-open');
-            window.print();
+            printBillWithUniqueTitle(currentBill || billEl);
           };
         }
         if (openFormBtn) {

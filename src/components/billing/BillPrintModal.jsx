@@ -1,31 +1,45 @@
 // Print Modal and Layout for Maa Durga Diesel Bill Slip
 import React from 'react';
-import { Printer, X } from 'lucide-react';
+import { Printer, Download, X } from 'lucide-react';
 import { numberToHindiWords } from '../../utils/numberToWords.js';
 import { formatToDMY } from '../../utils/dateUtils.js';
+import { printBillWithUniqueTitle, getBillUniqueFileName } from '../../utils/billPrintUtils.js';
 
 export function BillPrintModal({ bill, onClose }) {
   if (!bill) return null;
 
+  const fileName = getBillUniqueFileName(bill);
+
   const handlePrint = () => {
-    window.print();
+    printBillWithUniqueTitle(bill);
   };
 
   const words = bill.amountWords || numberToHindiWords(bill.totalRupees || 0);
 
   return (
     <div className="bill-print-modal-overlay">
-      <div className="bill-print-modal-actions no-print">
-        <button className="btn btn-primary" onClick={handlePrint}>
-          <Printer size={16} /> Print Now
-        </button>
-        <button className="btn btn-secondary" onClick={onClose}>
-          <X size={16} /> Close
-        </button>
+      <div className="bill-print-modal-actions no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+          📄 File name: <strong style={{ color: '#1e3a8a' }}>{fileName}.pdf</strong>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="btn btn-primary" onClick={handlePrint} title={`Download / Save as ${fileName}.pdf`}>
+            <Printer size={16} /> Print / Download PDF
+          </button>
+          <button className="btn btn-secondary" onClick={onClose}>
+            <X size={16} /> Close
+          </button>
+        </div>
       </div>
 
       <div className="printable-page-container">
-        <div className="maa-durga-slip print-only-target">
+        <div 
+          className="maa-durga-slip print-only-target"
+          data-bill-number={bill.billNumber}
+          data-customer-name={bill.customerName}
+          data-bill-date={bill.date}
+          data-bill-name={bill.billName}
+        >
           <div className="slip-ganesh">|| श्री गणेशाय नमः ||</div>
           <div className="slip-tag-estimate">ESTIMATE / CASH MEMO</div>
 

@@ -10,6 +10,7 @@ import { queryBusinessAdvisor } from './aiAdvisor.js';
 import { DURGA_MAA_LOGO } from './logoData.js';
 import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './analyticsEngine.js';
 import { autoDetectExpenseCategory } from './utils/expenseClassifier.js';
+import { getBillUniqueFileName, printBillWithUniqueTitle } from './utils/billPrintUtils.js';
 
 // --- ON-SCREEN TOAST NOTIFICATION SYSTEM ---
 export function showToast(message, type = 'success', title = '') {
@@ -189,9 +190,16 @@ export function autoFitBillToOnePage(billElement) {
 
 if (typeof window !== 'undefined' && !window._hasBoundBillPrintAutoFit) {
   window._hasBoundBillPrintAutoFit = true;
+  let savedDocTitle = '';
   window.addEventListener('beforeprint', () => {
     const bill = document.getElementById('printableMddBill');
-    if (bill) autoFitBillToOnePage(bill);
+    if (bill) {
+      autoFitBillToOnePage(bill);
+      if (!document.title.startsWith('Bill_')) {
+        savedDocTitle = document.title;
+        document.title = getBillUniqueFileName(bill);
+      }
+    }
   });
   window.addEventListener('afterprint', () => {
     const bill = document.getElementById('printableMddBill');
@@ -200,6 +208,10 @@ if (typeof window !== 'undefined' && !window._hasBoundBillPrintAutoFit) {
       bill.style.transformOrigin = '';
       bill.style.marginBottom = '';
       bill.style.overflow = '';
+    }
+    if (savedDocTitle) {
+      document.title = savedDocTitle;
+      savedDocTitle = '';
     }
   });
 }
@@ -363,7 +375,7 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
   const words = isPureBlank ? '' : (b.amountWords || (b.totalRupees ? numberToIndianWords(b.totalRupees) : ''));
 
   return `
-    <div class="mdd-bill-sheet ${densityClass} ${sheetModeClass}" id="printableMddBill" data-item-count="${itemCount}" style="${sheetStyle}">
+    <div class="mdd-bill-sheet ${densityClass} ${sheetModeClass}" id="printableMddBill" data-item-count="${itemCount}" data-bill-number="${billNumber}" data-customer-name="${(b.customerName || '').replace(/^मेसर्स\s*/i, '')}" data-bill-date="${rawDate}" data-bill-name="${billName}" style="${sheetStyle}">
       <!-- Top Bar with ESTIMATE and Phone -->
       <div class="mdd-top-bar">
         <div class="mdd-estimate-pill">ESTIMATE</div>
@@ -4386,8 +4398,8 @@ class TractorOSApp {
             <button class="quick-action-btn btn-sm btn-primary" id="tsbSaveBillBtn" style="background:linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);">
               💾 Save Bill
             </button>
-            <button class="quick-action-btn btn-sm btn-outline" id="tsbPrintBillBtn" style="background:#ffffff; color:#1e3a8a; border-color:#2563eb; font-weight:700;">
-              🖨️ Print Official Bill
+            <button class="quick-action-btn btn-sm btn-outline" id="tsbPrintBillBtn" style="background:#ffffff; color:#1e3a8a; border-color:#2563eb; font-weight:700;" title="Print or Download as PDF with unique filename">
+              🖨️ Print / Download PDF
             </button>
           </div>
         </div>
@@ -4457,7 +4469,7 @@ class TractorOSApp {
           const billEl = document.getElementById('printableMddBill');
           if (billEl) autoFitBillToOnePage(billEl);
           document.body.classList.add('is-printing-bill', 'bill-modal-active', 'modal-open');
-          window.print();
+          printBillWithUniqueTitle(currentBill || billEl);
         };
       }
       if (openFormBtn) {
