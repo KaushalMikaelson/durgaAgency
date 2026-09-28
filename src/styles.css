@@ -2199,20 +2199,34 @@ body {
     display: none !important;
   }
 
+/* Direct bill print container: hidden on screen, visible only during direct print */
+#directBillPrintArea {
+  display: none !important;
+}
+
   /* CRITICAL: Inactive modals must NEVER display during print */
   .modal-backdrop:not(.active) {
     display: none !important;
   }
 
-  /* CRITICAL: When a printable modal (like bill preview or gate pass) is open,
+  /* CRITICAL: When a printable modal or direct bill print is active,
      HIDE the entire background dashboard so ONLY the bill/pass prints */
   body.modal-open .main-layout,
   body.bill-modal-active .main-layout,
   body.is-printing-bill .main-layout,
+  body.is-direct-printing .main-layout,
   body:has(.modal-backdrop.active) .main-layout,
   .app-container:has(.modal-backdrop.active) .main-layout,
   #billPreviewModal.active ~ .main-layout {
     display: none !important;
+  }
+
+  /* Direct Bill Printing: display only the rendered bill sheet without any modal */
+  body.is-direct-printing #directBillPrintArea {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
   }
 
   /* Active modal backdrop becomes a clean, transparent, full-width container */

@@ -135,7 +135,15 @@ export function DashboardPage() {
                         <button
                           className="btn-icon-small"
                           title="Print Bill"
-                          onClick={() => openModal('billPrint', b)}
+                          onClick={() => {
+                            if (window.app?.printBillDirect) {
+                              window.app.printBillDirect(b);
+                            } else if (window.app?.openBillPreviewById) {
+                              window.app.openBillPreviewById(b.id || b.billNumber, true);
+                            } else {
+                              openModal('billPrint', b);
+                            }
+                          }}
                         >
                           <Printer size={15} />
                         </button>

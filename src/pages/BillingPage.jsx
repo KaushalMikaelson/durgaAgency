@@ -204,7 +204,15 @@ export function BillingPage() {
                           <button
                             className="btn-icon-action"
                             title="प्रिंट करें (Print Bill)"
-                            onClick={() => openModal('billPrint', bill)}
+                            onClick={() => {
+                              if (window.app?.printBillDirect) {
+                                window.app.printBillDirect(bill);
+                              } else if (window.app?.openBillPreviewById) {
+                                window.app.openBillPreviewById(bill.id || bill.billNumber, true);
+                              } else {
+                                openModal('billPrint', bill);
+                              }
+                            }}
                           >
                             <Printer size={15} />
                           </button>

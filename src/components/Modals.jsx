@@ -602,7 +602,8 @@ export function Modals() {
             </button>
           </div>
         </div>
-      </div>      {/* Modal 7: Schedule Field Demo */}
+      </div>
+      {/* Modal 7: Schedule Field Demo */}
       <div className="modal-backdrop" id="newDemoModal">
         <div className="modal-box">
           <div className="modal-header">

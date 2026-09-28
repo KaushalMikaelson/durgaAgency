@@ -10,7 +10,7 @@ import { queryBusinessAdvisor } from './aiAdvisor.js';
 import { DURGA_MAA_LOGO } from './logoData.js';
 import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './analyticsEngine.js';
 import { autoDetectExpenseCategory } from './utils/expenseClassifier.js';
-import { getBillUniqueFileName, printBillWithUniqueTitle } from './utils/billPrintUtils.js';
+import { getBillUniqueFileName, printBillWithUniqueTitle, printBillDirectIframe } from './utils/billPrintUtils.js';
 
 // --- ON-SCREEN TOAST NOTIFICATION SYSTEM ---
 export function showToast(message, type = 'success', title = '') {
@@ -192,7 +192,7 @@ if (typeof window !== 'undefined' && !window._hasBoundBillPrintAutoFit) {
   window._hasBoundBillPrintAutoFit = true;
   let savedDocTitle = '';
   window.addEventListener('beforeprint', () => {
-    const bill = document.getElementById('printableMddBill');
+    const bill = document.querySelector('#directBillPrintContainer #printableMddBill') || document.getElementById('printableMddBill');
     if (bill) {
       autoFitBillToOnePage(bill);
       if (!document.title.startsWith('Bill_')) {
@@ -1732,7 +1732,7 @@ class TractorOSApp {
                           ${renderIcon('edit')}
                           <span class="btn-label">Edit</span>
                         </button>
-                        <button class="quick-action-btn btn-sm btn-primary bill-action-btn print-bill-btn" data-bill-id="${billKey}" onclick="window.app.openBillPreviewById('${billKey}')" title="Print Bill">
+                        <button class="quick-action-btn btn-sm btn-primary bill-action-btn print-bill-btn" data-bill-id="${billKey}" onclick="window.app.printBillDirect('${billKey}')" title="Print Bill (प्रिंट करें)">
                           ${renderIcon('print')}
                           <span class="btn-label">Print</span>
                         </button>
@@ -1752,11 +1752,32 @@ class TractorOSApp {
     `;
   }
 
-  openBillPreviewById(billId) {
+  openBillPreviewById(billId, directPrint = true) {
     const bills = store.getBills ? store.getBills() : [];
     let bill = bills.find(b => b && (b.id === billId || String(b.id) === String(billId) || String(b.billNumber) === String(billId)));
     if (!bill && bills.length > 0) bill = bills[0];
-    this.openBillPreviewModal(bill || null, false);
+    if (!bill) return;
+
+    if (directPrint) {
+      this.printBillDirect(bill);
+    } else {
+      this.openBillPreviewModal(bill, false);
+    }
+  }
+
+  printBillDirect(billOrId) {
+    let bill = null;
+    if (billOrId && typeof billOrId === 'object') {
+      bill = billOrId;
+    } else {
+      const bills = store.getBills ? store.getBills() : [];
+      bill = bills.find(b => b && (b.id === billOrId || String(b.id) === String(billOrId) || String(b.billNumber) === String(billOrId)));
+      if (!bill && bills.length > 0) bill = bills[0];
+    }
+    if (!bill) return;
+
+    const billHTML = renderMaaDurgaBillHTML(bill, false, false);
+    printBillDirectIframe(bill, billHTML);
   }
 
   editBill(billId) {
@@ -1811,7 +1832,7 @@ class TractorOSApp {
         e.preventDefault();
         e.stopPropagation();
         const billId = btn.dataset.billId;
-        this.openBillPreviewById(billId);
+        this.printBillDirect(billId);
       };
     });
 
@@ -4114,7 +4135,7 @@ class TractorOSApp {
 
         this.closeAllModals();
         showToast(`Bill #${newBill.billNumber} for ${newBill.customerName} saved!`, 'success', 'Bill Saved');
-        this.openBillPreviewModal(newBill, false, 'filled');
+        this.printBillDirect(newBill);
       };
     }
   }

@@ -1,7 +1,7 @@
 import { supabaseApi } from './services/supabaseApi.js';
 import { supabase } from './lib/supabase.js';
 import { getAnalyticsViewModel, renderBarChartSVG, renderDonutSVG } from './analyticsEngine.js';
-import { getBillUniqueFileName, printBillWithUniqueTitle } from './utils/billPrintUtils.js';
+import { getBillUniqueFileName, printBillWithUniqueTitle, printBillDirectIframe } from './utils/billPrintUtils.js';
 
 // Maa Durga Engineering - Unified Self-Contained Bundle
 // Works seamlessly in both HTTP and local file:// browser modes without CORS limitations
@@ -1768,7 +1768,7 @@ import { getBillUniqueFileName, printBillWithUniqueTitle } from './utils/billPri
     window._hasBoundBillPrintAutoFit = true;
     let savedDocTitle = '';
     window.addEventListener('beforeprint', () => {
-      const bill = document.getElementById('printableMddBill');
+      const bill = document.querySelector('#directBillPrintContainer #printableMddBill') || document.getElementById('printableMddBill');
       if (bill) {
         autoFitBillToOnePage(bill);
         if (!document.title.startsWith('Bill_')) {
@@ -3234,7 +3234,7 @@ import { getBillUniqueFileName, printBillWithUniqueTitle } from './utils/billPri
                             ${renderIcon('edit')}
                             <span class="btn-label">Edit</span>
                           </button>
-                          <button class="quick-action-btn btn-sm btn-primary bill-action-btn print-bill-btn" data-bill-id="${billKey}" onclick="window.app.openBillPreviewById('${billKey}')" title="Print Bill">
+                          <button class="quick-action-btn btn-sm btn-primary bill-action-btn print-bill-btn" data-bill-id="${billKey}" onclick="window.app.printBillDirect('${billKey}')" title="Print Bill (प्रिंट करें)">
                             ${renderIcon('print')}
                             <span class="btn-label">Print</span>
                           </button>
@@ -3254,11 +3254,32 @@ import { getBillUniqueFileName, printBillWithUniqueTitle } from './utils/billPri
       `;
     }
 
-    openBillPreviewById(billId) {
+    openBillPreviewById(billId, directPrint = true) {
       const bills = store.getBills ? store.getBills() : [];
       let bill = bills.find(b => b && (b.id === billId || String(b.id) === String(billId) || String(b.billNumber) === String(billId)));
       if (!bill && bills.length > 0) bill = bills[0];
-      this.openBillPreviewModal(bill || null, false);
+      if (!bill) return;
+
+      if (directPrint) {
+        this.printBillDirect(bill);
+      } else {
+        this.openBillPreviewModal(bill, false);
+      }
+    }
+
+    printBillDirect(billOrId) {
+      let bill = null;
+      if (billOrId && typeof billOrId === 'object') {
+        bill = billOrId;
+      } else {
+        const bills = store.getBills ? store.getBills() : [];
+        bill = bills.find(b => b && (b.id === billOrId || String(b.id) === String(billOrId) || String(b.billNumber) === String(billOrId)));
+        if (!bill && bills.length > 0) bill = bills[0];
+      }
+      if (!bill) return;
+
+      const billHTML = renderMaaDurgaBillHTML(bill, false, false);
+      printBillDirectIframe(bill, billHTML);
     }
 
     editBill(billId) {
@@ -3311,7 +3332,7 @@ import { getBillUniqueFileName, printBillWithUniqueTitle } from './utils/billPri
           e.preventDefault();
           e.stopPropagation();
           const billId = btn.dataset.billId;
-          this.openBillPreviewById(billId);
+          this.printBillDirect(billId);
         };
       });
 
@@ -3422,7 +3443,7 @@ import { getBillUniqueFileName, printBillWithUniqueTitle } from './utils/billPri
 
           this.closeAllModals();
           showToast(`Bill #${newBill.billNumber} for ${newBill.customerName} saved!`, 'success', 'Bill Saved');
-          this.openBillPreviewModal(newBill, false, 'filled');
+          this.printBillDirect(newBill);
         };
       }
     }

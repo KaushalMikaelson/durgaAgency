@@ -97,6 +97,7 @@ export default function App() {
         </div>
       </main>
       <Modals />
+      <div id="directBillPrintArea" aria-hidden="true"></div>
       <div id="toastContainer" className="toast-container" aria-live="polite"></div>
     </div>
   );

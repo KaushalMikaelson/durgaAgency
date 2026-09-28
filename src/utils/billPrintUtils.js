@@ -154,12 +154,14 @@ if (typeof window !== 'undefined' && !window._hasBoundBillPrintTitleListener) {
   let savedOriginalTitle = '';
 
   window.addEventListener('beforeprint', () => {
-    const billEl = document.getElementById('printableMddBill') ||
+    const billEl = document.querySelector('#directBillPrintContainer #printableMddBill') ||
+                   document.getElementById('printableMddBill') ||
                    document.getElementById('printableBillSlip') ||
                    document.querySelector('.maa-durga-slip');
-    const isPrintingBill = document.body.classList.contains('is-printing-bill') ||
+    const isPrintingBill = document.body.classList.contains('is-direct-printing') ||
+                          document.body.classList.contains('is-printing-bill') ||
                           document.getElementById('billPreviewModal')?.classList.contains('active') ||
-                          Boolean(billEl && billEl.offsetParent !== null);
+                          Boolean(billEl);
 
     if (isPrintingBill && billEl && !document.title.startsWith('Bill_')) {
       savedOriginalTitle = document.title;
@@ -175,8 +177,124 @@ if (typeof window !== 'undefined' && !window._hasBoundBillPrintTitleListener) {
   });
 }
 
+/**
+ * Direct silent printing via completely hidden off-screen iframe.
+ * The parent page is NEVER affected, no preview modal or element is ever visible on screen.
+ * 
+ * @param {Object} bill
+ * @param {string} billHTML
+ */
+export function printBillDirectIframe(bill, billHTML) {
+  const originalTitle = document.title;
+  const uniqueTitle = getBillUniqueFileName(bill);
+
+  // Set document title for Save as PDF filename
+  document.title = uniqueTitle;
+
+  // Gather parent stylesheet and style tags
+  const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+    .map(el => el.outerHTML)
+    .join('\n');
+
+  // Create an entirely hidden iframe
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.left = '-99999px';
+  iframe.style.top = '-99999px';
+  iframe.style.width = '794px';
+  iframe.style.height = '1123px';
+  iframe.style.opacity = '0';
+  iframe.style.visibility = 'hidden';
+  iframe.style.pointerEvents = 'none';
+  iframe.style.border = 'none';
+  iframe.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(iframe);
+
+  try {
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <!DOCTYPE html>
+      <html lang="hi">
+        <head>
+          <meta charset="utf-8" />
+          <title>${uniqueTitle}</title>
+          ${styleTags}
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 4mm 6mm 4mm 6mm !important;
+            }
+            html, body {
+              background: #ffffff !important;
+              color: #000000 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              height: auto !important;
+              font-size: 12pt !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .no-print {
+              display: none !important;
+            }
+            .mdd-bill-sheet {
+              box-shadow: none !important;
+              margin: 0 auto !important;
+              width: 100% !important;
+            }
+          </style>
+        </head>
+        <body>
+          ${billHTML}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    const cleanup = () => {
+      document.title = originalTitle;
+      try {
+        if (iframe.parentNode) {
+          iframe.parentNode.removeChild(iframe);
+        }
+      } catch (err) {}
+    };
+
+    setTimeout(() => {
+      try {
+        const billEl = iframe.contentDocument ? iframe.contentDocument.getElementById('printableMddBill') : null;
+        if (billEl) {
+          const actualHeight = billEl.scrollHeight || billEl.offsetHeight;
+          if (actualHeight > 1060) {
+            const scale = Math.max(0.78, Math.floor((1060 / actualHeight) * 1000) / 1000);
+            billEl.style.transform = `scale(${scale})`;
+            billEl.style.transformOrigin = 'top center';
+          }
+        }
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      } catch (err) {
+        console.warn('Iframe print error, fallback to window.print:', err);
+        window.print();
+      } finally {
+        if (iframe.contentWindow) {
+          iframe.contentWindow.addEventListener('afterprint', cleanup);
+        }
+        window.addEventListener('afterprint', cleanup);
+        setTimeout(cleanup, 2500);
+      }
+    }, 200);
+  } catch (e) {
+    console.error('Failed to create print iframe:', e);
+    window.print();
+  }
+}
+
 // Attach to window for global access across vanilla JS and React
 if (typeof window !== 'undefined') {
   window.getBillUniqueFileName = getBillUniqueFileName;
   window.printBillWithUniqueTitle = printBillWithUniqueTitle;
+  window.printBillDirectIframe = printBillDirectIframe;
 }
