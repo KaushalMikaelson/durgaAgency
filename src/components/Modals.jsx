@@ -438,8 +438,8 @@ export function Modals() {
 
       {/* Modal 5: Create New Bill (Maa Durga Diesel) */}
       <div className="modal-backdrop" id="newBillModal">
-        <div className="modal-box large" style={{ maxWidth: '860px' }}>
-          <div className="modal-header">
+        <div className="modal-box large" style={{ maxWidth: '880px', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="modal-header" style={{ flexShrink: 0 }}>
             <div>
               <h3 style={{ margin: 0 }}>माँ दुर्गा डीजल - नया बिल / पर्ची बनाएं (New Bill)</h3>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -448,8 +448,8 @@ export function Modals() {
             </div>
             <button className="modal-close-btn">&times;</button>
           </div>
-          <form id="newBillForm">
-            <div className="modal-body">
+          <form id="newBillForm" style={{ display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, height: '100%', overflow: 'hidden', margin: 0 }}>
+            <div className="modal-body" style={{ overflowY: 'auto', flex: '1 1 auto', minHeight: 0, overscrollBehavior: 'contain' }}>
               <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <div className="form-group">
                   <label className="form-label">बिल नंबर (Unique Bill No.) *</label>
@@ -486,28 +486,37 @@ export function Modals() {
               </div>
 
               {/* Items Header & Add Row */}
-              <div style={{ margin: '14px 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
-                <label className="form-label" style={{ margin: 0, fontWeight: 800 }}>विवरण व मदें (Items & Particulars):</label>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल (High Speed Diesel)', 40, 'Ltr', 94)}>+ 40L Diesel</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('इंजन ऑयल Mobil Delvac 1', 1, 'Can', 2450)}>+ Mobil Delvac</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल फिल्टर किट (Bosch)', 2, 'Pcs', 340)}>+ Diesel Filter</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-primary" onClick={() => window.app?.addBillItemRow()}>+ Add Row</button>
+              <div style={{ margin: '14px 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <div>
+                  <label className="form-label" style={{ margin: 0, fontWeight: 800 }}>विवरण व मदें (Items & Charges):</label>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                    📦 नियमित सामान ऊपर रहेगा • 🔧 सर्विस व अतिरिक्त चार्ज बिल के <strong>निचले हिस्से (Bottom)</strong> में अलग से जुड़ेंगे
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल (High Speed Diesel)', 40, 'Ltr', 94, false)}>+ 40L Diesel</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('इंजन ऑयल Mobil Delvac 1', 1, 'Can', 2450, false)}>+ Mobil Delvac</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल फिल्टर किट (Bosch)', 2, 'Pcs', 340, false)}>+ Diesel Filter</button>
+                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 700 }} onClick={() => window.app?.addBillPresetItem('सर्विस एवं लेबर चार्ज (Service & Labor)', 1, 'Job', 500, true)} title="बिल के निचले हिस्से में सर्विस चार्ज जोड़ें">🔧 + सर्विस चार्ज</button>
+                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 700 }} onClick={() => window.app?.addBillPresetItem('ग्रीसिंग व धुलाई चार्ज (Greasing & Wash)', 1, 'Job', 350, true)} title="बिल के निचले हिस्से में ग्रीसिंग चार्ज जोड़ें">🔧 + ग्रीसिंग</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-primary" onClick={() => window.app?.addBillItemRow('', '', 'Ltr', '', '', '', false)}>+ सामान जोड़ें (Item)</button>
+                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#1e3a8a', color: '#ffffff', fontWeight: 700 }} onClick={() => window.app?.addBillItemRow('', '', 'Job', '', '', '', true)}>🔧 + सर्विस चार्ज (Bottom)</button>
                 </div>
               </div>
 
               {/* Items Table */}
-              <div className="table-responsive" style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+              <div className="table-responsive" style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
                 <table className="data-table" style={{ margin: 0, fontSize: '12.5px' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '45px', textAlign: 'center' }}>क्र० (#)</th>
-                      <th>विवरण (Item Description)</th>
-                      <th style={{ width: '85px', textAlign: 'center' }}>मात्रा (Qty)</th>
-                      <th style={{ width: '85px' }}>इकाई (Unit)</th>
-                      <th style={{ width: '95px', textAlign: 'right' }}>दर (Rate ₹)</th>
-                      <th style={{ width: '110px', textAlign: 'right' }}>रू० (Rupees)</th>
-                      <th style={{ width: '55px', textAlign: 'center' }}>पै०</th>
+                      <th style={{ width: '42px', textAlign: 'center' }}>क्र०</th>
+                      <th style={{ width: '92px' }}>मद प्रकार</th>
+                      <th>विवरण (Item / Service Description)</th>
+                      <th style={{ width: '80px', textAlign: 'center' }}>मात्रा (Qty)</th>
+                      <th style={{ width: '80px' }}>इकाई (Unit)</th>
+                      <th style={{ width: '90px', textAlign: 'right' }}>दर (Rate ₹)</th>
+                      <th style={{ width: '105px', textAlign: 'right' }}>रू० (Rupees)</th>
+                      <th style={{ width: '50px', textAlign: 'center' }}>पै०</th>
                       <th style={{ width: '36px' }}></th>
                     </tr>
                   </thead>
@@ -517,16 +526,27 @@ export function Modals() {
                 </table>
               </div>
 
-              {/* Summary & Words */}
-              <div style={{ marginTop: '14px', padding: '12px', background: 'var(--bg-main)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                <div>
+              {/* Summary & Breakdown */}
+              <div style={{ marginTop: '14px', padding: '12px 14px', background: 'var(--bg-main)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ flex: 1, minWidth: '220px' }}>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>राशि शब्दों में (Amount in Words):</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)' }} id="nbWordsPreview">Zero Rupees Only</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)', marginTop: '2px' }} id="nbWordsPreview">Zero Rupees Only</div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>कुल राशि (Total Amount):</div>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a8a', fontFamily: 'monospace, sans-serif' }}>
-                    <span id="nbTotalRupeesDisplay">₹0</span><span id="nbTotalPaiseDisplay" style={{ fontSize: '15px', color: 'var(--text-muted)' }}>.00</span>
+
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ background: '#ffffff', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', textAlign: 'right' }}>
+                    <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b' }}>📦 सामान कुल (Items):</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', fontFamily: 'monospace, sans-serif' }} id="nbItemsSubtotalDisplay">₹0</div>
+                  </div>
+                  <div style={{ background: '#fffbeb', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fde68a', textAlign: 'right' }}>
+                    <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#92400e' }}>🔧 सर्विस प्रभार (Bottom):</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#b45309', fontFamily: 'monospace, sans-serif' }} id="nbServiceSubtotalDisplay">₹0</div>
+                  </div>
+                  <div style={{ textAlign: 'right', paddingLeft: '4px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>कुल योग (Total):</div>
+                    <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a8a', fontFamily: 'monospace, sans-serif' }}>
+                      <span id="nbTotalRupeesDisplay">₹0</span><span id="nbTotalPaiseDisplay" style={{ fontSize: '15px', color: 'var(--text-muted)' }}>.00</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -554,7 +574,7 @@ export function Modals() {
               </div>
             </div>
 
-            <div className="modal-footer">
+            <div className="modal-footer" style={{ flexShrink: 0 }}>
               <button type="button" className="quick-action-btn btn-outline modal-close-btn">Cancel</button>
               <button type="button" className="quick-action-btn btn-outline" id="nbPreviewOnlyBtn" style={{ borderColor: '#2563eb', color: '#2563eb' }}>
                 🖨️ Preview on Bill Sheet

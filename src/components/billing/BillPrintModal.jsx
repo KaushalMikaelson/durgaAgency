@@ -5,6 +5,12 @@ import { numberToHindiWords } from '../../utils/numberToWords.js';
 import { formatToDMY } from '../../utils/dateUtils.js';
 import { printBillWithUniqueTitle, getBillUniqueFileName } from '../../utils/billPrintUtils.js';
 
+function isServiceItem(item) {
+  if (item.isService !== undefined && item.isService !== null) return Boolean(item.isService);
+  const text = (item.description || item.desc || '').toLowerCase();
+  return /सर्विस|लेबर|चार्ज|ग्रीसिंग|धुलाई|फिटिंग|मैकेनिक|मजदूरी|किराया|भाड़ा|service|labor|charge|fitting|greas|wash|mechanic/i.test(text);
+}
+
 export function BillPrintModal({ bill, onClose }) {
   if (!bill) return null;
 
@@ -15,6 +21,13 @@ export function BillPrintModal({ bill, onClose }) {
   };
 
   const words = bill.amountWords || numberToHindiWords(bill.totalRupees || 0);
+
+  const rawItems = bill.items || [];
+  const regularItems = rawItems.filter(it => !isServiceItem(it));
+  const serviceItems = rawItems.filter(it => isServiceItem(it));
+
+  const regularTotal = regularItems.reduce((sum, it) => sum + (Number(it.amountRupees || it.rupees) || 0), 0);
+  const serviceTotal = serviceItems.reduce((sum, it) => sum + (Number(it.amountRupees || it.rupees) || 0), 0);
 
   return (
     <div className="bill-print-modal-overlay">
@@ -95,27 +108,78 @@ export function BillPrintModal({ bill, onClose }) {
                 </tr>
               </thead>
               <tbody>
-                {(bill.items || []).map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="text-center">{idx + 1}</td>
-                    <td>{item.description}</td>
-                    <td className="text-center">{item.qty || '1'}</td>
-                    <td className="text-right font-mono">
-                      {item.rate ? `₹${Number(item.rate).toLocaleString('en-IN')}` : '-'}
-                    </td>
-                    <td className="text-right font-mono font-bold">
-                      {item.amountRupees > 0 ? Number(item.amountRupees).toLocaleString('en-IN') : '-'}
-                    </td>
-                    <td className="text-center font-mono">
-                      {item.amountPaise > 0 ? String(item.amountPaise).padStart(2, '0') : '00'}
+                {/* Regular Items */}
+                {regularItems.map((item, idx) => {
+                  const amtRupees = item.amountRupees !== undefined ? item.amountRupees : item.rupees;
+                  const amtPaise = item.amountPaise !== undefined ? item.amountPaise : item.paise;
+                  return (
+                    <tr key={`reg-${idx}`}>
+                      <td className="text-center">{idx + 1}</td>
+                      <td>{item.description || item.desc}</td>
+                      <td className="text-center">{item.qty || '1'}</td>
+                      <td className="text-right font-mono">
+                        {item.rate ? `₹${Number(item.rate).toLocaleString('en-IN')}` : '-'}
+                      </td>
+                      <td className="text-right font-mono font-bold">
+                        {amtRupees > 0 ? Number(amtRupees).toLocaleString('en-IN') : '-'}
+                      </td>
+                      <td className="text-center font-mono">
+                        {amtPaise > 0 ? String(amtPaise).padStart(2, '0') : '00'}
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {/* Service Charges Section Divider (Placed at Bottom) */}
+                {serviceItems.length > 0 && (
+                  <tr className="slip-service-divider" style={{ background: '#f8fafc', borderTop: '2px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>
+                    <td style={{ textAlign: 'center', fontWeight: 800, fontSize: '11px', color: '#1e3a8a', padding: '3px 2px' }}>चार्ज</td>
+                    <td colSpan="5" style={{ padding: '3px 8px', color: '#1e3a8a', fontWeight: 700, fontSize: '12px' }}>
+                      🔧 सर्विस व अतिरिक्त प्रभार (Service & Extra Charges - Added at Bottom)
                     </td>
                   </tr>
-                ))}
+                )}
+
+                {/* Service Charges Rows */}
+                {serviceItems.map((item, sIdx) => {
+                  const amtRupees = item.amountRupees !== undefined ? item.amountRupees : item.rupees;
+                  const amtPaise = item.amountPaise !== undefined ? item.amountPaise : item.paise;
+                  return (
+                    <tr key={`serv-${sIdx}`} className="mdd-service-row" style={{ background: '#fffdf5' }}>
+                      <td className="text-center" style={{ fontWeight: 800, color: '#1e3a8a' }}>{regularItems.length + sIdx + 1}</td>
+                      <td>
+                        <span className="mdd-service-badge" style={{ display: 'inline-block', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '3px', fontSize: '10px', padding: '1px 5px', marginRight: '6px', fontWeight: 800 }}>
+                          सर्विस/शुल्क
+                        </span>
+                        <strong>{item.description || item.desc}</strong>
+                      </td>
+                      <td className="text-center font-mono" style={{ fontWeight: 700 }}>{item.qty || '1 Job'}</td>
+                      <td className="text-right font-mono">
+                        {item.rate ? `₹${Number(item.rate).toLocaleString('en-IN')}` : '-'}
+                      </td>
+                      <td className="text-right font-mono font-bold" style={{ color: '#1e3a8a' }}>
+                        {amtRupees > 0 ? Number(amtRupees).toLocaleString('en-IN') : '-'}
+                      </td>
+                      <td className="text-center font-mono">
+                        {amtPaise > 0 ? String(amtPaise).padStart(2, '0') : '00'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan="4" className="text-right font-bold slip-total-label">
-                    कुल योग (TOTAL):
+                  <td colSpan="4" className="text-right font-bold slip-total-label" style={{ verticalAlign: 'middle', padding: '3px 8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+                      {regularItems.length > 0 && serviceItems.length > 0 ? (
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                          <span>📦 सामान कुल: <strong>₹{regularTotal.toLocaleString('en-IN')}</strong></span>
+                          <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
+                          <span>🔧 सर्विस व अन्य प्रभार: <strong>₹{serviceTotal.toLocaleString('en-IN')}</strong></span>
+                        </div>
+                      ) : <div />}
+                      <span style={{ marginLeft: 'auto' }}>कुल योग (TOTAL):</span>
+                    </div>
                   </td>
                   <td className="text-right font-bold font-mono slip-total-value">
                     ₹{Number(bill.totalRupees || 0).toLocaleString('en-IN')}

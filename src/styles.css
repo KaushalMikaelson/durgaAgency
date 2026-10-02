@@ -1039,6 +1039,11 @@ body {
   box-shadow: 0 0 0 3px rgba(15, 77, 42, 0.15);
 }
 
+body.modal-open {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1047,8 +1052,10 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 1000;
   padding: 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal-backdrop.active {
@@ -1066,10 +1073,24 @@ body {
   display: flex;
   flex-direction: column;
   animation: modalPop 0.2s ease-out;
+  overflow: hidden;
+  position: relative;
+  margin: auto;
 }
 
 .modal-box.large {
-  max-width: 860px;
+  max-width: 880px;
+  max-height: 92vh;
+}
+
+/* Ensure any form nested inside modal-box inherits flex column and proper height constraints */
+.modal-box > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 @keyframes modalPop {
@@ -1083,6 +1104,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -1130,8 +1152,29 @@ body {
 
 .modal-body {
   padding: 20px 22px;
-  overflow-y: auto;
-  flex: 1;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .modal-footer {
@@ -1142,6 +1185,7 @@ body {
   gap: 12px;
   background-color: var(--bg-main);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  flex-shrink: 0;
 }
 
 /* Recommendation Result Card Styling */
@@ -1923,6 +1967,93 @@ body {
   box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
 }
 
+/* Service Charges & Bottom Separation Styles */
+.mdd-service-section-divider td {
+  background: #f1f5f9 !important;
+  color: #1e3a8a !important;
+  font-weight: 800 !important;
+  border-top: 1.5px solid #000000 !important;
+  border-bottom: 1.5px solid #000000 !important;
+  padding: 3px 8px !important;
+  line-height: 1.2 !important;
+  font-size: 12px !important;
+  box-sizing: border-box;
+}
+
+.mdd-service-row td {
+  background: rgba(248, 250, 252, 0.7) !important;
+}
+
+.mdd-service-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-right: 6px;
+  letter-spacing: 0.3px;
+  border: 1px solid #c7d2fe;
+}
+
+.mdd-subtotal-breakdown-row td {
+  border-top: 1.5px solid #000000 !important;
+  background: #f8fafc !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+  padding: 3px 8px !important;
+  height: 28px !important;
+  max-height: 28px !important;
+  box-sizing: border-box;
+}
+
+.mdd-subtotal-breakdown-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.mdd-table tfoot .mdd-total-badge {
+  float: none !important;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.nb-service-charge-row {
+  background: #f0f7ff !important;
+}
+
+.nb-service-charge-row td:first-child {
+  border-left: 3px solid #3b82f6 !important;
+}
+
+.mdd-live-type-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.mdd-live-type-btn.is-service {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+
 .mdd-footer {
   margin-top: 14px;
   display: flex;
@@ -2146,6 +2277,86 @@ body {
 .mdd-sheet-table-input::placeholder {
   color: #cbd5e1;
   font-size: 12px;
+}
+
+/* Service / Labor Charge Rows & Divider Styles */
+.mdd-service-section-divider {
+  background: #f1f5f9;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #1e3a8a;
+  letter-spacing: 0.3px;
+  border-top: 1.5px solid #000000 !important;
+  border-bottom: 1.5px solid #000000 !important;
+}
+
+.mdd-service-section-divider td {
+  padding: 3px 6px !important;
+  background: #f1f5f9 !important;
+  color: #1e3a8a !important;
+  font-weight: 800 !important;
+}
+
+.mdd-service-row {
+  background: #fffdf5;
+}
+
+.mdd-service-row:hover {
+  background: #fefce8;
+}
+
+.mdd-service-badge {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 5px;
+  margin-right: 6px;
+  line-height: 1.3;
+  vertical-align: middle;
+}
+
+.mdd-subtotal-breakdown-row {
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  border-top: 1.5px solid #000000 !important;
+}
+
+.mdd-subtotal-breakdown-row td {
+  padding: 3px 6px !important;
+}
+
+.nb-service-charge-row {
+  background: #fffbeb !important;
+  border-left: 3px solid #d97706 !important;
+}
+
+.mdd-live-type-btn {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.mdd-live-type-btn:hover {
+  background: #dbeafe;
+}
+
+.mdd-live-type-btn.is-service {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
 }
 
 @media print {
@@ -2718,6 +2929,7 @@ body {
   .mdd-density-standard .mdd-item-qty-tag { font-size: 13.5px !important; margin-left: 12px !important; }
   .mdd-density-standard .mdd-table tfoot tr td { padding: 5px 9px !important; font-size: 14.5px !important; }
   .mdd-density-standard .mdd-total-badge { font-size: 13.5px !important; padding: 3px 10px !important; }
+  .mdd-density-standard .mdd-subtotal-breakdown-inline { font-size: 11px !important; gap: 6px !important; }
   .mdd-density-standard .mdd-footer { margin-top: 8px !important; gap: 6px !important; }
   .mdd-density-standard .mdd-words-row { font-size: 13px !important; gap: 6px !important; }
   .mdd-density-standard .mdd-sign-row { margin-top: 14px !important; }
@@ -2747,6 +2959,7 @@ body {
   .mdd-density-compact .mdd-item-qty-tag { font-size: 12px !important; margin-left: 10px !important; }
   .mdd-density-compact .mdd-table tfoot tr td { padding: 3px 6px !important; font-size: 12.5px !important; }
   .mdd-density-compact .mdd-total-badge { font-size: 12px !important; padding: 2px 7px !important; }
+  .mdd-density-compact .mdd-subtotal-breakdown-inline { font-size: 10px !important; gap: 5px !important; }
   .mdd-density-compact .mdd-footer { margin-top: 4px !important; gap: 3px !important; }
   .mdd-density-compact .mdd-words-row { font-size: 11.5px !important; gap: 5px !important; }
   .mdd-density-compact .mdd-sign-row { margin-top: 8px !important; }
@@ -2781,6 +2994,7 @@ body {
   .mdd-density-dense .mdd-item-qty-tag { font-size: 8.5pt !important; margin-left: 6px !important; }
   .mdd-density-dense .mdd-table tfoot tr td { padding: 2px 4px !important; font-size: 11px !important; }
   .mdd-density-dense .mdd-total-badge { font-size: 11px !important; padding: 1px 6px !important; }
+  .mdd-density-dense .mdd-subtotal-breakdown-inline { font-size: 9px !important; gap: 4px !important; }
   .mdd-density-dense .mdd-footer { margin-top: 2.5px !important; gap: 2px !important; }
   .mdd-density-dense .mdd-words-row { font-size: 10px !important; gap: 4px !important; }
   .mdd-density-dense .mdd-sign-row { margin-top: 5px !important; }
@@ -2816,6 +3030,7 @@ body {
   .mdd-density-ultra .mdd-item-qty-tag { font-size: 7.5pt !important; margin-left: 4px !important; }
   .mdd-density-ultra .mdd-table tfoot tr td { padding: 1.2px 3px !important; font-size: 10px !important; }
   .mdd-density-ultra .mdd-total-badge { font-size: 9.5px !important; padding: 1px 4px !important; }
+  .mdd-density-ultra .mdd-subtotal-breakdown-inline { font-size: 8px !important; gap: 3px !important; }
   .mdd-density-ultra .mdd-footer { margin-top: 2px !important; gap: 1.5px !important; }
   .mdd-density-ultra .mdd-words-row { font-size: 8.5px !important; }
   .mdd-density-ultra .mdd-sign-row { margin-top: 3px !important; }
@@ -2900,6 +3115,21 @@ body {
     padding: 0 !important;
     font-size: 0 !important;
     line-height: 0 !important;
+  }
+
+  .mdd-bill-sheet.mdd-has-items .mdd-service-section-divider td {
+    background: #f1f5f9 !important;
+    border-top: 1.5px solid #000000 !important;
+    border-bottom: 1.5px solid #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .mdd-bill-sheet.mdd-has-items .mdd-subtotal-breakdown-row td {
+    background: #f8fafc !important;
+    border-top: 1.5px solid #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* Quotation & Gate Pass Sheet */

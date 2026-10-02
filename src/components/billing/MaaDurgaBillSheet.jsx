@@ -5,35 +5,37 @@ import { api } from '../../services/api.js';
 import { numberToHindiWords } from '../../utils/numberToWords.js';
 import { Printer, Save, Plus, Trash2, Zap } from 'lucide-react';
 
-const PRESETS = [
+const REGULAR_PRESETS = [
   {
-    name: "VST Zetor PDI & Delivery Kit",
+    name: "VST Zetor Canopy Kit",
     items: [
-      { description: "हेवी ड्यूटी ट्रैक्टर कैनोपी (Canopy with Frame)", qty: "1", rate: 5200 },
-      { description: "इंजन ऑयल टॉप-अप एवं ग्रीसिंग किट", qty: "1", rate: 1600 }
+      { description: "हेवी ड्यूटी ट्रैक्टर कैनोपी (Canopy with Frame)", qty: "1", rate: 5200, isService: false },
+      { description: "इंजन ऑयल टॉप-अप किट", qty: "1", rate: 1600, isService: false }
     ]
   },
   {
-    name: "50-Hour First Service Kit",
+    name: "Rotavator Blades Set",
     items: [
-      { description: "VST Zetor 50-Hour First Service Kit (Oil & Filter)", qty: "1 सेट", rate: 4200 },
-      { description: "डीजल फिल्टर प्राथमिक एवं द्वितीयक (Dual Filter)", qty: "2 पीस", rate: 450 },
-      { description: "सर्विस एवं लेबर चार्ज (PDI & Greasing)", qty: "1", rate: 500 }
-    ]
-  },
-  {
-    name: "Rotavator Blades Set (42 Pcs)",
-    items: [
-      { description: "बोरोन स्टील रोटावेटर ब्लेड एल-टाइप (Boron Steel L-Type)", qty: "42 पीस", rate: 85 }
+      { description: "बोरोन स्टील रोटावेटर ब्लेड एल-टाइप (Boron Steel L-Type)", qty: "42", rate: 85, isService: false }
     ]
   },
   {
     name: "Diesel Fuel Filter Set",
     items: [
-      { description: "डीजल फिल्टर प्राइमरी व सेकेंडरी सेट (MICO / Bosch)", qty: "2 सेट", rate: 450 }
+      { description: "डीजल फिल्टर प्राइमरी व सेकेंडरी सेट (MICO / Bosch)", qty: "2", rate: 450, isService: false }
     ]
   }
 ];
+
+const SERVICE_PRESETS = [
+  { description: "सर्विस एवं लेबर चार्ज (Service & Labor Charge)", qty: "1 Job", rate: 500, isService: true },
+  { description: "ग्रीसिंग व धुलाई चार्ज (Greasing & Wash)", qty: "1 Job", rate: 350, isService: true },
+  { description: "मैकेनिक चार्ज (Mechanic Inspection Charge)", qty: "1 Job", rate: 400, isService: true }
+];
+
+function isServiceChargeDesc(text = '') {
+  return /सर्विस|लेबर|चार्ज|ग्रीसिंग|धुलाई|फिटिंग|मैकेनिक|मजदूरी|किराया|भाड़ा|service|labor|charge|fitting|greas|wash|mechanic/i.test(text);
+}
 
 export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview }) {
   const { saveBill } = useDealership();
@@ -45,12 +47,25 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
   const [vehicle, setVehicle] = useState(initialData?.vehicle || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
 
-  const [items, setItems] = useState(initialData?.items?.length ? initialData.items : [
-    { slNo: 1, description: '', qty: '1', rate: '', amountRupees: 0, amountPaise: 0 },
-    { slNo: 2, description: '', qty: '', rate: '', amountRupees: 0, amountPaise: 0 },
-    { slNo: 3, description: '', qty: '', rate: '', amountRupees: 0, amountPaise: 0 },
-    { slNo: 4, description: '', qty: '', rate: '', amountRupees: 0, amountPaise: 0 }
-  ]);
+  const [items, setItems] = useState(() => {
+    if (initialData?.items?.length) {
+      return initialData.items.map((it, idx) => ({
+        slNo: idx + 1,
+        description: it.description || it.desc || '',
+        qty: it.qty || '1',
+        rate: it.rate || '',
+        amountRupees: it.amountRupees !== undefined ? it.amountRupees : (it.rupees || 0),
+        amountPaise: it.amountPaise !== undefined ? it.amountPaise : (it.paise || 0),
+        isService: it.isService !== undefined ? Boolean(it.isService) : isServiceChargeDesc(it.description || it.desc)
+      }));
+    }
+    return [
+      { slNo: 1, description: '', qty: '1', rate: '', amountRupees: 0, amountPaise: 0, isService: false },
+      { slNo: 2, description: '', qty: '', rate: '', amountRupees: 0, amountPaise: 0, isService: false },
+      { slNo: 3, description: '', qty: '', rate: '', amountRupees: 0, amountPaise: 0, isService: false },
+      { slNo: 4, description: '', qty: '', rate: '', amountRupees: 0, amountPaise: 0, isService: false }
+    ];
+  });
 
   // Load next auto-incrementing bill number if creating new bill
   useEffect(() => {
@@ -66,6 +81,10 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
     setItems((prev) => {
       const next = [...prev];
       const item = { ...next[index], [field]: value };
+
+      if (field === 'description' && item.isService === undefined) {
+        item.isService = isServiceChargeDesc(value);
+      }
 
       // Compute amount if qty and rate are numeric
       const numericQty = parseFloat(String(item.qty).replace(/[^0-9.]/g, '')) || 1;
@@ -84,10 +103,24 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
     });
   };
 
-  const addRow = () => {
+  const toggleRowService = (index) => {
+    setItems((prev) => {
+      const next = [...prev];
+      const cur = next[index];
+      const nextIsService = !cur.isService;
+      next[index] = {
+        ...cur,
+        isService: nextIsService,
+        qty: cur.qty || (nextIsService ? '1 Job' : '1')
+      };
+      return next;
+    });
+  };
+
+  const addRow = (isService = false) => {
     setItems((prev) => [
       ...prev,
-      { slNo: prev.length + 1, description: '', qty: '', rate: '', amountRupees: 0, amountPaise: 0 }
+      { slNo: prev.length + 1, description: '', qty: isService ? '1 Job' : '', rate: '', amountRupees: 0, amountPaise: 0, isService }
     ]);
   };
 
@@ -96,7 +129,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
     setItems((prev) => prev.filter((_, i) => i !== idx).map((it, i) => ({ ...it, slNo: i + 1 })));
   };
 
-  const applyPreset = (preset) => {
+  const applyRegularPreset = (preset) => {
     const newItems = preset.items.map((it, idx) => {
       const numericQty = parseFloat(String(it.qty).replace(/[^0-9.]/g, '')) || 1;
       const total = numericQty * (it.rate || 0);
@@ -106,11 +139,34 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
         qty: String(it.qty),
         rate: it.rate,
         amountRupees: Math.floor(total),
-        amountPaise: 0
+        amountPaise: 0,
+        isService: false
       };
     });
     setItems(newItems);
   };
+
+  const addServicePreset = (serviceItem) => {
+    setItems((prev) => [
+      ...prev,
+      {
+        slNo: prev.length + 1,
+        description: serviceItem.description,
+        qty: serviceItem.qty,
+        rate: serviceItem.rate,
+        amountRupees: serviceItem.rate,
+        amountPaise: 0,
+        isService: true
+      }
+    ]);
+  };
+
+  // Separate items into regular items and bottom service charges
+  const regularItems = items.filter(it => !it.isService);
+  const serviceItems = items.filter(it => it.isService);
+
+  const regularRupees = regularItems.reduce((sum, it) => sum + (Number(it.amountRupees) || 0), 0);
+  const serviceRupees = serviceItems.reduce((sum, it) => sum + (Number(it.amountRupees) || 0), 0);
 
   // Grand totals
   const totalRupees = items.reduce((sum, it) => sum + (Number(it.amountRupees) || 0), 0);
@@ -120,6 +176,11 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
   const hindiWords = numberToHindiWords(adjustedRupees);
 
   const handleSaveAndPrint = async (shouldPrint = false) => {
+    // Preserve order: Regular items first, service charges at the bottom!
+    const validRegular = regularItems.filter(it => it.description && it.description.trim() !== '');
+    const validService = serviceItems.filter(it => it.description && it.description.trim() !== '');
+    const orderedItems = [...validRegular, ...validService];
+
     const billPayload = {
       id: initialData?.id,
       billNumber: billNumber || '21',
@@ -128,7 +189,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
       address: address.trim(),
       vehicle: vehicle.trim(),
       phone: phone.trim(),
-      items: items.filter(it => it.description && it.description.trim() !== ''),
+      items: orderedItems,
       totalRupees: adjustedRupees,
       totalPaise: adjustedPaise,
       amountWords: hindiWords
@@ -145,18 +206,34 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
   return (
     <div className="maa-durga-bill-wrapper">
       {/* Quick Presets Bar */}
-      <div className="bill-presets-bar">
-        <span className="presets-label"><Zap size={14} /> Quick Presets:</span>
-        {PRESETS.map((p, idx) => (
-          <button
-            key={idx}
-            type="button"
-            className="preset-tag-btn"
-            onClick={() => applyPreset(p)}
-          >
-            {p.name}
-          </button>
-        ))}
+      <div className="bill-presets-bar" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span className="presets-label"><Zap size={14} /> 📦 मुख्य सामान:</span>
+          {REGULAR_PRESETS.map((p, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className="preset-tag-btn"
+              onClick={() => applyRegularPreset(p)}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderTop: '1px dashed #e2e8f0', paddingTop: '6px' }}>
+          <span className="presets-label" style={{ color: '#92400e' }}>🔧 सर्विस/चार्ज (Bottom):</span>
+          {SERVICE_PRESETS.map((s, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className="preset-tag-btn"
+              style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a' }}
+              onClick={() => addServicePreset(s)}
+            >
+              + {s.description.split('(')[0].trim()} (₹{s.rate})
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Authentic Physical Bill Slip Card */}
@@ -257,27 +334,38 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
                 <th style={{ width: '100px' }}>दर<br/><small>Rate</small></th>
                 <th style={{ width: '110px' }}>रुपये<br/><small>Rs.</small></th>
                 <th style={{ width: '45px' }}>पैसे<br/><small>P.</small></th>
+                <th className="no-print" style={{ width: '70px' }}>प्रकार</th>
                 <th className="no-print" style={{ width: '35px' }}></th>
               </tr>
             </thead>
             <tbody>
               {items.map((item, idx) => (
-                <tr key={idx}>
-                  <td className="text-center">{item.slNo}</td>
+                <tr key={idx} className={item.isService ? 'mdd-service-row' : ''} style={{ background: item.isService ? '#fffbeb' : 'transparent' }}>
+                  <td className="text-center" style={{ fontWeight: item.isService ? 800 : 'normal', color: item.isService ? '#1e3a8a' : 'inherit' }}>
+                    {idx + 1}
+                  </td>
                   <td>
-                    <input
-                      type="text"
-                      className="table-input"
-                      placeholder="सामान का विवरण"
-                      value={item.description}
-                      onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {item.isService && (
+                        <span className="mdd-service-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '3px', fontSize: '10px', padding: '1px 5px', fontWeight: 800, whiteSpace: 'nowrap' }}>
+                          सर्विस
+                        </span>
+                      )}
+                      <input
+                        type="text"
+                        className="table-input"
+                        placeholder={item.isService ? 'सर्विस व लेबर चार्ज...' : 'सामान का विवरण'}
+                        value={item.description}
+                        style={{ fontWeight: item.isService ? 700 : 'normal', color: item.isService ? '#1e3a8a' : 'inherit' }}
+                        onChange={(e) => updateItem(idx, 'description', e.target.value)}
+                      />
+                    </div>
                   </td>
                   <td>
                     <input
                       type="text"
                       className="table-input text-center"
-                      placeholder="1"
+                      placeholder={item.isService ? '1 Job' : '1'}
                       value={item.qty}
                       onChange={(e) => updateItem(idx, 'qty', e.target.value)}
                     />
@@ -291,11 +379,22 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
                     />
                   </td>
-                  <td className="text-right font-mono font-bold">
+                  <td className="text-right font-mono font-bold" style={{ color: item.isService ? '#b45309' : 'inherit' }}>
                     {item.amountRupees > 0 ? Number(item.amountRupees).toLocaleString('en-IN') : '-'}
                   </td>
                   <td className="text-center font-mono">
                     {item.amountPaise > 0 ? String(item.amountPaise).padStart(2, '0') : '00'}
+                  </td>
+                  <td className="no-print text-center">
+                    <button
+                      type="button"
+                      className={`mdd-live-type-btn ${item.isService ? 'is-service' : ''}`}
+                      onClick={() => toggleRowService(idx)}
+                      title="सामान / सर्विस बदलें"
+                      style={{ padding: '2px 6px', fontSize: '10.5px' }}
+                    >
+                      {item.isService ? '🔧 सर्विस' : '📦 सामान'}
+                    </button>
                   </td>
                   <td className="no-print text-center">
                     <button
@@ -311,6 +410,20 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
               ))}
             </tbody>
             <tfoot>
+              {regularItems.length > 0 && serviceItems.length > 0 && (
+                <tr style={{ background: '#f1f5f9', fontSize: '12px', fontWeight: 700 }}>
+                  <td colSpan="4" className="text-right" style={{ padding: '3px 8px' }}>
+                    <span>📦 सामान कुल: <strong>₹{regularRupees.toLocaleString('en-IN')}</strong></span>
+                    <span style={{ margin: '0 8px', color: '#94a3b8' }}>|</span>
+                    <span>🔧 सर्विस प्रभार: <strong>₹{serviceRupees.toLocaleString('en-IN')}</strong></span>
+                  </td>
+                  <td className="text-right font-mono font-bold" style={{ color: '#1e3a8a', padding: '3px 8px' }}>
+                    ₹{(regularRupees + serviceRupees).toLocaleString('en-IN')}
+                  </td>
+                  <td className="text-center font-mono" style={{ padding: '3px 4px' }}>00</td>
+                  <td className="no-print" colSpan="2"></td>
+                </tr>
+              )}
               <tr>
                 <td colSpan="4" className="text-right font-bold slip-total-label">
                   कुल योग (TOTAL):
@@ -321,16 +434,19 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
                 <td className="text-center font-bold font-mono">
                   {String(adjustedPaise).padStart(2, '0')}
                 </td>
-                <td className="no-print"></td>
+                <td className="no-print" colSpan="2"></td>
               </tr>
             </tfoot>
           </table>
         </div>
 
-        {/* Row Adder Button */}
-        <div className="no-print slip-table-actions">
-          <button type="button" className="btn-add-row" onClick={addRow}>
-            <Plus size={14} /> पंक्ति जोड़ें (+ Add Row)
+        {/* Row Adder Buttons */}
+        <div className="no-print slip-table-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button type="button" className="btn-add-row" onClick={() => addRow(false)}>
+            <Plus size={14} /> + सामान पंक्ति जोड़ें (Add Item)
+          </button>
+          <button type="button" className="btn-add-row" onClick={() => addRow(true)} style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a' }}>
+            <Plus size={14} /> 🔧 + सर्विस चार्ज पंक्ति (Bottom Service)
           </button>
         </div>
 
