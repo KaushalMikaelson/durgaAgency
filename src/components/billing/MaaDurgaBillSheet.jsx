@@ -442,24 +442,33 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
               <tr>
                 <td colSpan="4" className="text-right font-bold slip-total-label" style={{ verticalAlign: 'middle', padding: '3px 8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
-                    {regularItems.length > 0 && (serviceItems.length > 0 || validDiscount > 0) ? (
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                        <span>Items Subtotal: <strong>₹{regularRupees.toLocaleString('en-IN')}</strong></span>
-                        {serviceItems.length > 0 && (
-                          <>
-                            <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
-                            <span>Service: <strong>₹{serviceRupees.toLocaleString('en-IN')}</strong></span>
-                          </>
-                        )}
-                        {validDiscount > 0 && (
-                          <>
-                            <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
-                            <span style={{ color: '#dc2626' }}>Discount: <strong>-₹{validDiscount.toLocaleString('en-IN')}</strong></span>
-                          </>
-                        )}
-                      </div>
-                    ) : <div />}
-                    <span style={{ marginLeft: 'auto' }}>Total:</span>
+                    <div className="mdd-subtotal-breakdown-inline" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>
+                      {(serviceItems.length > 0 || validDiscount > 0) && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <span>Subtotal:</span>
+                          <strong style={{ color: '#0f172a', fontFamily: 'monospace, sans-serif' }}>₹{regularRupees.toLocaleString('en-IN')}</strong>
+                        </span>
+                      )}
+                      {serviceItems.length > 0 && (
+                        <>
+                          <span style={{ color: '#94a3b8', margin: '0 1px' }}>|</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#1e3a8a' }}>
+                            <span>Service:</span>
+                            <strong style={{ color: '#1e3a8a', fontFamily: 'monospace, sans-serif' }}>+ ₹{serviceRupees.toLocaleString('en-IN')}</strong>
+                          </span>
+                        </>
+                      )}
+                      {validDiscount > 0 && (
+                        <>
+                          <span style={{ color: '#94a3b8', margin: '0 1px' }}>|</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#dc2626' }}>
+                            <span>Discount:</span>
+                            <strong style={{ color: '#dc2626', fontFamily: 'monospace, sans-serif' }}>- ₹{validDiscount.toLocaleString('en-IN')}</strong>
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <span style={{ marginLeft: 'auto' }}>{(serviceItems.length > 0 || validDiscount > 0) ? 'TOTAL PAYABLE:' : 'TOTAL:'}</span>
                   </div>
                 </td>
                 <td className="text-right font-bold font-mono slip-total-value">

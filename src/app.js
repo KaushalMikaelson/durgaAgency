@@ -795,32 +795,26 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
             ${rowsHtml}
           </tbody>
           <tfoot>
-            <tr id="mddLiveGrossRow" class="mdd-gross-row" style="${discount > 0 ? '' : 'display:none;'}">
-              <td colspan="2" style="vertical-align:middle; text-align:right; padding:2.5px 8px !important; font-weight:700; color:#334155; font-size:12px;">
-                कुल योग / Gross Total:
-              </td>
-              <td style="width:100px; text-align:right; font-size:13.5px; font-weight:800; font-family:monospace, sans-serif; color:#0f172a;">
-                <span id="mddLiveGrossVal">${grossR.toLocaleString('en-IN')}</span>
-              </td>
-              <td style="width:50px; text-align:center; font-size:12px; font-weight:700; font-family:monospace, sans-serif; color:#64748b;">
-                00
-              </td>
-            </tr>
-            <tr id="mddLiveDiscountRow" class="mdd-discount-row" style="${discount > 0 ? '' : 'display:none;'}">
-              <td colspan="2" style="vertical-align:middle; text-align:right; padding:2.5px 8px !important; font-weight:800; color:#dc2626; font-size:12px;">
-                विशेष छूट / Discount:
-              </td>
-              <td style="width:100px; text-align:right; font-size:13.5px; font-weight:900; font-family:monospace, sans-serif; color:#dc2626;">
-                <span id="mddLiveDiscountVal">- ${discount.toLocaleString('en-IN')}</span>
-              </td>
-              <td style="width:50px; text-align:center; font-size:12px; font-weight:800; font-family:monospace, sans-serif; color:#dc2626;">
-                00
-              </td>
-            </tr>
             <tr class="mdd-total-main-row">
               <td colspan="2" style="vertical-align:middle; padding:3px 8px !important;">
-                <div style="display:flex; align-items:center; justify-content:flex-end; width:100%;">
-                  <span class="mdd-total-badge" id="mddLiveTotalBadge" style="margin-left:auto;">${discount > 0 ? 'Total Payable' : 'Total'}</span>
+                <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px;">
+                  <div id="mddLiveBreakdownInline" class="mdd-subtotal-breakdown-inline" style="display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; color:#334155; white-space:nowrap; overflow:hidden;">
+                    <span id="mddLiveSubtotalGroup" style="display:${(serviceRupees > 0 || discount > 0) ? 'inline-flex' : 'none'}; align-items:center; gap:3px;">
+                      <span>Subtotal:</span>
+                      <strong id="mddLiveSubtotalVal" style="color:#0f172a; font-family:monospace, sans-serif;">₹${regularRupees.toLocaleString('en-IN')}</strong>
+                    </span>
+                    <span id="mddLiveServiceSep" style="color:#94a3b8; margin:0 1px; display:${(serviceRupees > 0) ? 'inline' : 'none'};">|</span>
+                    <span id="mddLiveServiceGroup" style="display:${(serviceRupees > 0) ? 'inline-flex' : 'none'}; align-items:center; gap:3px; color:#1e3a8a;">
+                      <span>Service:</span>
+                      <strong id="mddLiveServiceVal" style="color:#1e3a8a; font-family:monospace, sans-serif;">+ ₹${serviceRupees.toLocaleString('en-IN')}</strong>
+                    </span>
+                    <span id="mddLiveDiscountSep" style="color:#94a3b8; margin:0 1px; display:${(discount > 0) ? 'inline' : 'none'};">|</span>
+                    <span id="mddLiveDiscountGroup" style="display:${(discount > 0) ? 'inline-flex' : 'none'}; align-items:center; gap:3px; color:#dc2626;">
+                      <span>Discount:</span>
+                      <strong id="mddLiveDiscountVal" style="color:#dc2626; font-family:monospace, sans-serif;">- ₹${discount.toLocaleString('en-IN')}</strong>
+                    </span>
+                  </div>
+                  <span class="mdd-total-badge" id="mddLiveTotalBadge" style="margin-left:auto; flex-shrink:0;">${(discount > 0 || serviceRupees > 0) ? 'Total Payable' : 'Total'}</span>
                 </div>
               </td>
               <td style="width:100px; text-align:right; font-size:16px; font-weight:900; font-family:monospace, sans-serif;">
@@ -5283,8 +5277,8 @@ class TractorOSApp {
       });
 
       const grossR = regularR + serviceR;
-      const discInput = document.getElementById('mddLiveDiscountInput');
-      const rawDisc = Number(discInput?.value) || 0;
+      const bottomDiscInput = document.getElementById('mddLiveDiscountInput');
+      const rawDisc = Number(bottomDiscInput?.value) || 0;
       const discount = Math.min(grossR, Math.max(0, rawDisc));
 
       let totalR = Math.max(0, grossR - discount);
@@ -5302,25 +5296,49 @@ class TractorOSApp {
       const wordsCell = document.getElementById('mddLiveWordsVal');
       if (wordsCell) wordsCell.textContent = numberToIndianWords(totalR);
 
-      const grossRow = document.getElementById('mddLiveGrossRow');
-      const discountRow = document.getElementById('mddLiveDiscountRow');
-      const grossVal = document.getElementById('mddLiveGrossVal');
+      const subtotalGroup = document.getElementById('mddLiveSubtotalGroup');
+      const subtotalVal = document.getElementById('mddLiveSubtotalVal');
+      const serviceSep = document.getElementById('mddLiveServiceSep');
+      const serviceGroup = document.getElementById('mddLiveServiceGroup');
+      const serviceVal = document.getElementById('mddLiveServiceVal');
+      const discountSep = document.getElementById('mddLiveDiscountSep');
+      const discountGroup = document.getElementById('mddLiveDiscountGroup');
       const discountVal = document.getElementById('mddLiveDiscountVal');
       const totalBadge = document.getElementById('mddLiveTotalBadge');
 
-      if (discount > 0) {
-        if (grossRow) grossRow.style.display = '';
-        if (discountRow) discountRow.style.display = '';
-        if (grossVal) grossVal.textContent = grossR.toLocaleString('en-IN');
-        if (discountVal) discountVal.textContent = `- ${discount.toLocaleString('en-IN')}`;
-        if (totalBadge) totalBadge.textContent = 'Total Payable';
-      } else {
-        if (grossRow) grossRow.style.display = 'none';
-        if (discountRow) discountRow.style.display = 'none';
-        if (totalBadge) totalBadge.textContent = 'Total';
+      // Subtotal Group
+      if (subtotalGroup) {
+        subtotalGroup.style.display = (serviceR > 0 || discount > 0) ? 'inline-flex' : 'none';
+      }
+      if (subtotalVal) {
+        subtotalVal.textContent = `₹${regularR.toLocaleString('en-IN')}`;
       }
 
+      // Service Group
+      if (serviceSep) {
+        serviceSep.style.display = (serviceR > 0) ? 'inline' : 'none';
+      }
+      if (serviceGroup) {
+        serviceGroup.style.display = (serviceR > 0) ? 'inline-flex' : 'none';
+      }
+      if (serviceVal) {
+        serviceVal.textContent = `+ ₹${serviceR.toLocaleString('en-IN')}`;
+      }
 
+      // Discount Group
+      if (discountSep) {
+        discountSep.style.display = (discount > 0) ? 'inline' : 'none';
+      }
+      if (discountGroup) {
+        discountGroup.style.display = (discount > 0) ? 'inline-flex' : 'none';
+      }
+      if (discountVal) {
+        discountVal.textContent = `- ₹${discount.toLocaleString('en-IN')}`;
+      }
+
+      if (totalBadge) {
+        totalBadge.textContent = (discount > 0 || serviceR > 0) ? 'Total Payable' : 'Total';
+      }
 
       if (bill) {
         const custInput = document.getElementById('mddLiveCustomer');
@@ -5330,6 +5348,8 @@ class TractorOSApp {
         if (addrInput) bill.address = addrInput.value.trim() || '';
         if (dateInput) bill.date = formatToDMY(dateInput.value) || formatToDMY(new Date());
         bill.discount = discount;
+        bill.regularRupees = regularR;
+        bill.serviceRupees = serviceR;
         bill.grossRupees = grossR;
         bill.totalRupees = totalR;
         bill.totalPaise = totalP;
@@ -5338,12 +5358,12 @@ class TractorOSApp {
     };
 
     table.querySelectorAll('input').forEach(input => {
-      input.addEventListener('input', recalc);
+      input.addEventListener('input', () => recalc(input));
     });
 
     const discInput = document.getElementById('mddLiveDiscountInput');
     if (discInput) {
-      discInput.addEventListener('input', recalc);
+      discInput.addEventListener('input', () => recalc(discInput));
     }
   }
 

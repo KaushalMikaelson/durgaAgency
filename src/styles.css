@@ -1948,14 +1948,26 @@ body.modal-open {
   box-sizing: border-box !important;
 }
 
+.mdd-table tfoot tr.mdd-subtotal-row td {
+  border-top: 1.5px solid #000000;
+  background: #f8fafc;
+  padding: 2.5px 8px !important;
+}
+
+.mdd-table tfoot tr.mdd-service-charge-row td {
+  border-top: 1px dashed #cbd5e1;
+  background: #f0f7ff;
+  padding: 2.5px 8px !important;
+}
+
 .mdd-table tfoot tr.mdd-gross-row td {
-  border-top: 2px solid #000000;
+  border-top: 1.5px solid #000000;
   background: #f8fafc;
   padding: 2.5px 8px !important;
 }
 
 .mdd-table tfoot tr.mdd-discount-row td {
-  border-top: 1px dashed #cbd5e1;
+  border-top: 1px dashed #fca5a5;
   background: #fff1f2;
   padding: 2.5px 8px !important;
 }
@@ -2801,8 +2813,18 @@ body.modal-open {
     break-inside: avoid !important;
   }
 
+  .mdd-table tfoot tr.mdd-subtotal-row td {
+    border-top: 1.5px solid #000000 !important;
+    padding: 0.8mm 2.5mm !important;
+  }
+
+  .mdd-table tfoot tr.mdd-service-charge-row td {
+    border-top: 1px dashed #000000 !important;
+    padding: 0.8mm 2.5mm !important;
+  }
+
   .mdd-table tfoot tr.mdd-gross-row td {
-    border-top: 2px solid #000000 !important;
+    border-top: 1.5px solid #000000 !important;
     padding: 0.8mm 2.5mm !important;
   }
 

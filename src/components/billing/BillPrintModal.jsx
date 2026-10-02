@@ -173,8 +173,34 @@ export function BillPrintModal({ bill, onClose }) {
               <tfoot>
                 <tr>
                   <td colSpan="4" className="text-right font-bold slip-total-label" style={{ verticalAlign: 'middle', padding: '3px 8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
-                      <span style={{ marginLeft: 'auto' }}>SUBTOTAL:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+                      <div className="mdd-subtotal-breakdown-inline" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 700, color: '#334155', whiteSpace: 'nowrap' }}>
+                        {(serviceTotal > 0 || discount > 0) && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <span>Subtotal:</span>
+                            <strong style={{ color: '#0f172a', fontFamily: 'monospace, sans-serif' }}>₹{regularTotal.toLocaleString('en-IN')}</strong>
+                          </span>
+                        )}
+                        {serviceTotal > 0 && (
+                          <>
+                            <span style={{ color: '#94a3b8', margin: '0 1px' }}>|</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#1e3a8a' }}>
+                              <span>Service:</span>
+                              <strong style={{ color: '#1e3a8a', fontFamily: 'monospace, sans-serif' }}>+ ₹{serviceTotal.toLocaleString('en-IN')}</strong>
+                            </span>
+                          </>
+                        )}
+                        {discount > 0 && (
+                          <>
+                            <span style={{ color: '#94a3b8', margin: '0 1px' }}>|</span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#dc2626' }}>
+                              <span>Discount:</span>
+                              <strong style={{ color: '#dc2626', fontFamily: 'monospace, sans-serif' }}>- ₹{discount.toLocaleString('en-IN')}</strong>
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <span style={{ marginLeft: 'auto' }}>{(serviceTotal > 0 || discount > 0) ? 'TOTAL PAYABLE:' : 'TOTAL:'}</span>
                     </div>
                   </td>
                   <td className="text-right font-bold font-mono slip-total-value">
