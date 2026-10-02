@@ -1,36 +1,36 @@
-// Authentic "माँ दुर्गा डीजल" Estimate / Cash Memo Interactive Bill Book
+// Authentic "Maa Durga Diesel" Estimate / Cash Memo Interactive Bill Book
 import React, { useState, useEffect } from 'react';
 import { useDealership } from '../../context/DealershipContext.jsx';
 import { api } from '../../services/api.js';
-import { numberToHindiWords } from '../../utils/numberToWords.js';
+import { numberToIndianWords } from '../../utils/numberToWords.js';
 import { Printer, Save, Plus, Trash2, Zap } from 'lucide-react';
 
 const REGULAR_PRESETS = [
   {
     name: "VST Zetor Canopy Kit",
     items: [
-      { description: "हेवी ड्यूटी ट्रैक्टर कैनोपी (Canopy with Frame)", qty: "1", rate: 5200, isService: false },
-      { description: "इंजन ऑयल टॉप-अप किट", qty: "1", rate: 1600, isService: false }
+      { description: "Heavy Duty Tractor Canopy (Canopy with Frame)", qty: "1", rate: 5200, isService: false },
+      { description: "Engine Oil Top-up Kit", qty: "1", rate: 1600, isService: false }
     ]
   },
   {
     name: "Rotavator Blades Set",
     items: [
-      { description: "बोरोन स्टील रोटावेटर ब्लेड एल-टाइप (Boron Steel L-Type)", qty: "42", rate: 85, isService: false }
+      { description: "Boron Steel Rotavator Blades L-Type", qty: "42", rate: 85, isService: false }
     ]
   },
   {
     name: "Diesel Fuel Filter Set",
     items: [
-      { description: "डीजल फिल्टर प्राइमरी व सेकेंडरी सेट (MICO / Bosch)", qty: "2", rate: 450, isService: false }
+      { description: "Diesel Fuel Filter Primary & Secondary Set (MICO / Bosch)", qty: "2", rate: 450, isService: false }
     ]
   }
 ];
 
 const SERVICE_PRESETS = [
-  { description: "सर्विस एवं लेबर चार्ज (Service & Labor Charge)", qty: "1 Job", rate: 500, isService: true },
-  { description: "ग्रीसिंग व धुलाई चार्ज (Greasing & Wash)", qty: "1 Job", rate: 350, isService: true },
-  { description: "मैकेनिक चार्ज (Mechanic Inspection Charge)", qty: "1 Job", rate: 400, isService: true }
+  { description: "Service & Labor Charge", qty: "1 Job", rate: 500, isService: true },
+  { description: "Greasing & Washing Charge", qty: "1 Job", rate: 350, isService: true },
+  { description: "Mechanic Inspection Charge", qty: "1 Job", rate: 400, isService: true }
 ];
 
 function isServiceChargeDesc(text = '') {
@@ -46,6 +46,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
   const [address, setAddress] = useState(initialData?.address || '');
   const [vehicle, setVehicle] = useState(initialData?.vehicle || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
+  const [discount, setDiscount] = useState(initialData?.discount || 0);
 
   const [items, setItems] = useState(() => {
     if (initialData?.items?.length) {
@@ -171,9 +172,11 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
   // Grand totals
   const totalRupees = items.reduce((sum, it) => sum + (Number(it.amountRupees) || 0), 0);
   const totalPaise = items.reduce((sum, it) => sum + (Number(it.amountPaise) || 0), 0);
-  const adjustedRupees = totalRupees + Math.floor(totalPaise / 100);
+  const adjustedGrossRupees = totalRupees + Math.floor(totalPaise / 100);
   const adjustedPaise = totalPaise % 100;
-  const hindiWords = numberToHindiWords(adjustedRupees);
+  const validDiscount = Math.min(adjustedGrossRupees, Math.max(0, Number(discount) || 0));
+  const netRupees = Math.max(0, adjustedGrossRupees - validDiscount);
+  const amountWords = numberToIndianWords(netRupees);
 
   const handleSaveAndPrint = async (shouldPrint = false) => {
     // Preserve order: Regular items first, service charges at the bottom!
@@ -185,14 +188,16 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
       id: initialData?.id,
       billNumber: billNumber || '21',
       date,
-      customerName: customerName.trim() || 'मेसर्स ग्राहक',
+      customerName: customerName.trim() || 'M/s Customer',
       address: address.trim(),
       vehicle: vehicle.trim(),
       phone: phone.trim(),
       items: orderedItems,
-      totalRupees: adjustedRupees,
+      grossRupees: adjustedGrossRupees,
+      discount: validDiscount,
+      totalRupees: netRupees,
       totalPaise: adjustedPaise,
-      amountWords: hindiWords
+      amountWords: amountWords
     };
 
     const saved = await saveBill(billPayload);
@@ -208,7 +213,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
       {/* Quick Presets Bar */}
       <div className="bill-presets-bar" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span className="presets-label"><Zap size={14} /> 📦 मुख्य सामान:</span>
+          <span className="presets-label"><Zap size={14} /> 📦 Main Items:</span>
           {REGULAR_PRESETS.map((p, idx) => (
             <button
               key={idx}
@@ -221,7 +226,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderTop: '1px dashed #e2e8f0', paddingTop: '6px' }}>
-          <span className="presets-label" style={{ color: '#92400e' }}>🔧 सर्विस/चार्ज (Bottom):</span>
+          <span className="presets-label" style={{ color: '#92400e' }}>Service & Charges (Bottom):</span>
           {SERVICE_PRESETS.map((s, idx) => (
             <button
               key={idx}
@@ -234,6 +239,30 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
             </button>
           ))}
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', borderTop: '1px dashed #e2e8f0', paddingTop: '6px', background: '#fff1f2', padding: '6px 10px', borderRadius: '6px' }}>
+          <span className="presets-label" style={{ color: '#991b1b', fontWeight: 800 }}>Discount:</span>
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <span style={{ position: 'absolute', left: '6px', fontSize: '12px', fontWeight: 800, color: '#dc2626' }}>₹</span>
+            <input 
+              type="number"
+              min="0"
+              placeholder="0"
+              value={discount || ''}
+              onChange={(e) => setDiscount(Math.max(0, Number(e.target.value) || 0))}
+              style={{ width: '85px', padding: '2px 4px 2px 18px', fontSize: '12px', fontWeight: 800, color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '4px', background: '#ffffff', height: '26px' }}
+            />
+          </div>
+          <button type="button" className="preset-tag-btn" style={{ background: '#ffffff', color: '#475569', borderColor: '#cbd5e1' }} onClick={() => setDiscount(0)}>₹0</button>
+          <button type="button" className="preset-tag-btn" style={{ background: '#ffffff', color: '#dc2626', borderColor: '#fecaca', fontWeight: 700 }} onClick={() => setDiscount(50)}>-₹50</button>
+          <button type="button" className="preset-tag-btn" style={{ background: '#ffffff', color: '#dc2626', borderColor: '#fecaca', fontWeight: 700 }} onClick={() => setDiscount(100)}>-₹100</button>
+          <button type="button" className="preset-tag-btn" style={{ background: '#ffffff', color: '#dc2626', borderColor: '#fecaca', fontWeight: 700 }} onClick={() => setDiscount(200)}>-₹200</button>
+          <button type="button" className="preset-tag-btn" style={{ background: '#ffffff', color: '#dc2626', borderColor: '#fecaca', fontWeight: 700 }} onClick={() => setDiscount(500)}>-₹500</button>
+          {validDiscount > 0 && (
+            <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700, marginLeft: 'auto' }}>
+              Discount Applied: -₹{validDiscount.toLocaleString('en-IN')} (Gross: ₹{adjustedGrossRupees.toLocaleString('en-IN')})
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Authentic Physical Bill Slip Card */}
@@ -245,18 +274,18 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
         data-bill-date={date}
       >
         {/* Slip Top Header */}
-        <div className="slip-ganesh">|| श्री गणेशाय नमः ||</div>
-        <div className="slip-tag-estimate">ESTIMATE / CASH MEMO</div>
+        <div className="slip-ganesh">ESTIMATE / CASH MEMO</div>
+        <div className="slip-tag-estimate">GENUINE SPARES & TRACTOR SERVICE</div>
 
-        <div className="slip-main-title">माँ दुर्गा डीजल</div>
-        <div className="slip-subtitle">डीजल पम्प, नोजल एवं ट्रेक्टर के सामानों के विक्रेता</div>
-        <div className="slip-address">बड़हलगंज रोड, दोहरीघाट, मऊ</div>
+        <div className="slip-main-title">MAA DURGA DIESEL</div>
+        <div className="slip-subtitle">Dealers in Diesel Pump, Nozzles & Tractor Spare Parts</div>
+        <div className="slip-address">Barhalganj Road, Dohrighat, Mau</div>
 
         {/* Slip Metadata Dotted Grid */}
         <div className="slip-meta-grid">
           <div className="meta-row">
             <div className="meta-field flex-1">
-              <span className="meta-lbl">No. / क्र.सं.:</span>
+              <span className="meta-lbl">Bill No.:</span>
               <input
                 type="text"
                 className="dotted-input bold-red"
@@ -266,7 +295,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
               />
             </div>
             <div className="meta-field flex-1 text-right">
-              <span className="meta-lbl">Date / दिनांक:</span>
+              <span className="meta-lbl">Date:</span>
               <input
                 type="date"
                 className="dotted-input bold-red"
@@ -278,30 +307,30 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
 
           <div className="meta-row">
             <div className="meta-field flex-1">
-              <span className="meta-lbl">M/s / मेसर्स:</span>
+              <span className="meta-lbl">M/s (Customer Name):</span>
               <input
                 type="text"
                 className="dotted-input bold-red"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="किसान का नाम (Customer Name)"
+                placeholder="Customer Name"
               />
             </div>
           </div>
 
           <div className="meta-row">
             <div className="meta-field flex-2">
-              <span className="meta-lbl">Address / पता:</span>
+              <span className="meta-lbl">Address:</span>
               <input
                 type="text"
                 className="dotted-input bold-red"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="ग्राम / पोस्ट / जिला"
+                placeholder="Village / Post / District"
               />
             </div>
             <div className="meta-field flex-1">
-              <span className="meta-lbl">Vehicle / गाड़ी:</span>
+              <span className="meta-lbl">Vehicle No.:</span>
               <input
                 type="text"
                 className="dotted-input bold-red"
@@ -311,7 +340,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
               />
             </div>
             <div className="meta-field flex-1">
-              <span className="meta-lbl">Mob / मो.:</span>
+              <span className="meta-lbl">Mobile No.:</span>
               <input
                 type="text"
                 className="dotted-input bold-red"
@@ -328,13 +357,13 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
           <table className="slip-table">
             <thead>
               <tr>
-                <th style={{ width: '45px' }}>क्र.<br/><small>Sl.</small></th>
-                <th>विवरण<br/><small>Particulars / Item Description</small></th>
-                <th style={{ width: '90px' }}>मात्रा<br/><small>Qty.</small></th>
-                <th style={{ width: '100px' }}>दर<br/><small>Rate</small></th>
-                <th style={{ width: '110px' }}>रुपये<br/><small>Rs.</small></th>
-                <th style={{ width: '45px' }}>पैसे<br/><small>P.</small></th>
-                <th className="no-print" style={{ width: '70px' }}>प्रकार</th>
+                <th style={{ width: '45px' }}>Sl.</th>
+                <th>Particulars / Item Description</th>
+                <th style={{ width: '90px' }}>Qty.</th>
+                <th style={{ width: '100px' }}>Rate</th>
+                <th style={{ width: '110px' }}>Rs.</th>
+                <th style={{ width: '45px' }}>P.</th>
+                <th className="no-print" style={{ width: '70px' }}>Type</th>
                 <th className="no-print" style={{ width: '35px' }}></th>
               </tr>
             </thead>
@@ -348,13 +377,13 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {item.isService && (
                         <span className="mdd-service-badge" style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '3px', fontSize: '10px', padding: '1px 5px', fontWeight: 800, whiteSpace: 'nowrap' }}>
-                          सर्विस
+                          SERVICE
                         </span>
                       )}
                       <input
                         type="text"
                         className="table-input"
-                        placeholder={item.isService ? 'सर्विस व लेबर चार्ज...' : 'सामान का विवरण'}
+                        placeholder={item.isService ? 'Service & Labor Charge...' : 'Item Description'}
                         value={item.description}
                         style={{ fontWeight: item.isService ? 700 : 'normal', color: item.isService ? '#1e3a8a' : 'inherit' }}
                         onChange={(e) => updateItem(idx, 'description', e.target.value)}
@@ -390,10 +419,10 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
                       type="button"
                       className={`mdd-live-type-btn ${item.isService ? 'is-service' : ''}`}
                       onClick={() => toggleRowService(idx)}
-                      title="सामान / सर्विस बदलें"
+                      title="Toggle Item / Service"
                       style={{ padding: '2px 6px', fontSize: '10.5px' }}
                     >
-                      {item.isService ? '🔧 सर्विस' : '📦 सामान'}
+                      {item.isService ? '🔧 Service' : '📦 Item'}
                     </button>
                   </td>
                   <td className="no-print text-center">
@@ -410,26 +439,31 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
               ))}
             </tbody>
             <tfoot>
-              {regularItems.length > 0 && serviceItems.length > 0 && (
-                <tr style={{ background: '#f1f5f9', fontSize: '12px', fontWeight: 700 }}>
-                  <td colSpan="4" className="text-right" style={{ padding: '3px 8px' }}>
-                    <span>📦 सामान कुल: <strong>₹{regularRupees.toLocaleString('en-IN')}</strong></span>
-                    <span style={{ margin: '0 8px', color: '#94a3b8' }}>|</span>
-                    <span>🔧 सर्विस प्रभार: <strong>₹{serviceRupees.toLocaleString('en-IN')}</strong></span>
-                  </td>
-                  <td className="text-right font-mono font-bold" style={{ color: '#1e3a8a', padding: '3px 8px' }}>
-                    ₹{(regularRupees + serviceRupees).toLocaleString('en-IN')}
-                  </td>
-                  <td className="text-center font-mono" style={{ padding: '3px 4px' }}>00</td>
-                  <td className="no-print" colSpan="2"></td>
-                </tr>
-              )}
               <tr>
-                <td colSpan="4" className="text-right font-bold slip-total-label">
-                  कुल योग (TOTAL):
+                <td colSpan="4" className="text-right font-bold slip-total-label" style={{ verticalAlign: 'middle', padding: '3px 8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+                    {regularItems.length > 0 && (serviceItems.length > 0 || validDiscount > 0) ? (
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                        <span>Items Subtotal: <strong>₹{regularRupees.toLocaleString('en-IN')}</strong></span>
+                        {serviceItems.length > 0 && (
+                          <>
+                            <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
+                            <span>Service: <strong>₹{serviceRupees.toLocaleString('en-IN')}</strong></span>
+                          </>
+                        )}
+                        {validDiscount > 0 && (
+                          <>
+                            <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
+                            <span style={{ color: '#dc2626' }}>Discount: <strong>-₹{validDiscount.toLocaleString('en-IN')}</strong></span>
+                          </>
+                        )}
+                      </div>
+                    ) : <div />}
+                    <span style={{ marginLeft: 'auto' }}>Total:</span>
+                  </div>
                 </td>
                 <td className="text-right font-bold font-mono slip-total-value">
-                  ₹{Number(adjustedRupees).toLocaleString('en-IN')}
+                  ₹{Number(netRupees).toLocaleString('en-IN')}
                 </td>
                 <td className="text-center font-bold font-mono">
                   {String(adjustedPaise).padStart(2, '0')}
@@ -440,28 +474,48 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
           </table>
         </div>
 
-        {/* Row Adder Buttons */}
-        <div className="no-print slip-table-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button type="button" className="btn-add-row" onClick={() => addRow(false)}>
-            <Plus size={14} /> + सामान पंक्ति जोड़ें (Add Item)
-          </button>
-          <button type="button" className="btn-add-row" onClick={() => addRow(true)} style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a' }}>
-            <Plus size={14} /> 🔧 + सर्विस चार्ज पंक्ति (Bottom Service)
-          </button>
+        {/* Row Adder & Discount Actions */}
+        <div className="no-print slip-table-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <button type="button" className="btn-add-row" onClick={() => addRow(false)}>
+              <Plus size={14} /> + Add Item Row
+            </button>
+            <button type="button" className="btn-add-row" onClick={() => addRow(true)} style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a' }}>
+              <Plus size={14} /> + Add Service Charge Row (Bottom)
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#fef2f2', padding: '4px 10px', borderRadius: '6px', border: '1px solid #fecaca' }}>
+            <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#991b1b' }}>Discount:</span>
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <span style={{ position: 'absolute', left: '6px', fontSize: '11px', fontWeight: 800, color: '#dc2626' }}>₹</span>
+              <input 
+                type="number"
+                min="0"
+                placeholder="0"
+                value={discount || ''}
+                onChange={(e) => setDiscount(Math.max(0, Number(e.target.value) || 0))}
+                style={{ width: '80px', padding: '2px 4px 2px 18px', fontSize: '12px', fontWeight: 800, color: '#dc2626', border: '1px solid #fca5a5', borderRadius: '4px', background: '#ffffff', height: '24px' }}
+              />
+            </div>
+            <button type="button" className="btn-add-row" style={{ padding: '2px 6px', fontSize: '11px', background: '#ffffff', color: '#dc2626', borderColor: '#fecaca' }} onClick={() => setDiscount(50)}>-₹50</button>
+            <button type="button" className="btn-add-row" style={{ padding: '2px 6px', fontSize: '11px', background: '#ffffff', color: '#dc2626', borderColor: '#fecaca' }} onClick={() => setDiscount(100)}>-₹100</button>
+            <button type="button" className="btn-add-row" style={{ padding: '2px 6px', fontSize: '11px', background: '#ffffff', color: '#dc2626', borderColor: '#fecaca' }} onClick={() => setDiscount(200)}>-₹200</button>
+            <button type="button" className="btn-add-row" style={{ padding: '2px 6px', fontSize: '11px', background: '#ffffff', color: '#dc2626', borderColor: '#fecaca' }} onClick={() => setDiscount(500)}>-₹500</button>
+          </div>
         </div>
 
-        {/* Hindi Words & Signatures Footer */}
+        {/* Words & Signatures Footer */}
         <div className="slip-footer">
           <div className="slip-words-row">
-            <span className="words-lbl">रुपये (शब्दों में):</span>
-            <span className="words-val">{hindiWords}</span>
+            <span className="words-lbl">Rs. in words:</span>
+            <span className="words-val">{amountWords}</span>
           </div>
 
           <div className="slip-signs-row" style={{ justifyContent: 'flex-end' }}>
             <div className="sign-col shop-sign" style={{ textAlign: 'center' }}>
               <div style={{ height: '40px' }}></div>
               <div className="sign-line" style={{ width: '180px', margin: '0 auto 4px' }}></div>
-              <span>हस्ताक्षर</span>
+              <span>Authorized Signature</span>
             </div>
           </div>
         </div>
@@ -474,7 +528,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
           className="btn btn-secondary"
           onClick={onClose}
         >
-          Cancel / बंद करें
+          Cancel
         </button>
 
         <button
@@ -482,7 +536,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
           className="btn btn-primary"
           onClick={() => handleSaveAndPrint(false)}
         >
-          <Save size={16} /> सहेजें (Save Bill)
+          <Save size={16} /> Save Bill
         </button>
 
         <button
@@ -490,7 +544,7 @@ export function MaaDurgaBillSheet({ initialData = null, onClose, onPrintPreview 
           className="btn btn-print-primary"
           onClick={() => handleSaveAndPrint(true)}
         >
-          <Printer size={16} /> सहेजें एवं प्रिंट करें (Save & Print)
+          <Printer size={16} /> Save & Print
         </button>
       </div>
     </div>

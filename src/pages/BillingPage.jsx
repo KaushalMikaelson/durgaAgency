@@ -181,6 +181,11 @@ export function BillingPage() {
                       </td>
                       <td className="text-right font-mono font-bold font-lg text-emerald">
                         ₹{total.toLocaleString('en-IN')}
+                        {Number(bill.discount) > 0 && (
+                          <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700 }}>
+                            Discount: -₹{Number(bill.discount).toLocaleString('en-IN')}
+                          </div>
+                        )}
                       </td>
                       <td className="text-center">
                         {due <= 0 && total > 0 ? (

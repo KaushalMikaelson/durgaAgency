@@ -1,7 +1,7 @@
 // Print Modal and Layout for Maa Durga Diesel Bill Slip
 import React from 'react';
 import { Printer, Download, X } from 'lucide-react';
-import { numberToHindiWords } from '../../utils/numberToWords.js';
+import { numberToIndianWords } from '../../utils/numberToWords.js';
 import { formatToDMY } from '../../utils/dateUtils.js';
 import { printBillWithUniqueTitle, getBillUniqueFileName } from '../../utils/billPrintUtils.js';
 
@@ -20,14 +20,16 @@ export function BillPrintModal({ bill, onClose }) {
     printBillWithUniqueTitle(bill);
   };
 
-  const words = bill.amountWords || numberToHindiWords(bill.totalRupees || 0);
+  const words = bill.amountWords || numberToIndianWords(bill.totalRupees || 0);
 
   const rawItems = bill.items || [];
   const regularItems = rawItems.filter(it => !isServiceItem(it));
   const serviceItems = rawItems.filter(it => isServiceItem(it));
+  const hasMixedTypes = regularItems.length > 0 && serviceItems.length > 0 && rawItems.length > 1;
 
   const regularTotal = regularItems.reduce((sum, it) => sum + (Number(it.amountRupees || it.rupees) || 0), 0);
   const serviceTotal = serviceItems.reduce((sum, it) => sum + (Number(it.amountRupees || it.rupees) || 0), 0);
+  const discount = Number(bill.discount || 0);
 
   return (
     <div className="bill-print-modal-overlay">
@@ -53,43 +55,43 @@ export function BillPrintModal({ bill, onClose }) {
           data-bill-date={bill.date}
           data-bill-name={bill.billName}
         >
-          <div className="slip-ganesh">|| श्री गणेशाय नमः ||</div>
-          <div className="slip-tag-estimate">ESTIMATE / CASH MEMO</div>
+          <div className="slip-ganesh">ESTIMATE / CASH MEMO</div>
+          <div className="slip-tag-estimate">GENUINE SPARES & TRACTOR SERVICE</div>
 
-          <div className="slip-main-title">माँ दुर्गा डीजल</div>
-          <div className="slip-subtitle">डीजल पम्प, नोजल एवं ट्रेक्टर के सामानों के विक्रेता</div>
-          <div className="slip-address">बड़हलगंज रोड, दोहरीघाट, मऊ</div>
+          <div className="slip-main-title">MAA DURGA DIESEL</div>
+          <div className="slip-subtitle">Dealers in Diesel Pump, Nozzles & Tractor Spare Parts</div>
+          <div className="slip-address">Barhalganj Road, Dohrighat, Mau</div>
 
           <div className="slip-meta-grid">
             <div className="meta-row">
               <div className="meta-field flex-1">
-                <span className="meta-lbl">No. / क्र.सं.:</span>
+                <span className="meta-lbl">Bill No.:</span>
                 <span className="dotted-val bold-red">{bill.billNumber}</span>
               </div>
               <div className="meta-field flex-1 text-right">
-                <span className="meta-lbl">Date / दिनांक:</span>
+                <span className="meta-lbl">Date:</span>
                 <span className="dotted-val bold-red">{formatToDMY(bill.date)}</span>
               </div>
             </div>
 
             <div className="meta-row">
               <div className="meta-field flex-1">
-                <span className="meta-lbl">M/s / मेसर्स:</span>
+                <span className="meta-lbl">M/s:</span>
                 <span className="dotted-val bold-red">{bill.customerName}</span>
               </div>
             </div>
 
             <div className="meta-row">
               <div className="meta-field flex-2">
-                <span className="meta-lbl">Address / पता:</span>
+                <span className="meta-lbl">Address:</span>
                 <span className="dotted-val">{bill.address || '-'}</span>
               </div>
               <div className="meta-field flex-1">
-                <span className="meta-lbl">Vehicle / गाड़ी:</span>
+                <span className="meta-lbl">Vehicle No.:</span>
                 <span className="dotted-val">{bill.vehicle || '-'}</span>
               </div>
               <div className="meta-field flex-1">
-                <span className="meta-lbl">Mob / मो.:</span>
+                <span className="meta-lbl">Mobile No.:</span>
                 <span className="dotted-val">{bill.phone || '-'}</span>
               </div>
             </div>
@@ -99,12 +101,12 @@ export function BillPrintModal({ bill, onClose }) {
             <table className="slip-table">
               <thead>
                 <tr>
-                  <th style={{ width: '45px' }}>क्र.<br/><small>Sl.</small></th>
-                  <th>विवरण<br/><small>Particulars / Item Description</small></th>
-                  <th style={{ width: '90px' }}>मात्रा<br/><small>Qty.</small></th>
-                  <th style={{ width: '100px' }}>दर<br/><small>Rate</small></th>
-                  <th style={{ width: '110px' }}>रुपये<br/><small>Rs.</small></th>
-                  <th style={{ width: '45px' }}>पैसे<br/><small>P.</small></th>
+                  <th style={{ width: '45px' }}>Sl.</th>
+                  <th>Particulars / Item Description</th>
+                  <th style={{ width: '90px' }}>Qty.</th>
+                  <th style={{ width: '100px' }}>Rate</th>
+                  <th style={{ width: '110px' }}>Rs.</th>
+                  <th style={{ width: '45px' }}>P.</th>
                 </tr>
               </thead>
               <tbody>
@@ -130,12 +132,12 @@ export function BillPrintModal({ bill, onClose }) {
                   );
                 })}
 
-                {/* Service Charges Section Divider (Placed at Bottom) */}
-                {serviceItems.length > 0 && (
+                {/* Service Charges Section Divider (Only when mixed types exist) */}
+                {hasMixedTypes && (
                   <tr className="slip-service-divider" style={{ background: '#f8fafc', borderTop: '2px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>
-                    <td style={{ textAlign: 'center', fontWeight: 800, fontSize: '11px', color: '#1e3a8a', padding: '3px 2px' }}>चार्ज</td>
+                    <td style={{ textAlign: 'center', fontWeight: 800, fontSize: '11px', color: '#1e3a8a', padding: '3px 2px' }}>CHARGE</td>
                     <td colSpan="5" style={{ padding: '3px 8px', color: '#1e3a8a', fontWeight: 700, fontSize: '12px' }}>
-                      🔧 सर्विस व अतिरिक्त प्रभार (Service & Extra Charges - Added at Bottom)
+                      Service & Extra Charges (Added at Bottom)
                     </td>
                   </tr>
                 )}
@@ -144,12 +146,13 @@ export function BillPrintModal({ bill, onClose }) {
                 {serviceItems.map((item, sIdx) => {
                   const amtRupees = item.amountRupees !== undefined ? item.amountRupees : item.rupees;
                   const amtPaise = item.amountPaise !== undefined ? item.amountPaise : item.paise;
+                  const serialNo = hasMixedTypes ? (regularItems.length + sIdx + 1) : (sIdx + 1);
                   return (
                     <tr key={`serv-${sIdx}`} className="mdd-service-row" style={{ background: '#fffdf5' }}>
-                      <td className="text-center" style={{ fontWeight: 800, color: '#1e3a8a' }}>{regularItems.length + sIdx + 1}</td>
+                      <td className="text-center" style={{ fontWeight: 800, color: '#1e3a8a' }}>{serialNo}</td>
                       <td>
                         <span className="mdd-service-badge" style={{ display: 'inline-block', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '3px', fontSize: '10px', padding: '1px 5px', marginRight: '6px', fontWeight: 800 }}>
-                          सर्विस/शुल्क
+                          SERVICE
                         </span>
                         <strong>{item.description || item.desc}</strong>
                       </td>
@@ -171,14 +174,24 @@ export function BillPrintModal({ bill, onClose }) {
                 <tr>
                   <td colSpan="4" className="text-right font-bold slip-total-label" style={{ verticalAlign: 'middle', padding: '3px 8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
-                      {regularItems.length > 0 && serviceItems.length > 0 ? (
+                      {regularItems.length > 0 && (serviceItems.length > 0 || discount > 0) ? (
                         <div style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                          <span>📦 सामान कुल: <strong>₹{regularTotal.toLocaleString('en-IN')}</strong></span>
-                          <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
-                          <span>🔧 सर्विस व अन्य प्रभार: <strong>₹{serviceTotal.toLocaleString('en-IN')}</strong></span>
+                          <span>Items Subtotal: <strong>₹{regularTotal.toLocaleString('en-IN')}</strong></span>
+                          {serviceItems.length > 0 && (
+                            <>
+                              <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
+                              <span>Service: <strong>₹{serviceTotal.toLocaleString('en-IN')}</strong></span>
+                            </>
+                          )}
+                          {discount > 0 && (
+                            <>
+                              <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
+                              <span style={{ color: '#dc2626' }}>Discount: <strong>-₹{discount.toLocaleString('en-IN')}</strong></span>
+                            </>
+                          )}
                         </div>
                       ) : <div />}
-                      <span style={{ marginLeft: 'auto' }}>कुल योग (TOTAL):</span>
+                      <span style={{ marginLeft: 'auto' }}>TOTAL:</span>
                     </div>
                   </td>
                   <td className="text-right font-bold font-mono slip-total-value">
@@ -194,7 +207,7 @@ export function BillPrintModal({ bill, onClose }) {
 
           <div className="slip-footer">
             <div className="slip-words-row">
-              <span className="words-lbl">रुपये (शब्दों में):</span>
+              <span className="words-lbl">Rs. in words:</span>
               <span className="words-val">{words}</span>
             </div>
 
@@ -202,7 +215,7 @@ export function BillPrintModal({ bill, onClose }) {
               <div className="sign-col shop-sign" style={{ textAlign: 'center' }}>
                 <div style={{ height: '40px' }}></div>
                 <div className="sign-line" style={{ width: '180px', margin: '0 auto 4px' }}></div>
-                <span>हस्ताक्षर</span>
+                <span>Authorized Signature</span>
               </div>
             </div>
           </div>

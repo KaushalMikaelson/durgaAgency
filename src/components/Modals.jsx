@@ -441,9 +441,9 @@ export function Modals() {
         <div className="modal-box large" style={{ maxWidth: '880px', maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div className="modal-header" style={{ flexShrink: 0 }}>
             <div>
-              <h3 style={{ margin: 0 }}>माँ दुर्गा डीजल - नया बिल / पर्ची बनाएं (New Bill)</h3>
+              <h3 style={{ margin: 0 }}>Maa Durga Diesel - Create New Bill</h3>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                Maa Durga Diesel Estimate & Cash Memo • डीलर बिल बुक रिकॉर्ड
+                Maa Durga Diesel Estimate & Cash Memo • Official Dealer Bill Book Record
               </div>
             </div>
             <button className="modal-close-btn">&times;</button>
@@ -452,35 +452,35 @@ export function Modals() {
             <div className="modal-body" style={{ overflowY: 'auto', flex: '1 1 auto', minHeight: 0, overscrollBehavior: 'contain' }}>
               <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
                 <div className="form-group">
-                  <label className="form-label">बिल नंबर (Unique Bill No.) *</label>
+                  <label className="form-label">Bill Number (Unique Bill No.) *</label>
                   <input type="text" id="nbBillNo" className="form-input" placeholder="e.g. 87" required />
                   <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} id="nbBillNoHint">Auto-incremented Unique #</span>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">बिल का नाम / संदर्भ (Bill Name / Ref)</label>
-                  <input type="text" id="nbBillName" className="form-input" placeholder="e.g. हार्वेस्टर रिपेयर / महिंद्रा सर्विस" />
+                  <label className="form-label">Bill Name / Reference (Optional)</label>
+                  <input type="text" id="nbBillName" className="form-input" placeholder="e.g. Harvester Repair / Mahindra Service" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">दिनांक (Date) *</label>
+                  <label className="form-label">Date *</label>
                   <input type="date" id="nbDate" className="form-input" required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">मोबाइल नंबर (Mobile)</label>
+                  <label className="form-label">Mobile Number</label>
                   <input type="tel" id="nbPhone" className="form-input" placeholder="9839123456" />
                 </div>
               </div>
 
               <div className="form-grid" style={{ gridTemplateColumns: '1.2fr 1fr 1fr' }}>
                 <div className="form-group">
-                  <label className="form-label">मेसर्स / ग्राहक का नाम (Customer Name) *</label>
+                  <label className="form-label">M/s / Customer Name *</label>
                   <input type="text" id="nbCustomer" className="form-input" placeholder="e.g. Ramesh Chandra Verma" required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">पता / गाँव (Address / Village)</label>
+                  <label className="form-label">Address / Village</label>
                   <input type="text" id="nbAddress" className="form-input" placeholder="e.g. Kalyanpur, Gorakhpur" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">वाहन / ट्रैक्टर नं० (Vehicle / Tractor No.)</label>
+                  <label className="form-label">Vehicle / Tractor No.</label>
                   <input type="text" id="nbVehicle" className="form-input" placeholder="e.g. UP-53-AZ-1234" />
                 </div>
               </div>
@@ -488,19 +488,19 @@ export function Modals() {
               {/* Items Header & Add Row */}
               <div style={{ margin: '14px 0 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                 <div>
-                  <label className="form-label" style={{ margin: 0, fontWeight: 800 }}>विवरण व मदें (Items & Charges):</label>
+                  <label className="form-label" style={{ margin: 0, fontWeight: 800 }}>Items & Charges:</label>
                   <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                    📦 नियमित सामान ऊपर रहेगा • 🔧 सर्विस व अतिरिक्त चार्ज बिल के <strong>निचले हिस्से (Bottom)</strong> में अलग से जुड़ेंगे
+                    📦 Regular items appear on top • 🔧 Service & extra charges added at the <strong>bottom</strong>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल (High Speed Diesel)', 40, 'Ltr', 94, false)}>+ 40L Diesel</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('इंजन ऑयल Mobil Delvac 1', 1, 'Can', 2450, false)}>+ Mobil Delvac</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('डीजल फिल्टर किट (Bosch)', 2, 'Pcs', 340, false)}>+ Diesel Filter</button>
-                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 700 }} onClick={() => window.app?.addBillPresetItem('सर्विस एवं लेबर चार्ज (Service & Labor)', 1, 'Job', 500, true)} title="बिल के निचले हिस्से में सर्विस चार्ज जोड़ें">🔧 + सर्विस चार्ज</button>
-                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 700 }} onClick={() => window.app?.addBillPresetItem('ग्रीसिंग व धुलाई चार्ज (Greasing & Wash)', 1, 'Job', 350, true)} title="बिल के निचले हिस्से में ग्रीसिंग चार्ज जोड़ें">🔧 + ग्रीसिंग</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-primary" onClick={() => window.app?.addBillItemRow('', '', 'Ltr', '', '', '', false)}>+ सामान जोड़ें (Item)</button>
-                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#1e3a8a', color: '#ffffff', fontWeight: 700 }} onClick={() => window.app?.addBillItemRow('', '', 'Job', '', '', '', true)}>🔧 + सर्विस चार्ज (Bottom)</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('Diesel (High Speed Diesel)', 40, 'Ltr', 94, false)}>+ 40L Diesel</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('Engine Oil - Mobil Delvac 1', 1, 'Can', 2450, false)}>+ Mobil Delvac</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('Diesel Fuel Filter Kit (Bosch)', 2, 'Pcs', 340, false)}>+ Diesel Filter</button>
+                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 700 }} onClick={() => window.app?.addBillPresetItem('Service & Labor Charge', 1, 'Job', 500, true)} title="Add service charge at the bottom of the bill">🔧 + Service Charge</button>
+                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 700 }} onClick={() => window.app?.addBillPresetItem('Greasing & Washing Charge', 1, 'Job', 350, true)} title="Add greasing & wash charge at the bottom">🔧 + Greasing</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-primary" onClick={() => window.app?.addBillItemRow('', '', 'Ltr', '', '', '', false)}>+ Add Item</button>
+                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#1e3a8a', color: '#ffffff', fontWeight: 700 }} onClick={() => window.app?.addBillItemRow('', '', 'Job', '', '', '', true)}>🔧 + Service Charge (Bottom)</button>
                 </div>
               </div>
 
@@ -509,14 +509,14 @@ export function Modals() {
                 <table className="data-table" style={{ margin: 0, fontSize: '12.5px' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '42px', textAlign: 'center' }}>क्र०</th>
-                      <th style={{ width: '92px' }}>मद प्रकार</th>
-                      <th>विवरण (Item / Service Description)</th>
-                      <th style={{ width: '80px', textAlign: 'center' }}>मात्रा (Qty)</th>
-                      <th style={{ width: '80px' }}>इकाई (Unit)</th>
-                      <th style={{ width: '90px', textAlign: 'right' }}>दर (Rate ₹)</th>
-                      <th style={{ width: '105px', textAlign: 'right' }}>रू० (Rupees)</th>
-                      <th style={{ width: '50px', textAlign: 'center' }}>पै०</th>
+                      <th style={{ width: '42px', textAlign: 'center' }}>Sl.</th>
+                      <th style={{ width: '92px' }}>Type</th>
+                      <th>Description (Item / Service)</th>
+                      <th style={{ width: '80px', textAlign: 'center' }}>Qty</th>
+                      <th style={{ width: '80px' }}>Unit</th>
+                      <th style={{ width: '90px', textAlign: 'right' }}>Rate (₹)</th>
+                      <th style={{ width: '105px', textAlign: 'right' }}>Rupees (₹)</th>
+                      <th style={{ width: '50px', textAlign: 'center' }}>P.</th>
                       <th style={{ width: '36px' }}></th>
                     </tr>
                   </thead>
@@ -526,24 +526,59 @@ export function Modals() {
                 </table>
               </div>
 
+              {/* Discount Section */}
+              <div style={{ marginTop: '12px', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 800, fontSize: '12.5px', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    🎁 Discount:
+                  </span>
+                  <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                    <span style={{ position: 'absolute', left: '8px', fontWeight: 800, color: '#dc2626', fontSize: '13px' }}>₹</span>
+                    <input 
+                      type="number" 
+                      id="nbDiscount" 
+                      className="form-input" 
+                      placeholder="0" 
+                      min="0" 
+                      step="any"
+                      style={{ width: '130px', padding: '5px 8px 5px 22px', fontWeight: 800, fontSize: '13px', color: '#dc2626', borderColor: '#fca5a5', background: '#ffffff' }} 
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+                    <button type="button" className="quick-action-btn btn-xs" style={{ background: '#ffffff', color: '#475569', borderColor: '#cbd5e1' }} onClick={() => window.app?.setBillDiscount(0)}>₹0</button>
+                    <button type="button" className="quick-action-btn btn-xs" style={{ background: '#ffffff', color: '#b91c1c', borderColor: '#fecaca', fontWeight: 700 }} onClick={() => window.app?.setBillDiscount(50)}>₹50</button>
+                    <button type="button" className="quick-action-btn btn-xs" style={{ background: '#ffffff', color: '#b91c1c', borderColor: '#fecaca', fontWeight: 700 }} onClick={() => window.app?.setBillDiscount(100)}>₹100</button>
+                    <button type="button" className="quick-action-btn btn-xs" style={{ background: '#ffffff', color: '#b91c1c', borderColor: '#fecaca', fontWeight: 700 }} onClick={() => window.app?.setBillDiscount(200)}>₹200</button>
+                    <button type="button" className="quick-action-btn btn-xs" style={{ background: '#ffffff', color: '#b91c1c', borderColor: '#fecaca', fontWeight: 700 }} onClick={() => window.app?.setBillDiscount(500)}>₹500</button>
+                  </div>
+                </div>
+                <div id="nbDiscountNotice" style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', display: 'none' }}>
+                  Discount Applied: -<span id="nbDiscountNoticeVal">₹0</span> (Gross: <span id="nbGrossTotalNoticeVal">₹0</span>)
+                </div>
+              </div>
+
               {/* Summary & Breakdown */}
-              <div style={{ marginTop: '14px', padding: '12px 14px', background: 'var(--bg-main)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ marginTop: '12px', padding: '12px 14px', background: 'var(--bg-main)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ flex: 1, minWidth: '220px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>राशि शब्दों में (Amount in Words):</div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Amount in Words:</div>
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary)', marginTop: '2px' }} id="nbWordsPreview">Zero Rupees Only</div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ background: '#ffffff', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', textAlign: 'right' }}>
-                    <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b' }}>📦 सामान कुल (Items):</div>
+                    <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#64748b' }}>Items Subtotal:</div>
                     <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', fontFamily: 'monospace, sans-serif' }} id="nbItemsSubtotalDisplay">₹0</div>
                   </div>
                   <div style={{ background: '#fffbeb', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fde68a', textAlign: 'right' }}>
-                    <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#92400e' }}>🔧 सर्विस प्रभार (Bottom):</div>
+                    <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#92400e' }}>Service Charges:</div>
                     <div style={{ fontSize: '14px', fontWeight: 800, color: '#b45309', fontFamily: 'monospace, sans-serif' }} id="nbServiceSubtotalDisplay">₹0</div>
                   </div>
+                  <div id="nbDiscountBreakdownCard" style={{ background: '#fef2f2', padding: '6px 12px', borderRadius: '6px', border: '1px solid #fecaca', textAlign: 'right', display: 'none' }}>
+                    <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#991b1b' }}>Discount:</div>
+                    <div style={{ fontSize: '14px', fontWeight: 800, color: '#dc2626', fontFamily: 'monospace, sans-serif' }} id="nbDiscountDisplay">-₹0</div>
+                  </div>
                   <div style={{ textAlign: 'right', paddingLeft: '4px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>कुल योग (Total):</div>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase' }}>Net Total:</div>
                     <div style={{ fontSize: '22px', fontWeight: 900, color: '#1e3a8a', fontFamily: 'monospace, sans-serif' }}>
                       <span id="nbTotalRupeesDisplay">₹0</span><span id="nbTotalPaiseDisplay" style={{ fontSize: '15px', color: 'var(--text-muted)' }}>.00</span>
                     </div>
@@ -555,19 +590,19 @@ export function Modals() {
               <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 'var(--radius-md)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '12px', alignItems: 'center' }}>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>भुगतान स्थिति (Payment Status)</label>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>Payment Status</label>
                     <select id="nbPaymentStatus" className="form-select" defaultValue="Paid" style={{ fontWeight: 700 }}>
-                      <option value="Paid">✓ Paid (पूर्ण भुगतान)</option>
-                      <option value="Partial">⏳ Partial (आंशिक भुगतान)</option>
-                      <option value="Due">⚠️ Due (पूर्ण बकाया)</option>
+                      <option value="Paid">✓ Paid</option>
+                      <option value="Partial">⏳ Partial</option>
+                      <option value="Due">⚠️ Due</option>
                     </select>
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>जमा राशि (Paid Amount ₹)</label>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>Paid Amount (₹)</label>
                     <input type="number" id="nbPaidAmount" className="form-input" placeholder="0" min="0" style={{ fontWeight: 700, color: '#059669' }} />
                   </div>
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>बकाया राशि (Due Amount ₹)</label>
+                    <label className="form-label" style={{ fontWeight: 700, fontSize: '12px' }}>Due Amount (₹)</label>
                     <div id="nbDueAmountDisplay" style={{ fontSize: '16px', fontWeight: 800, color: '#dc2626', padding: '7px 10px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: 'var(--radius-sm)' }}>₹0</div>
                   </div>
                 </div>
@@ -591,7 +626,7 @@ export function Modals() {
         <div className="modal-box large" style={{ maxWidth: '900px' }}>
           <div className="modal-header no-print">
             <div>
-              <h3 style={{ margin: 0 }}>माँ दुर्गा डीजल पर्ची - बिल प्रीव्यू (Bill Preview)</h3>
+              <h3 style={{ margin: 0 }}>Maa Durga Diesel - Bill Sheet Preview</h3>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                 Maa Durga Diesel Estimate & Cash Memo
               </div>
