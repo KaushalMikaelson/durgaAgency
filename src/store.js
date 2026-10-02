@@ -9,7 +9,7 @@ import {
   DEFAULT_DEMOS,
   DEFAULT_QUOTES
 } from './data.js';
-import { formatToDMY } from './utils/dateUtils.js';
+import { formatToDMY, parseDateSafe, getLocalIsoDate, toIsoDate } from './utils/dateUtils.js';
 import { supabaseApi } from './services/supabaseApi.js';
 import { supabase } from './lib/supabase.js';
 import { autoDetectExpenseCategory } from './utils/expenseClassifier.js';
@@ -49,7 +49,8 @@ const STORAGE_KEYS = {
   get DEMOS() { return `${getPrefix()}demos_prod_v2`; },
   get QUOTES() { return `${getPrefix()}quotes_prod_v2`; },
   get BILLS() { return `${getPrefix()}bills_prod_v2`; },
-  get SETTINGS() { return `${getPrefix()}settings_prod_v3`; }
+  get SETTINGS() { return `${getPrefix()}settings_prod_v3`; },
+  get ITEM_CATALOG() { return `${getPrefix()}item_catalog_v1`; }
 };
 
 class DealershipStore {
@@ -484,7 +485,7 @@ class DealershipStore {
         t.amount = Number(t.amount || 0);
       });
 
-      stored.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+      stored.sort((a, b) => parseDateSafe(b.date) - parseDateSafe(a.date));
 
       localStorage.setItem(STORAGE_KEYS.CASH_TXNS, JSON.stringify(stored));
       return stored;
@@ -843,6 +844,23 @@ class DealershipStore {
     // Optional unique bill name / reference title
     const billName = billData.billName ? String(billData.billName).trim() : '';
 
+    const cleanedItems = (billData.items || []).map(it => {
+      let r = it.rupees;
+      const qVal = parseFloat(it.qty);
+      const rVal = parseFloat(it.rate);
+      if (!isNaN(qVal) && qVal > 0 && !isNaN(rVal) && rVal > 0) {
+        const expected = Math.round(qVal * rVal);
+        if (r === undefined || r === null || r === '' || r === 0 || r === expected * 100 || r === expected * 1000 || Math.abs(r - expected) > expected * 5) {
+          r = expected;
+        }
+      }
+      return { ...it, rupees: r !== undefined ? Number(r) : 0 };
+    });
+
+    const calculatedGross = cleanedItems.reduce((s, it) => s + (Number(it.rupees) || 0), 0);
+    const discountVal = Number(billData.discount) || 0;
+    const finalTotalRupees = Math.max(0, calculatedGross - discountVal);
+
     const newBill = {
       id: billId,
       billNumber: String(uniqueBillNumber),
@@ -852,14 +870,16 @@ class DealershipStore {
       address: billData.address || '',
       phone: billData.phone || '',
       vehicle: billData.vehicle || '',
-      items: billData.items || [],
-      totalRupees: Number(billData.totalRupees || 0),
+      items: cleanedItems,
+      totalRupees: finalTotalRupees,
       totalPaise: Number(billData.totalPaise || 0),
       amountWords: billData.amountWords || '',
       ...billData,
       id: billId,
       billNumber: String(uniqueBillNumber),
-      billName: billName
+      billName: billName,
+      items: cleanedItems,
+      totalRupees: finalTotalRupees
     };
     newBill.date = formatToDMY(newBill.date);
 
@@ -1066,6 +1086,60 @@ class DealershipStore {
     this.init();
     this.notify();
   }
+
+  // --- Item Catalog Methods ---
+  getCatalogItems() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.ITEM_CATALOG);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+      localStorage.setItem(STORAGE_KEYS.ITEM_CATALOG, JSON.stringify(DEFAULT_CATALOG_ITEMS));
+      return DEFAULT_CATALOG_ITEMS;
+    } catch { return DEFAULT_CATALOG_ITEMS; }
+  }
+
+  saveCatalogItem(item) {
+    const items = this.getCatalogItems();
+    const idx = items.findIndex(i => i.id === item.id);
+    if (idx >= 0) {
+      items[idx] = { ...items[idx], ...item, updatedAt: new Date().toISOString() };
+    } else {
+      item.id = item.id || `CATITEM-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      item.createdAt = new Date().toISOString();
+      items.push(item);
+    }
+    localStorage.setItem(STORAGE_KEYS.ITEM_CATALOG, JSON.stringify(items));
+    this.notify();
+    return item;
+  }
+
+  deleteCatalogItem(id) {
+    const items = this.getCatalogItems().filter(i => i.id !== id);
+    localStorage.setItem(STORAGE_KEYS.ITEM_CATALOG, JSON.stringify(items));
+    this.notify();
+  }
+
+  resetCatalogToDefaults() {
+    localStorage.setItem(STORAGE_KEYS.ITEM_CATALOG, JSON.stringify(DEFAULT_CATALOG_ITEMS));
+    this.notify();
+    return DEFAULT_CATALOG_ITEMS;
+  }
 }
+
+export const DEFAULT_CATALOG_ITEMS = [
+  { id: 'cat-item-1', name: 'Diesel (High Speed Diesel 40L)', unit: '40 L', rate: 3760, isService: false, category: 'Fuel & Oil' },
+  { id: 'cat-item-2', name: 'Engine Oil - Mobil 15W40', unit: '1 Can', rate: 2450, isService: false, category: 'Fuel & Oil' },
+  { id: 'cat-item-3', name: 'Diesel Fuel Filter Kit (Bosch)', unit: '2 Pc', rate: 680, isService: false, category: 'Spare Parts' },
+  { id: 'cat-item-4', name: 'Rotavator Blades Set', unit: '1 Set', rate: 4200, isService: false, category: 'Implement Spares' },
+  { id: 'cat-item-5', name: 'Tractor Battery 12V 88Ah Exide', unit: '1 Pc', rate: 6500, isService: false, category: 'Electrical' },
+  { id: 'cat-item-6', name: 'Hydraulic Oil 68 Grade', unit: '5 L', rate: 1850, isService: false, category: 'Fuel & Oil' },
+  { id: 'cat-serv-1', name: 'Service & Labor Charge', unit: '1 Job', rate: 500, isService: true, category: 'Workshop Service' },
+  { id: 'cat-serv-2', name: 'Greasing & Washing Charge', unit: '1 Job', rate: 350, isService: true, category: 'Workshop Service' },
+  { id: 'cat-serv-3', name: 'Mechanic Inspection Charge', unit: '1 Job', rate: 400, isService: true, category: 'Workshop Service' },
+  { id: 'cat-serv-4', name: 'Clutch & Brake Adjustment', unit: '1 Job', rate: 450, isService: true, category: 'Workshop Service' },
+  { id: 'cat-serv-5', name: 'Hydraulic System Overhaul', unit: '1 Job', rate: 1200, isService: true, category: 'Workshop Service' }
+];
 
 export const store = new DealershipStore();

@@ -191,7 +191,23 @@ export function printBillDirectIframe(bill, billHTML) {
   // Set document title for Save as PDF filename
   document.title = uniqueTitle;
 
-  // Gather parent stylesheet and style tags
+  // Gather parent active CSS rules so all current styling applies synchronously
+  let activeCss = '';
+  try {
+    for (let i = 0; i < document.styleSheets.length; i++) {
+      const sheet = document.styleSheets[i];
+      try {
+        if (sheet.cssRules) {
+          for (let j = 0; j < sheet.cssRules.length; j++) {
+            activeCss += sheet.cssRules[j].cssText + '\n';
+          }
+        }
+      } catch (e) {
+        // Cross-origin restriction - safe to skip
+      }
+    }
+  } catch (e) {}
+
   const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
     .map(el => el.outerHTML)
     .join('\n');
@@ -221,6 +237,9 @@ export function printBillDirectIframe(bill, billHTML) {
           <title>${uniqueTitle}</title>
           ${styleTags}
           <style>
+            ${activeCss}
+          </style>
+          <style>
             @page {
               size: A4 portrait;
               margin: 4mm 6mm 4mm 6mm !important;
@@ -232,6 +251,7 @@ export function printBillDirectIframe(bill, billHTML) {
               padding: 0 !important;
               width: 100% !important;
               height: auto !important;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
               font-size: 12pt !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
@@ -243,6 +263,139 @@ export function printBillDirectIframe(bill, billHTML) {
               box-shadow: none !important;
               margin: 0 auto !important;
               width: 100% !important;
+              max-width: 100% !important;
+              padding: 6mm 8mm !important;
+              box-sizing: border-box !important;
+            }
+            .mdd-top-bar {
+              display: flex !important;
+              justify-content: space-between !important;
+              align-items: center !important;
+              width: 100% !important;
+              margin-bottom: 2px !important;
+            }
+            .mdd-estimate-pill {
+              font-size: 11px !important;
+              font-weight: 800 !important;
+              padding: 1px 8px !important;
+              border: 1.5px solid #000000 !important;
+              border-radius: 12px !important;
+              text-transform: uppercase !important;
+            }
+            .mdd-top-phone {
+              font-size: 12px !important;
+              font-weight: 800 !important;
+              font-family: monospace, sans-serif !important;
+            }
+            .mdd-header-main {
+              display: flex !important;
+              flex-direction: row !important;
+              align-items: center !important;
+              justify-content: space-between !important;
+              width: 100% !important;
+              gap: 8px !important;
+              padding: 2px 0 6px 0 !important;
+            }
+            .mdd-emblem-left {
+              width: 80px !important;
+              height: 80px !important;
+              min-width: 80px !important;
+              max-width: 80px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              flex-shrink: 0 !important;
+            }
+            .mdd-emblem-left img, .mdd-durga-logo {
+              width: 100% !important;
+              height: 100% !important;
+              object-fit: contain !important;
+              display: block !important;
+            }
+            .mdd-title-center {
+              text-align: center !important;
+              flex: 1 !important;
+            }
+            .mdd-shop-name {
+              font-size: 28px !important;
+              font-weight: 900 !important;
+              color: #000000 !important;
+              line-height: 1.1 !important;
+              letter-spacing: 0.5px !important;
+            }
+            .mdd-address-lines {
+              font-size: 11.5px !important;
+              font-weight: 700 !important;
+              color: #1e293b !important;
+              line-height: 1.3 !important;
+              margin-top: 2px !important;
+            }
+            .mdd-emblem-right {
+              width: 75px !important;
+              height: 75px !important;
+              min-width: 75px !important;
+              max-width: 75px !important;
+              max-height: 75px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              flex-shrink: 0 !important;
+              overflow: hidden !important;
+            }
+            .mdd-emblem-right svg {
+              width: 75px !important;
+              height: 75px !important;
+              max-width: 75px !important;
+              max-height: 75px !important;
+              display: block !important;
+            }
+            .mdd-meta-grid {
+              display: flex !important;
+              justify-content: space-between !important;
+              align-items: baseline !important;
+              width: 100% !important;
+              margin: 4px 0 6px 0 !important;
+              font-size: 13px !important;
+              font-weight: 700 !important;
+            }
+            .mdd-customer-section {
+              border: 1px solid #94a3b8 !important;
+              border-radius: 4px !important;
+              padding: 4px 8px !important;
+              margin-bottom: 6px !important;
+            }
+            .mdd-cust-row {
+              display: flex !important;
+              align-items: baseline !important;
+              width: 100% !important;
+              gap: 12px !important;
+              margin: 2px 0 !important;
+              font-size: 12.5px !important;
+            }
+            .mdd-dots-line {
+              border-bottom: 1px dotted #475569 !important;
+              padding-bottom: 1px !important;
+            }
+            .mdd-table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              margin: 4px 0 !important;
+            }
+            .mdd-table th {
+              border: 1px solid #000000 !important;
+              background: #f1f5f9 !important;
+              padding: 3px 6px !important;
+              font-size: 12px !important;
+              font-weight: 800 !important;
+            }
+            .mdd-table td {
+              border: 1px solid #cbd5e1 !important;
+              padding: 3px 6px !important;
+              font-size: 12px !important;
+            }
+            .mdd-total-row td {
+              border-top: 2px solid #000000 !important;
+              font-weight: 800 !important;
             }
           </style>
         </head>
@@ -262,7 +415,7 @@ export function printBillDirectIframe(bill, billHTML) {
       } catch (err) {}
     };
 
-    setTimeout(() => {
+    const triggerPrint = () => {
       try {
         const billEl = iframe.contentDocument ? iframe.contentDocument.getElementById('printableMddBill') : null;
         if (billEl) {
@@ -283,9 +436,29 @@ export function printBillDirectIframe(bill, billHTML) {
           iframe.contentWindow.addEventListener('afterprint', cleanup);
         }
         window.addEventListener('afterprint', cleanup);
-        setTimeout(cleanup, 2500);
+        setTimeout(cleanup, 3000);
       }
-    }, 200);
+    };
+
+    // Wait for images to load before opening print
+    const imgs = Array.from(doc.images || []);
+    const pendingImgs = imgs.filter(img => !img.complete);
+    if (pendingImgs.length > 0) {
+      let loaded = 0;
+      const onImgDone = () => {
+        loaded++;
+        if (loaded >= pendingImgs.length) {
+          setTimeout(triggerPrint, 60);
+        }
+      };
+      pendingImgs.forEach(img => {
+        img.onload = onImgDone;
+        img.onerror = onImgDone;
+      });
+      setTimeout(triggerPrint, 500); // failsafe
+    } else {
+      setTimeout(triggerPrint, 120);
+    }
   } catch (e) {
     console.error('Failed to create print iframe:', e);
     window.print();

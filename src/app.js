@@ -109,11 +109,11 @@ export function numberToIndianWords(n) {
 
 export function getMaaDurgaSvg() {
   const logoSrc = (typeof DURGA_MAA_LOGO !== 'undefined' && DURGA_MAA_LOGO) ? DURGA_MAA_LOGO : '/durga-maa-logo.jpg';
-  return `<img src="${logoSrc}" alt="Maa Durga Logo" class="mdd-durga-logo" style="width:100%; height:100%; object-fit:contain; display:block;" onerror="this.onerror=null; this.src='/durga-maa-logo.jpg';" />`;
+  return `<img src="${logoSrc}" alt="Maa Durga Logo" class="mdd-durga-logo" style="width:100%; height:100%; max-width:85px; max-height:85px; object-fit:contain; display:block;" onerror="this.onerror=null; this.src='/durga-maa-logo.jpg';" />`;
 }
 
 export function getChakraSvg() {
-  return `<svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  return `<svg viewBox="0 0 100 100" width="75" height="75" style="width:75px; height:75px; max-width:75px; max-height:75px; display:block;" xmlns="http://www.w3.org/2000/svg">
     <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#000000" stroke-width="3"/>
     <circle cx="50" cy="50" r="42" fill="none" stroke="#000000" stroke-width="1"/>
     <circle cx="50" cy="50" r="7" fill="#000000"/>
@@ -125,14 +125,33 @@ export function getChakraSvg() {
 
 export function formatToDMY(dateInput) {
   if (!dateInput) return '';
+  if (dateInput instanceof Date) {
+    if (isNaN(dateInput.getTime())) return '';
+    const day = String(dateInput.getDate()).padStart(2, '0');
+    const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+    const year = dateInput.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
   const str = String(dateInput).trim();
   if (!str) return '';
+
   if (/^\d{2}-\d{2}-\d{4}$/.test(str)) return str;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str.replace(/\//g, '-');
+
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+    const parts = str.split('/');
+    return `${String(parts[0]).padStart(2, '0')}-${String(parts[1]).padStart(2, '0')}-${parts[2]}`;
+  }
+
   if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str)) {
     const [y, m, d] = str.split('T')[0].split(/[-/]/);
     return `${String(d).padStart(2, '0')}-${String(m).padStart(2, '0')}-${y}`;
   }
+
+  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(str)) {
+    const parts = str.split('-');
+    return `${String(parts[0]).padStart(2, '0')}-${String(parts[1]).padStart(2, '0')}-${parts[2]}`;
+  }
+
   const dateObj = new Date(str);
   if (!isNaN(dateObj.getTime())) {
     const day = String(dateObj.getDate()).padStart(2, '0');
@@ -145,12 +164,34 @@ export function formatToDMY(dateInput) {
 
 export function toIsoDate(dmyOrIso) {
   if (!dmyOrIso) return new Date().toISOString().split('T')[0];
+  if (dmyOrIso instanceof Date) {
+    const y = dmyOrIso.getFullYear();
+    const m = String(dmyOrIso.getMonth() + 1).padStart(2, '0');
+    const d = String(dmyOrIso.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
   const str = String(dmyOrIso).trim();
-  if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(str)) {
+  if (!str) return new Date().toISOString().split('T')[0];
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}/.test(str)) {
+    const [y, m, d] = str.split('T')[0].split(/[-/]/);
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(str)) {
     const [d, m, y] = str.split(/[-/]/);
     return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
   return str.split('T')[0];
+}
+
+export function getLocalIsoDate() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 export function formatAdaptiveRupee(val) {
@@ -248,20 +289,26 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
 
   const regularRupees = regularItems.reduce((sum, it) => {
     let r = it.rupees;
-    if ((r === undefined || r === null || r === '' || r === 0) && it.qty && it.rate) {
-      const qVal = parseFloat(it.qty);
-      const rVal = parseFloat(it.rate);
-      if (!isNaN(qVal) && !isNaN(rVal)) r = Math.round(qVal * rVal);
+    const qVal = parseFloat(it.qty);
+    const rVal = parseFloat(it.rate);
+    if (!isNaN(qVal) && qVal > 0 && !isNaN(rVal) && rVal > 0) {
+      const expected = Math.round(qVal * rVal);
+      if (r === undefined || r === null || r === '' || r === 0 || r === expected * 100 || r === expected * 1000 || Math.abs(r - expected) > expected * 5) {
+        r = expected;
+      }
     }
     return sum + (Number(r) || 0);
   }, 0);
 
   const serviceRupees = serviceItems.reduce((sum, it) => {
     let r = it.rupees;
-    if ((r === undefined || r === null || r === '' || r === 0) && it.qty && it.rate) {
-      const qVal = parseFloat(it.qty);
-      const rVal = parseFloat(it.rate);
-      if (!isNaN(qVal) && !isNaN(rVal)) r = Math.round(qVal * rVal);
+    const qVal = parseFloat(it.qty);
+    const rVal = parseFloat(it.rate);
+    if (!isNaN(qVal) && qVal > 0 && !isNaN(rVal) && rVal > 0) {
+      const expected = Math.round(qVal * rVal);
+      if (r === undefined || r === null || r === '' || r === 0 || r === expected * 100 || r === expected * 1000 || Math.abs(r - expected) > expected * 5) {
+        r = expected;
+      }
     }
     return sum + (Number(r) || 0);
   }, 0);
@@ -471,11 +518,12 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
           : '';
 
         let rowRupees = item.rupees;
-        if ((rowRupees === undefined || rowRupees === null || rowRupees === '' || rowRupees === 0) && item.qty && item.rate) {
-          const qVal = parseFloat(item.qty);
-          const rVal = parseFloat(item.rate);
-          if (!isNaN(qVal) && !isNaN(rVal) && qVal > 0 && rVal > 0) {
-            rowRupees = Math.round(qVal * rVal);
+        const qVal = parseFloat(item.qty);
+        const rVal = parseFloat(item.rate);
+        if (!isNaN(qVal) && qVal > 0 && !isNaN(rVal) && rVal > 0) {
+          const expected = Math.round(qVal * rVal);
+          if (rowRupees === undefined || rowRupees === null || rowRupees === '' || rowRupees === 0 || rowRupees === expected * 100 || rowRupees === expected * 1000 || Math.abs(rowRupees - expected) > expected * 5) {
+            rowRupees = expected;
           }
         }
 
@@ -536,11 +584,12 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
           : '';
 
         let rowRupees = item.rupees;
-        if ((rowRupees === undefined || rowRupees === null || rowRupees === '' || rowRupees === 0) && item.qty && item.rate) {
-          const qVal = parseFloat(item.qty);
-          const rVal = parseFloat(item.rate);
-          if (!isNaN(qVal) && !isNaN(rVal) && qVal > 0 && rVal > 0) {
-            rowRupees = Math.round(qVal * rVal);
+        const qVal = parseFloat(item.qty);
+        const rVal = parseFloat(item.rate);
+        if (!isNaN(qVal) && qVal > 0 && !isNaN(rVal) && rVal > 0) {
+          const expected = Math.round(qVal * rVal);
+          if (rowRupees === undefined || rowRupees === null || rowRupees === '' || rowRupees === 0 || rowRupees === expected * 100 || rowRupees === expected * 1000 || Math.abs(rowRupees - expected) > expected * 5) {
+            rowRupees = expected;
           }
         }
 
@@ -584,11 +633,12 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
           : '';
 
         let rowRupees = item.rupees;
-        if ((rowRupees === undefined || rowRupees === null || rowRupees === '' || rowRupees === 0) && item.qty && item.rate) {
-          const qVal = parseFloat(item.qty);
-          const rVal = parseFloat(item.rate);
-          if (!isNaN(qVal) && !isNaN(rVal) && qVal > 0 && rVal > 0) {
-            rowRupees = Math.round(qVal * rVal);
+        const qVal = parseFloat(item.qty);
+        const rVal = parseFloat(item.rate);
+        if (!isNaN(qVal) && qVal > 0 && !isNaN(rVal) && rVal > 0) {
+          const expected = Math.round(qVal * rVal);
+          if (rowRupees === undefined || rowRupees === null || rowRupees === '' || rowRupees === 0 || rowRupees === expected * 100 || rowRupees === expected * 1000 || Math.abs(rowRupees - expected) > expected * 5) {
+            rowRupees = expected;
           }
         }
 
@@ -631,24 +681,24 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
   return `
     <div class="mdd-bill-sheet ${densityClass} ${sheetModeClass}" id="printableMddBill" data-item-count="${itemCount}" data-bill-number="${billNumber}" data-customer-name="${(b.customerName || '').replace(/^M\/s\s*/i, '').replace(/^मेसर्स\s*/i, '')}" data-bill-date="${rawDate}" data-bill-name="${billName}" style="${sheetStyle}">
       <!-- Top Bar with ESTIMATE and Phone -->
-      <div class="mdd-top-bar">
-        <div class="mdd-estimate-pill">ESTIMATE / CASH MEMO</div>
-        <div class="mdd-top-phone">Mob.: 9931227178</div>
+      <div class="mdd-top-bar" style="display:flex !important; justify-content:space-between !important; align-items:center !important; width:100% !important;">
+        <div class="mdd-estimate-pill" style="font-size:11px !important; font-weight:800 !important; padding:1px 8px !important; border:1.5px solid #000000 !important; border-radius:12px !important; text-transform:uppercase !important;">ESTIMATE / CASH MEMO</div>
+        <div class="mdd-top-phone" style="font-size:12px !important; font-weight:800 !important; font-family:monospace, sans-serif !important;">Mob.: 9931227178</div>
       </div>
 
       <!-- Header: Durga Logo (Left) | Center Shop Name & Address | Chakra Logo (Right) -->
-      <div class="mdd-header-main">
-        <div class="mdd-emblem-left">
+      <div class="mdd-header-main" style="display:flex !important; flex-direction:row !important; align-items:center !important; justify-content:space-between !important; width:100% !important; gap:8px !important; padding:2px 0 6px 0 !important;">
+        <div class="mdd-emblem-left" style="width:80px !important; height:80px !important; min-width:80px !important; max-width:80px !important; display:flex !important; align-items:center !important; justify-content:center !important; flex-shrink:0 !important; overflow:hidden !important;">
           ${getMaaDurgaSvg()}
         </div>
-        <div class="mdd-title-center">
-          <div class="mdd-shop-name">MAA DURGA DIESEL</div>
-          <div class="mdd-address-lines">
+        <div class="mdd-title-center" style="text-align:center !important; flex:1 !important;">
+          <div class="mdd-shop-name" style="font-size:28px !important; font-weight:900 !important; color:#000000 !important; line-height:1.1 !important;">MAA DURGA DIESEL</div>
+          <div class="mdd-address-lines" style="font-size:11.5px !important; font-weight:700 !important; line-height:1.3 !important; margin-top:2px !important;">
             Mahavir Market, Mahadev Sthan, Karmalichak<br>
             Bypass, N. H. - 30, Patna City
           </div>
         </div>
-        <div class="mdd-emblem-right">
+        <div class="mdd-emblem-right" style="width:75px !important; height:75px !important; min-width:75px !important; max-width:75px !important; max-height:75px !important; display:flex !important; align-items:center !important; justify-content:center !important; flex-shrink:0 !important; overflow:hidden !important;">
           ${getChakraSvg()}
         </div>
       </div>
@@ -745,17 +795,32 @@ export function renderMaaDurgaBillHTML(bill, isPureBlank = false, isLive = false
             ${rowsHtml}
           </tbody>
           <tfoot>
-            <tr>
-              <td colspan="2" style="vertical-align:middle; padding:3px 10px !important;">
-                <div style="display:flex; align-items:center; justify-content:space-between; width:100%; gap:8px;">
-                  <div id="mddLiveSubtotalContainer" class="mdd-subtotal-breakdown-inline" style="display:${(regularItems.length > 0 && (serviceItems.length > 0 || discount > 0) && !isPureBlank) ? 'flex' : 'none'};">
-                    <span>Items Subtotal: <strong id="mddLiveRegularSubtotal">₹${regularRupees.toLocaleString('en-IN')}</strong></span>
-                    <span id="mddLiveServSep" style="margin:0 6px; color:#94a3b8; display:${serviceItems.length > 0 ? 'inline' : 'none'};">|</span>
-                    <span id="mddLiveServPart" style="display:${serviceItems.length > 0 ? 'inline' : 'none'};">Service: <strong id="mddLiveServiceSubtotal">₹${serviceRupees.toLocaleString('en-IN')}</strong></span>
-                    <span id="mddLiveDiscSep" style="margin:0 6px; color:#94a3b8; display:${discount > 0 ? 'inline' : 'none'};">|</span>
-                    <span id="mddLiveDiscPart" style="color:#dc2626; display:${discount > 0 ? 'inline' : 'none'};">Discount: <strong id="mddLiveDiscountSubtotal">-₹${discount.toLocaleString('en-IN')}</strong></span>
-                  </div>
-                  <span class="mdd-total-badge" style="margin-left:auto;">Total</span>
+            <tr id="mddLiveGrossRow" class="mdd-gross-row" style="${discount > 0 ? '' : 'display:none;'}">
+              <td colspan="2" style="vertical-align:middle; text-align:right; padding:2.5px 8px !important; font-weight:700; color:#334155; font-size:12px;">
+                कुल योग / Gross Total:
+              </td>
+              <td style="width:100px; text-align:right; font-size:13.5px; font-weight:800; font-family:monospace, sans-serif; color:#0f172a;">
+                <span id="mddLiveGrossVal">${grossR.toLocaleString('en-IN')}</span>
+              </td>
+              <td style="width:50px; text-align:center; font-size:12px; font-weight:700; font-family:monospace, sans-serif; color:#64748b;">
+                00
+              </td>
+            </tr>
+            <tr id="mddLiveDiscountRow" class="mdd-discount-row" style="${discount > 0 ? '' : 'display:none;'}">
+              <td colspan="2" style="vertical-align:middle; text-align:right; padding:2.5px 8px !important; font-weight:800; color:#dc2626; font-size:12px;">
+                विशेष छूट / Discount:
+              </td>
+              <td style="width:100px; text-align:right; font-size:13.5px; font-weight:900; font-family:monospace, sans-serif; color:#dc2626;">
+                <span id="mddLiveDiscountVal">- ${discount.toLocaleString('en-IN')}</span>
+              </td>
+              <td style="width:50px; text-align:center; font-size:12px; font-weight:800; font-family:monospace, sans-serif; color:#dc2626;">
+                00
+              </td>
+            </tr>
+            <tr class="mdd-total-main-row">
+              <td colspan="2" style="vertical-align:middle; padding:3px 8px !important;">
+                <div style="display:flex; align-items:center; justify-content:flex-end; width:100%;">
+                  <span class="mdd-total-badge" id="mddLiveTotalBadge" style="margin-left:auto;">${discount > 0 ? 'Total Payable' : 'Total'}</span>
                 </div>
               </td>
               <td style="width:100px; text-align:right; font-size:16px; font-weight:900; font-family:monospace, sans-serif;">
@@ -4357,7 +4422,20 @@ class TractorOSApp {
     }
 
     const dateInput = document.getElementById('nbDate');
-    if (dateInput) dateInput.value = toIsoDate(prefill?.date);
+    const datePicker = document.getElementById('nbDatePicker');
+    const curDateStr = formatToDMY(prefill?.date || new Date());
+    if (dateInput) dateInput.value = curDateStr;
+    if (datePicker) {
+      datePicker.value = toIsoDate(curDateStr);
+      datePicker.onchange = () => {
+        if (datePicker.value && dateInput) dateInput.value = formatToDMY(datePicker.value);
+      };
+    }
+    if (dateInput) {
+      dateInput.oninput = () => {
+        if (datePicker && dateInput.value) datePicker.value = toIsoDate(dateInput.value);
+      };
+    }
 
     const custInput = document.getElementById('nbCustomer');
     if (custInput) custInput.value = prefill?.customerName || '';
@@ -4410,9 +4488,9 @@ class TractorOSApp {
     if (tbody) {
       tbody.innerHTML = '';
       if (prefill?.items && prefill.items.length > 0) {
-        prefill.items.forEach(it => this.addBillItemRow(it.desc, it.qty, it.unit || 'Ltr', it.rate, it.rupees, it.paise, it.isService));
+        prefill.items.forEach(it => this.addBillItemRow(it.desc, it.qty || '1', it.unit || 'Pcs', it.rate, it.rupees, it.paise, it.isService));
       } else {
-        this.addBillItemRow('', '', 'Ltr', '', '', '', false);
+        this.addBillItemRow('', '1', 'Pcs', '', '', '', false);
       }
     }
 
@@ -4445,9 +4523,9 @@ class TractorOSApp {
     const nextNo = store.getNextBillNumber();
     const billNumber = document.getElementById('nbBillNo')?.value.trim() || nextNo;
     const billName = document.getElementById('nbBillName')?.value.trim() || '';
-    const rawDate = document.getElementById('nbDate')?.value || new Date().toISOString().split('T')[0];
+    const rawDate = document.getElementById('nbDate')?.value || getLocalIsoDate();
     const date = formatToDMY(rawDate);
-    const customerName = document.getElementById('nbCustomer')?.value.trim() || 'M/s Customer';
+    const customerName = document.getElementById('nbCustomer')?.value.trim() || 'मेसर्स ग्राहक';
     const address = document.getElementById('nbAddress')?.value.trim() || '';
     const phone = document.getElementById('nbPhone')?.value.trim() || '';
     const vehicle = document.getElementById('nbVehicle')?.value.trim() || '';
@@ -4459,11 +4537,26 @@ class TractorOSApp {
       const typeVal = tr.querySelector('.nb-type')?.value;
       const desc = tr.querySelector('.nb-desc')?.value.trim() || '';
       const isService = typeVal === 'service' || (typeVal !== 'regular' && isServiceChargeItem({ desc }));
-      const qty = tr.querySelector('.nb-qty')?.value.trim() || '';
-      const unit = tr.querySelector('.nb-unit')?.value.trim() || '';
+      let qty = tr.querySelector('.nb-qty')?.value.trim() || '';
+      const unit = tr.querySelector('.nb-unit')?.value.trim() || (isService ? 'Job' : 'Pcs');
       const rate = Number(tr.querySelector('.nb-rate')?.value) || 0;
-      const rupees = Number(tr.querySelector('.nb-rupees')?.value) || 0;
+      let rupees = Number(tr.querySelector('.nb-rupees')?.value) || 0;
       const paise = Number(tr.querySelector('.nb-paise')?.value) || 0;
+
+      // If rate is entered but qty is missing/0, default qty to 1
+      if (rate > 0 && (!qty || parseFloat(qty) <= 0)) {
+        qty = '1';
+      }
+
+      // Auto-correct any corrupt amount (e.g. 3500 x 2 = 7000, never 700000 or 7001000)
+      const qVal = parseFloat(qty);
+      if (!isNaN(qVal) && qVal > 0 && rate > 0) {
+        const expected = Math.round(qVal * rate);
+        if (rupees === 0 || rupees === expected * 100 || rupees === expected * 1000 || Math.abs(rupees - expected) > expected * 5) {
+          rupees = expected;
+        }
+      }
+
       if (desc || rupees > 0 || qty) {
         const itemObj = { qty, unit, desc, rate, rupees, paise, isService };
         if (isService) {
@@ -4524,19 +4617,29 @@ class TractorOSApp {
     });
   }
 
-  addBillItemRow(desc = '', qty = '', unit = 'Ltr', rate = '', rupees = '', paise = '', isService = null) {
+  addBillItemRow(desc = '', qty = '', unit = 'Pcs', rate = '', rupees = '', paise = '', isService = null) {
     const tbody = document.getElementById('nbItemsBody');
     if (!tbody) return;
     const tr = document.createElement('tr');
     const rowIdx = tbody.children.length + 1;
     const descVal = (desc !== undefined && desc !== null) ? desc : '';
-    const qtyVal = (qty !== undefined && qty !== null && qty !== '') ? qty : '';
+    const qtyVal = (qty !== undefined && qty !== null && String(qty).trim() !== '') ? String(qty).trim() : '1';
     const rateVal = (rate !== undefined && rate !== null && rate !== 0 && rate !== '') ? rate : '';
-    const rupeesVal = (rupees !== undefined && rupees !== null && rupees !== 0 && rupees !== '') ? rupees : '';
+    let rupeesVal = (rupees !== undefined && rupees !== null && rupees !== 0 && rupees !== '') ? rupees : '';
     const paiseVal = (paise !== undefined && paise !== null && paise !== 0 && paise !== '00') ? paise : '';
     
     const isServ = isService !== null ? Boolean(isService) : isServiceChargeItem({ desc: descVal });
-    const unitVal = unit || (isServ ? 'Job' : 'Ltr');
+    const unitVal = unit || (isServ ? 'Job' : 'Pcs');
+
+    // Auto-correct corrupt amount on load
+    const qNum = parseFloat(qtyVal);
+    const rNum = parseFloat(rateVal);
+    if (!isNaN(qNum) && qNum > 0 && !isNaN(rNum) && rNum > 0) {
+      const expected = Math.round(qNum * rNum);
+      if (!rupeesVal || Number(rupeesVal) === expected * 100 || Number(rupeesVal) === expected * 1000 || Math.abs(Number(rupeesVal) - expected) > expected * 5) {
+        rupeesVal = expected;
+      }
+    }
 
     if (isServ) {
       tr.classList.add('nb-service-charge-row');
@@ -4551,15 +4654,15 @@ class TractorOSApp {
         </select>
       </td>
       <td>
-        <input type="text" class="form-input nb-desc" style="padding:5px 8px; font-size:12.5px; font-weight:${isServ ? '700' : '600'}; color:${isServ ? '#1e3a8a' : 'inherit'};" placeholder="${isServ ? 'Service & Labor Charge...' : 'Description (Item / Parts / Diesel)...'}" value="${descVal}" required />
+        <input type="text" class="form-input nb-desc" style="padding:5px 8px; font-size:12.5px; font-weight:${isServ ? '700' : '600'}; color:${isServ ? '#1e3a8a' : 'inherit'};" placeholder="${isServ ? 'Service & labor charge...' : 'Description (Item / Diesel / Oil / Parts...)'}" value="${descVal}" required />
       </td>
       <td>
-        <input type="number" class="form-input nb-qty" style="padding:5px 6px; font-size:12.5px; text-align:center; font-weight:700;" placeholder="1" min="0" step="any" value="${qtyVal}" />
+        <input type="number" class="form-input nb-qty" style="padding:5px 4px; font-size:12.5px; text-align:center; font-weight:700;" placeholder="1" min="0" step="any" value="${qtyVal}" />
       </td>
       <td>
-        <select class="form-select nb-unit" style="padding:5px 4px; font-size:11.5px;">
-          <option value="Ltr" ${unitVal === 'Ltr' ? 'selected' : ''}>Ltr</option>
+        <select class="form-select nb-unit" style="padding:5px 2px; font-size:11.5px;">
           <option value="Pcs" ${unitVal === 'Pcs' ? 'selected' : ''}>Pcs</option>
+          <option value="Ltr" ${unitVal === 'Ltr' ? 'selected' : ''}>Ltr</option>
           <option value="Can" ${unitVal === 'Can' ? 'selected' : ''}>Can</option>
           <option value="Job" ${unitVal === 'Job' ? 'selected' : ''}>Job</option>
           <option value="Bags" ${unitVal === 'Bags' ? 'selected' : ''}>Bags</option>
@@ -4571,16 +4674,16 @@ class TractorOSApp {
         </select>
       </td>
       <td>
-        <input type="number" class="form-input nb-rate" style="padding:5px 6px; font-size:12.5px; text-align:right;" placeholder="Rate ₹" min="0" step="any" value="${rateVal}" />
+        <input type="number" class="form-input nb-rate" style="padding:5px 4px; font-size:12.5px; text-align:right;" placeholder="Rate ₹" min="0" step="any" value="${rateVal}" />
       </td>
       <td>
-        <input type="number" class="form-input nb-rupees" style="padding:5px 6px; font-size:12.5px; text-align:right; font-weight:700; color:${isServ ? '#b45309' : '#1e3a8a'};" placeholder="0" min="0" value="${rupeesVal}" />
+        <input type="number" class="form-input nb-rupees" style="padding:5px 4px; font-size:12.5px; text-align:right; font-weight:700; color:${isServ ? '#b45309' : '#1e3a8a'};" placeholder="0" min="0" value="${rupeesVal}" />
       </td>
       <td>
-        <input type="number" class="form-input nb-paise" style="padding:5px 4px; font-size:12.5px; text-align:center;" placeholder="00" min="0" max="99" value="${paiseVal}" />
+        <input type="number" class="form-input nb-paise" style="padding:5px 2px; font-size:12.5px; text-align:center;" placeholder="00" min="0" max="99" value="${paiseVal}" />
       </td>
       <td style="text-align:center;">
-        <button type="button" class="nb-remove-row-btn" style="background:transparent; border:none; color:#ef4444; font-size:18px; font-weight:700; cursor:pointer; line-height:1; padding:2px 6px; border-radius:4px;" title="Remove item">&times;</button>
+        <button type="button" class="nb-remove-row-btn" style="background:transparent; border:none; color:#ef4444; font-size:18px; font-weight:700; cursor:pointer; line-height:1; padding:2px 4px; border-radius:4px;" title="Remove item">&times;</button>
       </td>
     `;
     tbody.appendChild(tr);
@@ -4602,7 +4705,7 @@ class TractorOSApp {
         typeSelect.style.color = '#92400e';
         typeSelect.style.borderColor = '#fde68a';
         rupeesInput.style.color = '#b45309';
-        if (unitSelect.value === 'Ltr') unitSelect.value = 'Job';
+        if (unitSelect.value === 'Pcs' || unitSelect.value === 'Ltr') unitSelect.value = 'Job';
       } else {
         tr.classList.remove('nb-service-charge-row');
         typeSelect.style.background = '#ffffff';
@@ -4623,7 +4726,7 @@ class TractorOSApp {
           typeSelect.style.color = '#92400e';
           typeSelect.style.borderColor = '#fde68a';
           rupeesInput.style.color = '#b45309';
-          if (unitSelect.value === 'Ltr') unitSelect.value = 'Job';
+          if (unitSelect.value === 'Pcs' || unitSelect.value === 'Ltr') unitSelect.value = 'Job';
         } else if (!autoServ && typeSelect.value === 'service' && !descInput.value.trim()) {
           typeSelect.value = 'regular';
           tr.classList.remove('nb-service-charge-row');
@@ -4635,23 +4738,6 @@ class TractorOSApp {
       }
       this.recalcBillForm();
     });
-
-    const removeBtn = tr.querySelector('.nb-remove-row-btn');
-    if (removeBtn) {
-      removeBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const allRows = tbody.querySelectorAll('tr');
-        if (allRows.length <= 1) {
-          tr.remove();
-          this.addBillItemRow('', '', 'Ltr', '', '', '', false);
-        } else {
-          tr.remove();
-        }
-        this.reindexBillRows();
-        this.recalcBillForm();
-      });
-    }
 
     if (!tbody._hasBoundRowDelete) {
       tbody._hasBoundRowDelete = true;
@@ -4665,7 +4751,7 @@ class TractorOSApp {
             const allRows = tbody.querySelectorAll('tr');
             if (allRows.length <= 1) {
               targetTr.remove();
-              this.addBillItemRow('', '', 'Ltr', '', '', '', false);
+              this.addBillItemRow('', '1', 'Pcs', '', '', '', false);
             } else {
               targetTr.remove();
             }
@@ -4676,29 +4762,78 @@ class TractorOSApp {
       });
     }
 
+    // Bidirectional calculation: Qty * Rate -> Rupees; or Rupees / Qty -> Rate
     const onQtyRateChange = () => {
-      const q = parseFloat(qtyInput.value);
+      let q = parseFloat(qtyInput.value);
       const r = parseFloat(rateInput.value);
+
+      // If rate is entered but qty is missing/blank/0, default qty to 1
+      if (!isNaN(r) && r > 0 && (isNaN(q) || q <= 0)) {
+        q = 1;
+        qtyInput.value = '1';
+      }
+
       if (!isNaN(q) && !isNaN(r) && q > 0 && r >= 0) {
-        const product = q * r;
+        const product = Math.round(q * r * 100) / 100;
         const whole = Math.floor(product);
         const pFrac = Math.round((product - whole) * 100);
         rupeesInput.value = whole;
         paiseInput.value = pFrac > 0 ? (pFrac < 10 ? '0' + pFrac : pFrac) : '00';
+      } else if (!rateInput.value && !rupeesInput.value) {
+        rupeesInput.value = '';
+        paiseInput.value = '00';
+      }
+      this.recalcBillForm();
+    };
+
+    const onRupeesChange = () => {
+      let q = parseFloat(qtyInput.value);
+      const rVal = parseFloat(rupeesInput.value) || 0;
+      const pVal = parseFloat(paiseInput.value) || 0;
+
+      // If rupees is entered but qty is missing/blank/0, default qty to 1
+      if (rVal > 0 && (isNaN(q) || q <= 0)) {
+        q = 1;
+        qtyInput.value = '1';
+      }
+
+      if (!isNaN(q) && q > 0 && rVal >= 0) {
+        const totalAmt = rVal + (pVal / 100);
+        rateInput.value = Math.round((totalAmt / q) * 100) / 100;
+      } else if (!rupeesInput.value) {
+        rateInput.value = '';
       }
       this.recalcBillForm();
     };
 
     qtyInput.addEventListener('input', onQtyRateChange);
+    qtyInput.addEventListener('change', onQtyRateChange);
     rateInput.addEventListener('input', onQtyRateChange);
+    rateInput.addEventListener('change', onQtyRateChange);
     unitSelect.addEventListener('change', () => this.recalcBillForm());
-    rupeesInput.addEventListener('input', () => this.recalcBillForm());
-    paiseInput.addEventListener('input', () => this.recalcBillForm());
+    rupeesInput.addEventListener('input', onRupeesChange);
+    rupeesInput.addEventListener('change', onRupeesChange);
+    paiseInput.addEventListener('input', onRupeesChange);
+    paiseInput.addEventListener('change', onRupeesChange);
 
     this.recalcBillForm();
   }
 
   addBillPresetItem(desc, qty, unit, rate, isService = false) {
+    const tbody = document.getElementById('nbItemsBody');
+    if (tbody) {
+      const rows = tbody.querySelectorAll('tr');
+      if (rows.length === 1) {
+        const firstTr = rows[0];
+        const descInput = firstTr.querySelector('.nb-desc');
+        const qtyInput = firstTr.querySelector('.nb-qty');
+        const rateInput = firstTr.querySelector('.nb-rate');
+        const rupeesInput = firstTr.querySelector('.nb-rupees');
+        if (!descInput?.value.trim() && !qtyInput?.value.trim() && !rateInput?.value.trim() && !rupeesInput?.value.trim()) {
+          firstTr.remove();
+        }
+      }
+    }
     const rupees = (qty && rate) ? Math.round(Number(qty) * Number(rate)) : '';
     this.addBillItemRow(desc, qty, unit, rate, rupees, 0, isService);
   }
@@ -4720,8 +4855,31 @@ class TractorOSApp {
       const typeVal = tr.querySelector('.nb-type')?.value;
       const desc = tr.querySelector('.nb-desc')?.value || '';
       const isServ = typeVal === 'service' || (typeVal !== 'regular' && isServiceChargeItem({ desc }));
-      const r = Number(tr.querySelector('.nb-rupees')?.value) || 0;
-      const p = Number(tr.querySelector('.nb-paise')?.value) || 0;
+      const rawQ = tr.querySelector('.nb-qty')?.value;
+      const rate = parseFloat(tr.querySelector('.nb-rate')?.value) || 0;
+      let q = parseFloat(rawQ);
+      let r = Number(tr.querySelector('.nb-rupees')?.value);
+      let p = Number(tr.querySelector('.nb-paise')?.value) || 0;
+
+      // If rate is entered but qty is missing/blank/0, default qty to 1
+      if (rate > 0 && (isNaN(q) || q <= 0)) {
+        q = 1;
+        const qInput = tr.querySelector('.nb-qty');
+        if (qInput && !qInput.value) qInput.value = '1';
+      }
+
+      // Auto-correct any corrupt amount (e.g. 3500 x 2 = 7000, never 700000 or 7001000)
+      if (q > 0 && rate > 0) {
+        const expected = Math.round(q * rate);
+        if (isNaN(r) || r === 0 || (expected > 0 && (r === expected * 100 || r === expected * 1000 || Math.abs(r - expected) > expected * 5))) {
+          r = expected;
+          const rInput = tr.querySelector('.nb-rupees');
+          if (rInput) rInput.value = expected;
+        }
+      } else if (isNaN(r)) {
+        r = 0;
+      }
+
       if (isServ) {
         serviceR += r;
       } else {
@@ -5144,29 +5302,25 @@ class TractorOSApp {
       const wordsCell = document.getElementById('mddLiveWordsVal');
       if (wordsCell) wordsCell.textContent = numberToIndianWords(totalR);
 
-      const subtotalCont = document.getElementById('mddLiveSubtotalContainer');
-      const regSub = document.getElementById('mddLiveRegularSubtotal');
-      const servSub = document.getElementById('mddLiveServiceSubtotal');
-      const servSep = document.getElementById('mddLiveServSep');
-      const servPart = document.getElementById('mddLiveServPart');
-      const discSep = document.getElementById('mddLiveDiscSep');
-      const discPart = document.getElementById('mddLiveDiscPart');
-      const discSub = document.getElementById('mddLiveDiscountSubtotal');
+      const grossRow = document.getElementById('mddLiveGrossRow');
+      const discountRow = document.getElementById('mddLiveDiscountRow');
+      const grossVal = document.getElementById('mddLiveGrossVal');
+      const discountVal = document.getElementById('mddLiveDiscountVal');
+      const totalBadge = document.getElementById('mddLiveTotalBadge');
 
-      if (subtotalCont) {
-        if (regularR > 0 && (serviceR > 0 || discount > 0)) {
-          subtotalCont.style.display = 'flex';
-          if (regSub) regSub.textContent = `₹${regularR.toLocaleString('en-IN')}`;
-          if (servSub) servSub.textContent = `₹${serviceR.toLocaleString('en-IN')}`;
-          if (servSep) servSep.style.display = serviceR > 0 ? 'inline' : 'none';
-          if (servPart) servPart.style.display = serviceR > 0 ? 'inline' : 'none';
-          if (discSep) discSep.style.display = discount > 0 ? 'inline' : 'none';
-          if (discPart) discPart.style.display = discount > 0 ? 'inline' : 'none';
-          if (discSub) discSub.textContent = `-₹${discount.toLocaleString('en-IN')}`;
-        } else {
-          subtotalCont.style.display = 'none';
-        }
+      if (discount > 0) {
+        if (grossRow) grossRow.style.display = '';
+        if (discountRow) discountRow.style.display = '';
+        if (grossVal) grossVal.textContent = grossR.toLocaleString('en-IN');
+        if (discountVal) discountVal.textContent = `- ${discount.toLocaleString('en-IN')}`;
+        if (totalBadge) totalBadge.textContent = 'Total Payable';
+      } else {
+        if (grossRow) grossRow.style.display = 'none';
+        if (discountRow) discountRow.style.display = 'none';
+        if (totalBadge) totalBadge.textContent = 'Total';
       }
+
+
 
       if (bill) {
         const custInput = document.getElementById('mddLiveCustomer');

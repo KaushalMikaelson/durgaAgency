@@ -461,8 +461,11 @@ export function Modals() {
                   <input type="text" id="nbBillName" className="form-input" placeholder="e.g. Harvester Repair / Mahindra Service" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Date *</label>
-                  <input type="date" id="nbDate" className="form-input" required />
+                  <label className="form-label">Date (DD-MM-YYYY) *</label>
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    <input type="text" id="nbDate" className="form-input" placeholder="DD-MM-YYYY" style={{ fontWeight: 700 }} required />
+                    <input type="date" id="nbDatePicker" style={{ width: '36px', height: '36px', padding: '0 2px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: '#ffffff', flexShrink: 0 }} title="Pick date from calendar" tabIndex="-1" />
+                  </div>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Mobile Number</label>
@@ -499,25 +502,25 @@ export function Modals() {
                   <button type="button" className="quick-action-btn btn-xs btn-outline" onClick={() => window.app?.addBillPresetItem('Diesel Fuel Filter Kit (Bosch)', 2, 'Pcs', 340, false)}>+ Diesel Filter</button>
                   <button type="button" className="quick-action-btn btn-xs" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 700 }} onClick={() => window.app?.addBillPresetItem('Service & Labor Charge', 1, 'Job', 500, true)} title="Add service charge at the bottom of the bill">🔧 + Service Charge</button>
                   <button type="button" className="quick-action-btn btn-xs" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a', fontWeight: 700 }} onClick={() => window.app?.addBillPresetItem('Greasing & Washing Charge', 1, 'Job', 350, true)} title="Add greasing & wash charge at the bottom">🔧 + Greasing</button>
-                  <button type="button" className="quick-action-btn btn-xs btn-primary" onClick={() => window.app?.addBillItemRow('', '', 'Ltr', '', '', '', false)}>+ Add Item</button>
-                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#1e3a8a', color: '#ffffff', fontWeight: 700 }} onClick={() => window.app?.addBillItemRow('', '', 'Job', '', '', '', true)}>🔧 + Service Charge (Bottom)</button>
+                  <button type="button" className="quick-action-btn btn-xs btn-primary" onClick={() => window.app?.addBillItemRow('', '1', 'Pcs', '', '', '', false)}>+ Add Item</button>
+                  <button type="button" className="quick-action-btn btn-xs" style={{ background: '#1e3a8a', color: '#ffffff', fontWeight: 700 }} onClick={() => window.app?.addBillItemRow('', '1', 'Job', '', '', '', true)}>🔧 + Service Charge (Bottom)</button>
                 </div>
               </div>
 
               {/* Items Table */}
-              <div className="table-responsive" style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
-                <table className="data-table" style={{ margin: 0, fontSize: '12.5px' }}>
+              <div className="table-responsive" style={{ maxHeight: '250px', overflowY: 'auto', overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                <table className="data-table" style={{ margin: 0, fontSize: '12px', width: '100%', minWidth: '680px' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '42px', textAlign: 'center' }}>Sl.</th>
-                      <th style={{ width: '92px' }}>Type</th>
+                      <th style={{ width: '36px', textAlign: 'center' }}>Sl.</th>
+                      <th style={{ width: '85px' }}>Type</th>
                       <th>Description (Item / Service)</th>
-                      <th style={{ width: '80px', textAlign: 'center' }}>Qty</th>
-                      <th style={{ width: '80px' }}>Unit</th>
-                      <th style={{ width: '90px', textAlign: 'right' }}>Rate (₹)</th>
-                      <th style={{ width: '105px', textAlign: 'right' }}>Rupees (₹)</th>
-                      <th style={{ width: '50px', textAlign: 'center' }}>P.</th>
-                      <th style={{ width: '36px' }}></th>
+                      <th style={{ width: '65px', textAlign: 'center' }}>Qty</th>
+                      <th style={{ width: '65px' }}>Unit</th>
+                      <th style={{ width: '85px', textAlign: 'right' }}>Rate (₹)</th>
+                      <th style={{ width: '95px', textAlign: 'right' }}>Rupees (₹)</th>
+                      <th style={{ width: '42px', textAlign: 'center' }}>P.</th>
+                      <th style={{ width: '30px' }}></th>
                     </tr>
                   </thead>
                   <tbody id="nbItemsBody">

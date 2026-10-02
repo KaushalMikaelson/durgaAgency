@@ -173,25 +173,8 @@ export function BillPrintModal({ bill, onClose }) {
               <tfoot>
                 <tr>
                   <td colSpan="4" className="text-right font-bold slip-total-label" style={{ verticalAlign: 'middle', padding: '3px 8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
-                      {regularItems.length > 0 && (serviceItems.length > 0 || discount > 0) ? (
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-                          <span>Items Subtotal: <strong>₹{regularTotal.toLocaleString('en-IN')}</strong></span>
-                          {serviceItems.length > 0 && (
-                            <>
-                              <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
-                              <span>Service: <strong>₹{serviceTotal.toLocaleString('en-IN')}</strong></span>
-                            </>
-                          )}
-                          {discount > 0 && (
-                            <>
-                              <span style={{ color: '#94a3b8', margin: '0 2px' }}>|</span>
-                              <span style={{ color: '#dc2626' }}>Discount: <strong>-₹{discount.toLocaleString('en-IN')}</strong></span>
-                            </>
-                          )}
-                        </div>
-                      ) : <div />}
-                      <span style={{ marginLeft: 'auto' }}>TOTAL:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%' }}>
+                      <span style={{ marginLeft: 'auto' }}>SUBTOTAL:</span>
                     </div>
                   </td>
                   <td className="text-right font-bold font-mono slip-total-value">

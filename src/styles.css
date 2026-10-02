@@ -1928,26 +1928,41 @@ body.modal-open {
   border-right: none !important;
 }
 
-/* Bottom Total Row: compact locked height at the very bottom */
+/* Bottom Total Rows: compact locked height at the very bottom */
 .mdd-table tfoot {
-  height: 1px !important;
+  height: auto !important;
 }
 
 .mdd-table tfoot tr {
-  height: 36px !important;
+  height: auto !important;
 }
 
 .mdd-table tfoot tr td {
-  border-top: 2px solid #000000;
+  border-top: 1.5px solid #000000;
   border-right: 1.5px solid #000000;
   border-bottom: none;
   font-weight: 800;
-  padding: 4px 10px !important;
-  height: 36px !important;
-  max-height: 36px !important;
+  padding: 3px 8px !important;
   vertical-align: middle;
   background: #ffffff;
   box-sizing: border-box !important;
+}
+
+.mdd-table tfoot tr.mdd-gross-row td {
+  border-top: 2px solid #000000;
+  background: #f8fafc;
+  padding: 2.5px 8px !important;
+}
+
+.mdd-table tfoot tr.mdd-discount-row td {
+  border-top: 1px dashed #cbd5e1;
+  background: #fff1f2;
+  padding: 2.5px 8px !important;
+}
+
+.mdd-table tfoot tr.mdd-total-main-row td {
+  border-top: 1.5px solid #000000;
+  padding: 4px 8px !important;
 }
 
 .mdd-table tfoot tr td:last-child {
@@ -2761,31 +2776,45 @@ body.modal-open {
     border-right: none !important;
   }
 
-  /* Table footer: Total row bound directly at the bottom with fixed compact height */
+  /* Table footer: Total rows bound directly at the bottom */
   .mdd-table tfoot {
-    height: 1px !important;
+    height: auto !important;
     display: table-row-group !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
   .mdd-table tfoot tr {
-    height: 9mm !important;
+    height: auto !important;
   }
 
   .mdd-table tfoot tr td {
-    border-top: 2px solid #000000 !important;
+    border-top: 1.5px solid #000000 !important;
     border-right: 1.5px solid #000000 !important;
     border-bottom: none !important;
     color: #000000 !important;
-    font-weight: 900 !important;
+    font-weight: 800 !important;
     vertical-align: middle !important;
-    height: 9mm !important;
-    max-height: 9mm !important;
-    padding: 1.5mm 3mm !important;
+    padding: 1mm 2.5mm !important;
     box-sizing: border-box !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
+  }
+
+  .mdd-table tfoot tr.mdd-gross-row td {
+    border-top: 2px solid #000000 !important;
+    padding: 0.8mm 2.5mm !important;
+  }
+
+  .mdd-table tfoot tr.mdd-discount-row td {
+    border-top: 1px dashed #000000 !important;
+    color: #000000 !important;
+    padding: 0.8mm 2.5mm !important;
+  }
+
+  .mdd-table tfoot tr.mdd-total-main-row td {
+    border-top: 1.5px solid #000000 !important;
+    padding: 1.2mm 2.5mm !important;
   }
 
   .mdd-table tfoot tr td:last-child {
