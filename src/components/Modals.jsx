@@ -1,5 +1,5 @@
 import React from 'react';
-import { printBillWithUniqueTitle } from '../utils/billPrintUtils.js';
+import { printBillWithUniqueTitle, autoFitBillToOnePage } from '../utils/billPrintUtils.js';
 
 export function Modals() {
   return (
@@ -643,15 +643,7 @@ export function Modals() {
             <button type="button" className="quick-action-btn btn-primary" onClick={() => {
               const billEl = document.getElementById('printableMddBill');
               if (billEl) {
-                billEl.style.transform = '';
-                billEl.style.transformOrigin = '';
-                billEl.style.marginBottom = '';
-                if (billEl.scrollHeight > 1040) {
-                  const scale = Math.floor((1040 / billEl.scrollHeight) * 1000) / 1000;
-                  billEl.style.transform = `scale(${scale})`;
-                  billEl.style.transformOrigin = 'top center';
-                  billEl.style.marginBottom = `-${billEl.scrollHeight - (billEl.scrollHeight * scale)}px`;
-                }
+                autoFitBillToOnePage(billEl);
               }
               document.body.classList.add('is-printing-bill', 'bill-modal-active', 'modal-open');
               printBillWithUniqueTitle(billEl);

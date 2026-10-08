@@ -112,6 +112,42 @@ export function getBillUniqueFileName(bill) {
   return parts.join('_');
 }
 
+export function autoFitBillToOnePage(billElement) {
+  if (!billElement) return;
+  billElement.style.transform = '';
+  billElement.style.transformOrigin = '';
+  billElement.style.zoom = '';
+  billElement.style.marginBottom = '';
+  billElement.style.overflow = '';
+
+  const visualHeight = billElement.getBoundingClientRect().height || billElement.offsetHeight || billElement.scrollHeight;
+  const actualHeight = Math.max(visualHeight, billElement.scrollHeight);
+  // 990px corresponds to ~262mm at 96 DPI, ensuring exact 1-page fit with symmetrical 17.5mm margins
+  const SAFE_MAX_PX = 990;
+
+  if (actualHeight > SAFE_MAX_PX) {
+    const scale = Math.max(0.70, Math.floor((SAFE_MAX_PX / actualHeight) * 1000) / 1000);
+    billElement.style.zoom = String(scale);
+    billElement.style.transformOrigin = 'top center';
+  }
+  billElement.style.height = '262mm';
+  billElement.style.maxHeight = '262mm';
+  billElement.style.overflow = 'hidden';
+  billElement.style.margin = 'auto auto';
+}
+
+export function restoreBillAfterPrint(billElement) {
+  if (!billElement) return;
+  billElement.style.transform = '';
+  billElement.style.transformOrigin = '';
+  billElement.style.zoom = '';
+  billElement.style.marginBottom = '';
+  billElement.style.overflow = '';
+  billElement.style.height = '';
+  billElement.style.maxHeight = '';
+  billElement.style.margin = '';
+}
+
 /**
  * Triggers window.print() while dynamically setting document.title to the unique bill file name.
  * When the browser's "Save as PDF" dialog opens, it will automatically propose this unique name.
@@ -122,6 +158,16 @@ export function getBillUniqueFileName(bill) {
 export function printBillWithUniqueTitle(bill, prepareFn) {
   const originalTitle = document.title;
   const uniqueTitle = getBillUniqueFileName(bill);
+
+  const billEl = (bill && bill.nodeType === 1) ? bill :
+                 (document.querySelector('#directBillPrintContainer #printableMddBill') ||
+                  document.getElementById('printableMddBill') ||
+                  document.getElementById('printableBillSlip') ||
+                  document.querySelector('.maa-durga-slip'));
+
+  if (billEl) {
+    autoFitBillToOnePage(billEl);
+  }
 
   if (typeof prepareFn === 'function') {
     try {
@@ -136,6 +182,9 @@ export function printBillWithUniqueTitle(bill, prepareFn) {
 
   const restore = () => {
     document.title = originalTitle;
+    if (billEl) {
+      restoreBillAfterPrint(billEl);
+    }
     window.removeEventListener('afterprint', restore);
   };
   window.addEventListener('afterprint', restore);
@@ -148,7 +197,7 @@ export function printBillWithUniqueTitle(bill, prepareFn) {
   }
 }
 
-// Global safety listener: auto-update document.title on beforeprint if printing a bill
+// Global safety listener: auto-update document.title and autofit bill on beforeprint
 if (typeof window !== 'undefined' && !window._hasBoundBillPrintTitleListener) {
   window._hasBoundBillPrintTitleListener = true;
   let savedOriginalTitle = '';
@@ -163,13 +212,23 @@ if (typeof window !== 'undefined' && !window._hasBoundBillPrintTitleListener) {
                           document.getElementById('billPreviewModal')?.classList.contains('active') ||
                           Boolean(billEl);
 
-    if (isPrintingBill && billEl && !document.title.startsWith('Bill_')) {
-      savedOriginalTitle = document.title;
-      document.title = getBillUniqueFileName(billEl);
+    if (isPrintingBill && billEl) {
+      autoFitBillToOnePage(billEl);
+      if (!document.title.startsWith('Bill_')) {
+        savedOriginalTitle = document.title;
+        document.title = getBillUniqueFileName(billEl);
+      }
     }
   });
 
   window.addEventListener('afterprint', () => {
+    const billEl = document.querySelector('#directBillPrintContainer #printableMddBill') ||
+                   document.getElementById('printableMddBill') ||
+                   document.getElementById('printableBillSlip') ||
+                   document.querySelector('.maa-durga-slip');
+    if (billEl) {
+      restoreBillAfterPrint(billEl);
+    }
     if (savedOriginalTitle) {
       document.title = savedOriginalTitle;
       savedOriginalTitle = '';
@@ -242,7 +301,7 @@ export function printBillDirectIframe(bill, billHTML) {
           <style>
             @page {
               size: A4 portrait;
-              margin: 4mm 6mm 4mm 6mm !important;
+              margin: 15mm 6mm 15mm 6mm !important;
             }
             html, body {
               background: #ffffff !important;
@@ -250,9 +309,14 @@ export function printBillDirectIframe(bill, billHTML) {
               margin: 0 !important;
               padding: 0 !important;
               width: 100% !important;
-              height: auto !important;
+              height: 100% !important;
+              min-height: 100% !important;
+              display: flex !important;
+              flex-direction: column !important;
+              justify-content: center !important;
+              align-items: center !important;
+              overflow: hidden !important;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-              font-size: 12pt !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
@@ -261,141 +325,21 @@ export function printBillDirectIframe(bill, billHTML) {
             }
             .mdd-bill-sheet {
               box-shadow: none !important;
-              margin: 0 auto !important;
+              margin: auto auto !important;
               width: 100% !important;
               max-width: 100% !important;
-              padding: 6mm 8mm !important;
+              height: 262mm !important;
+              min-height: 262mm !important;
+              max-height: 262mm !important;
+              padding: 3.5mm 5mm !important;
               box-sizing: border-box !important;
-            }
-            .mdd-top-bar {
-              display: flex !important;
-              justify-content: space-between !important;
-              align-items: center !important;
-              width: 100% !important;
-              margin-bottom: 2px !important;
-            }
-            .mdd-estimate-pill {
-              font-size: 11px !important;
-              font-weight: 800 !important;
-              padding: 1px 8px !important;
-              border: 1.5px solid #000000 !important;
-              border-radius: 12px !important;
-              text-transform: uppercase !important;
-            }
-            .mdd-top-phone {
-              font-size: 12px !important;
-              font-weight: 800 !important;
-              font-family: monospace, sans-serif !important;
-            }
-            .mdd-header-main {
-              display: flex !important;
-              flex-direction: row !important;
-              align-items: center !important;
-              justify-content: space-between !important;
-              width: 100% !important;
-              gap: 8px !important;
-              padding: 2px 0 6px 0 !important;
-            }
-            .mdd-emblem-left {
-              width: 80px !important;
-              height: 80px !important;
-              min-width: 80px !important;
-              max-width: 80px !important;
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              flex-shrink: 0 !important;
-            }
-            .mdd-emblem-left img, .mdd-durga-logo {
-              width: 100% !important;
-              height: 100% !important;
-              object-fit: contain !important;
-              display: block !important;
-            }
-            .mdd-title-center {
-              text-align: center !important;
-              flex: 1 !important;
-            }
-            .mdd-shop-name {
-              font-size: 28px !important;
-              font-weight: 900 !important;
-              color: #000000 !important;
-              line-height: 1.1 !important;
-              letter-spacing: 0.5px !important;
-            }
-            .mdd-address-lines {
-              font-size: 11.5px !important;
-              font-weight: 700 !important;
-              color: #1e293b !important;
-              line-height: 1.3 !important;
-              margin-top: 2px !important;
-            }
-            .mdd-emblem-right {
-              width: 75px !important;
-              height: 75px !important;
-              min-width: 75px !important;
-              max-width: 75px !important;
-              max-height: 75px !important;
-              display: flex !important;
-              align-items: center !important;
-              justify-content: center !important;
-              flex-shrink: 0 !important;
               overflow: hidden !important;
-            }
-            .mdd-emblem-right svg {
-              width: 75px !important;
-              height: 75px !important;
-              max-width: 75px !important;
-              max-height: 75px !important;
-              display: block !important;
-            }
-            .mdd-meta-grid {
-              display: flex !important;
-              justify-content: space-between !important;
-              align-items: baseline !important;
-              width: 100% !important;
-              margin: 4px 0 6px 0 !important;
-              font-size: 13px !important;
-              font-weight: 700 !important;
-            }
-            .mdd-customer-section {
-              border: 1px solid #94a3b8 !important;
-              border-radius: 4px !important;
-              padding: 4px 8px !important;
-              margin-bottom: 6px !important;
-            }
-            .mdd-cust-row {
-              display: flex !important;
-              align-items: baseline !important;
-              width: 100% !important;
-              gap: 12px !important;
-              margin: 2px 0 !important;
-              font-size: 12.5px !important;
-            }
-            .mdd-dots-line {
-              border-bottom: 1px dotted #475569 !important;
-              padding-bottom: 1px !important;
-            }
-            .mdd-table {
-              width: 100% !important;
-              border-collapse: collapse !important;
-              margin: 4px 0 !important;
-            }
-            .mdd-table th {
-              border: 1px solid #000000 !important;
-              background: #f1f5f9 !important;
-              padding: 3px 6px !important;
-              font-size: 12px !important;
-              font-weight: 800 !important;
-            }
-            .mdd-table td {
-              border: 1px solid #cbd5e1 !important;
-              padding: 3px 6px !important;
-              font-size: 12px !important;
-            }
-            .mdd-total-row td {
-              border-top: 2px solid #000000 !important;
-              font-weight: 800 !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              page-break-after: avoid !important;
+              break-after: avoid !important;
+              page-break-before: avoid !important;
+              break-before: avoid !important;
             }
           </style>
         </head>
@@ -419,11 +363,23 @@ export function printBillDirectIframe(bill, billHTML) {
       try {
         const billEl = iframe.contentDocument ? iframe.contentDocument.getElementById('printableMddBill') : null;
         if (billEl) {
-          const actualHeight = billEl.scrollHeight || billEl.offsetHeight;
-          if (actualHeight > 1060) {
-            const scale = Math.max(0.78, Math.floor((1060 / actualHeight) * 1000) / 1000);
-            billEl.style.transform = `scale(${scale})`;
-            billEl.style.transformOrigin = 'top center';
+          autoFitBillToOnePage(billEl);
+          billEl.style.height = '262mm';
+          billEl.style.maxHeight = '262mm';
+          billEl.style.margin = 'auto auto';
+        }
+        if (iframe.contentDocument) {
+          if (iframe.contentDocument.documentElement) {
+            iframe.contentDocument.documentElement.style.overflow = 'hidden';
+            iframe.contentDocument.documentElement.style.height = '100%';
+          }
+          if (iframe.contentDocument.body) {
+            iframe.contentDocument.body.style.overflow = 'hidden';
+            iframe.contentDocument.body.style.height = '100%';
+            iframe.contentDocument.body.style.display = 'flex';
+            iframe.contentDocument.body.style.flexDirection = 'column';
+            iframe.contentDocument.body.style.justifyContent = 'center';
+            iframe.contentDocument.body.style.alignItems = 'center';
           }
         }
         iframe.contentWindow.focus();
@@ -468,6 +424,8 @@ export function printBillDirectIframe(bill, billHTML) {
 // Attach to window for global access across vanilla JS and React
 if (typeof window !== 'undefined') {
   window.getBillUniqueFileName = getBillUniqueFileName;
+  window.autoFitBillToOnePage = autoFitBillToOnePage;
+  window.restoreBillAfterPrint = restoreBillAfterPrint;
   window.printBillWithUniqueTitle = printBillWithUniqueTitle;
   window.printBillDirectIframe = printBillDirectIframe;
 }

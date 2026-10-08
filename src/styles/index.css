@@ -972,20 +972,28 @@ body {
 
 /* Print Stylesheet */
 @media print {
-  body * {
-    visibility: hidden;
+  @page {
+    size: A4 portrait;
+    margin: 15mm 6mm 15mm 6mm !important;
   }
-  .printable-page-container,
-  .printable-page-container * {
-    visibility: visible;
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    overflow: hidden !important;
   }
   .printable-page-container {
-    position: absolute;
-    left: 0;
-    top: 0;
     width: 100%;
-    margin: 0;
+    margin: auto auto;
     padding: 0;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
   }
   .no-print {
     display: none !important;
@@ -993,6 +1001,12 @@ body {
   .maa-durga-slip {
     border: 2px solid #b91c1c !important;
     box-shadow: none !important;
+    height: 262mm !important;
+    max-height: 262mm !important;
+    margin: auto auto !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 

@@ -1861,22 +1861,24 @@ import { getBillUniqueFileName, printBillWithUniqueTitle, printBillDirectIframe 
     if (!billElement) return;
     billElement.style.transform = '';
     billElement.style.transformOrigin = '';
+    billElement.style.zoom = '';
     billElement.style.marginBottom = '';
     billElement.style.overflow = '';
 
-    const itemCount = Number(billElement.dataset.itemCount || 0);
     const visualHeight = billElement.getBoundingClientRect().height || billElement.offsetHeight || billElement.scrollHeight;
-    const actualHeight = itemCount >= 29 ? Math.max(visualHeight, billElement.scrollHeight) : visualHeight;
-    const SAFE_MAX_PX = 1120;
+    const actualHeight = Math.max(visualHeight, billElement.scrollHeight);
+    // 990px corresponds to ~262mm at 96 DPI, ensuring exact 1-page fit with symmetrical 17.5mm margins
+    const SAFE_MAX_PX = 990;
 
     if (actualHeight > SAFE_MAX_PX) {
-      const scale = Math.max(0.78, Math.floor((SAFE_MAX_PX / actualHeight) * 1000) / 1000);
-      billElement.style.transform = `scale(${scale})`;
+      const scale = Math.max(0.70, Math.floor((SAFE_MAX_PX / actualHeight) * 1000) / 1000);
+      billElement.style.zoom = String(scale);
       billElement.style.transformOrigin = 'top center';
-      billElement.style.overflow = 'visible';
-      const collapsed = actualHeight - (actualHeight * scale);
-      billElement.style.marginBottom = `-${collapsed}px`;
     }
+    billElement.style.height = '262mm';
+    billElement.style.maxHeight = '262mm';
+    billElement.style.overflow = 'hidden';
+    billElement.style.margin = 'auto auto';
   }
 
   if (typeof window !== 'undefined' && !window._hasBoundBillPrintAutoFit) {
@@ -1893,12 +1895,16 @@ import { getBillUniqueFileName, printBillWithUniqueTitle, printBillDirectIframe 
       }
     });
     window.addEventListener('afterprint', () => {
-      const bill = document.getElementById('printableMddBill');
+      const bill = document.querySelector('#directBillPrintContainer #printableMddBill') || document.getElementById('printableMddBill');
       if (bill) {
         bill.style.transform = '';
         bill.style.transformOrigin = '';
+        bill.style.zoom = '';
         bill.style.marginBottom = '';
         bill.style.overflow = '';
+        bill.style.height = '';
+        bill.style.maxHeight = '';
+        bill.style.margin = '';
       }
       if (savedDocTitle) {
         document.title = savedDocTitle;
@@ -1969,17 +1975,17 @@ import { getBillUniqueFileName, printBillWithUniqueTitle, printBillDirectIframe 
 
     // Strict 1-page density calculation based on item count
     let densityClass = 'mdd-density-standard';
-    if (itemCount >= 29) {
+    if (itemCount >= 23) {
       densityClass = 'mdd-density-ultra';
-    } else if (itemCount >= 19) {
+    } else if (itemCount >= 15) {
       densityClass = 'mdd-density-dense';
     } else if (itemCount >= 8) {
       densityClass = 'mdd-density-compact';
     }
     const sheetModeClass = isPureBlank ? 'mdd-blank-sheet' : 'mdd-has-items';
-    const printRowFont = itemCount >= 36 ? '6pt' : itemCount >= 29 ? '7pt' : itemCount >= 19 ? '8pt' : itemCount >= 8 ? '9pt' : '10pt';
-    const printRowPadY = itemCount >= 36 ? '0.15mm' : itemCount >= 29 ? '0.3mm' : itemCount >= 19 ? '0.45mm' : itemCount >= 8 ? '0.7mm' : '0.9mm';
-    const printRowMinHeight = itemCount >= 36 ? '3.1mm' : itemCount >= 29 ? '3.8mm' : itemCount >= 19 ? '5.5mm' : itemCount >= 12 ? '8.2mm' : itemCount >= 8 ? '7.4mm' : '0mm';
+    const printRowFont = itemCount >= 30 ? '6.5pt' : itemCount >= 23 ? '7.5pt' : itemCount >= 15 ? '8.5pt' : itemCount >= 8 ? '9.5pt' : '10pt';
+    const printRowPadY = itemCount >= 30 ? '0.2mm' : itemCount >= 23 ? '0.35mm' : itemCount >= 15 ? '0.5mm' : itemCount >= 8 ? '0.7mm' : '0.9mm';
+    const printRowMinHeight = itemCount >= 30 ? '3.2mm' : itemCount >= 23 ? '4.0mm' : itemCount >= 15 ? '5.2mm' : itemCount >= 8 ? '6.5mm' : '0mm';
     const sheetStyle = `--mdd-print-row-font:${printRowFont}; --mdd-print-row-pad-y:${printRowPadY}; --mdd-print-row-min-height:${printRowMinHeight};`;
 
     let rowsHtml = '';
@@ -2336,24 +2342,24 @@ import { getBillUniqueFileName, printBillWithUniqueTitle, printBillDirectIframe 
     return `
       <div class="mdd-bill-sheet ${densityClass} ${sheetModeClass}" id="printableMddBill" data-item-count="${itemCount}" data-bill-number="${billNumber}" data-customer-name="${(b.customerName || '').replace(/^(मेसर्स|M\/s)\s*/i, '')}" data-bill-date="${rawDate}" data-bill-name="${billName}" style="${sheetStyle}">
         <!-- Top Bar with ESTIMATE and Phone -->
-        <div class="mdd-top-bar" style="display:flex !important; justify-content:space-between !important; align-items:center !important; width:100% !important;">
-          <div class="mdd-estimate-pill" style="font-size:11px !important; font-weight:800 !important; padding:1px 8px !important; border:1.5px solid #000000 !important; border-radius:12px !important; text-transform:uppercase !important;">ESTIMATE</div>
-          <div class="mdd-top-phone" style="font-size:12px !important; font-weight:800 !important; font-family:monospace, sans-serif !important;">Mob.: 9931227178</div>
+        <div class="mdd-top-bar" style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <div class="mdd-estimate-pill" style="font-size:11px; font-weight:800; padding:1px 8px; border:1.5px solid #000000; border-radius:12px; text-transform:uppercase;">ESTIMATE</div>
+          <div class="mdd-top-phone" style="font-size:12px; font-weight:800; font-family:monospace, sans-serif;">Mob.: 9931227178</div>
         </div>
 
         <!-- Header: Durga Logo (Left) | Center Shop Name & Address | Chakra Logo (Right) -->
-        <div class="mdd-header-main" style="display:flex !important; flex-direction:row !important; align-items:center !important; justify-content:space-between !important; width:100% !important; gap:8px !important; padding:2px 0 6px 0 !important;">
-          <div class="mdd-emblem-left" style="width:80px !important; height:80px !important; min-width:80px !important; max-width:80px !important; display:flex !important; align-items:center !important; justify-content:center !important; flex-shrink:0 !important; overflow:hidden !important;">
+        <div class="mdd-header-main" style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; width:100%; gap:8px; padding:2px 0 4px 0;">
+          <div class="mdd-emblem-left" style="width:75px; height:75px; min-width:75px; max-width:75px; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
             ${getMaaDurgaSvg()}
           </div>
-          <div class="mdd-title-center" style="text-align:center !important; flex:1 !important;">
-            <div class="mdd-shop-name" style="font-size:28px !important; font-weight:900 !important; color:#000000 !important; line-height:1.1 !important;">MAA DURGA DIESEL</div>
-            <div class="mdd-address-lines" style="font-size:11.5px !important; font-weight:700 !important; line-height:1.3 !important; margin-top:2px !important;">
+          <div class="mdd-title-center" style="text-align:center; flex:1;">
+            <div class="mdd-shop-name" style="font-size:28px; font-weight:900; color:#000000; line-height:1.1;">MAA DURGA DIESEL</div>
+            <div class="mdd-address-lines" style="font-size:11.5px; font-weight:700; line-height:1.3; margin-top:2px;">
               Dealers in: Diesel Pump, Nozzles & Tractor Spare Parts<br>
               Mahavir Market, Mahadev Sthan, Karmalichak, Bypass, N.H.-30, Patna City
             </div>
           </div>
-          <div class="mdd-emblem-right" style="width:75px !important; height:75px !important; min-width:75px !important; max-width:75px !important; max-height:75px !important; display:flex !important; align-items:center !important; justify-content:center !important; flex-shrink:0 !important; overflow:hidden !important;">
+          <div class="mdd-emblem-right" style="width:70px; height:70px; min-width:70px; max-width:70px; max-height:70px; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden;">
             ${getChakraSvg()}
           </div>
         </div>
