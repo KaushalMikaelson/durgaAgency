@@ -5678,4 +5678,276 @@ body.modal-open {
   font-weight: 700;
 }
 
+/* ==========================================================================
+   BILL FILTERS & SEARCH SYSTEM (माँ दुर्गा डीजल)
+   ========================================================================== */
+.bill-filter-card {
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: var(--radius-md, 10px);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
 
+.bill-filter-grid-primary {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.8fr) minmax(160px, 1.1fr) minmax(160px, 1.1fr) minmax(160px, 1.1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.bill-filter-grid-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-color, #e5e7eb);
+}
+
+@media (max-width: 1024px) {
+  .bill-filter-grid-primary {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .bill-filter-grid-primary {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bill-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.bill-search-icon-left {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted, #9ca3af);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bill-search-input {
+  width: 100%;
+  padding-left: 36px !important;
+  padding-right: 32px !important;
+  font-size: 13px !important;
+  height: 38px !important;
+  border-radius: var(--radius-md, 10px) !important;
+}
+
+.bill-search-clear-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #9ca3af);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.bill-search-clear-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--danger, #ef4444);
+}
+
+.bill-filter-select-item {
+  height: 38px;
+  font-size: 12.5px;
+  border-radius: var(--radius-md, 10px);
+  width: 100%;
+  cursor: pointer;
+  background-color: var(--bg-card, #ffffff);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.bill-custom-dates-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-main, #f4f6f8);
+  padding: 4px 10px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.bill-date-picker-input {
+  height: 30px;
+  padding: 4px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  background: var(--bg-card, #ffffff);
+  color: var(--text-primary);
+}
+
+.bill-active-filter-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: var(--primary-light, #e8f5ec);
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid rgba(15, 77, 42, 0.18);
+  font-size: 12px;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.bill-filter-chips-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.bill-filter-chip-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card, #ffffff);
+  color: var(--primary-dark, #092c18);
+  border: 1px solid rgba(15, 77, 42, 0.25);
+  border-radius: 9999px;
+  padding: 3px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.bill-filter-chip-tag button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  margin-left: 2px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.bill-filter-chip-tag button:hover {
+  opacity: 1;
+  color: #ef4444;
+}
+
+.bill-clear-all-btn {
+  background: transparent;
+  border: 1px solid var(--primary, #0f4d2a);
+  color: var(--primary, #0f4d2a);
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 9999px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.bill-clear-all-btn:hover {
+  background: var(--primary, #0f4d2a);
+  color: #ffffff;
+}
+
+.bill-stats-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bill-stat-chip-pill {
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  color: var(--text-primary);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.bill-stat-chip-pill.paid {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
+.bill-stat-chip-pill.due {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sortable-th:hover {
+  background-color: rgba(15, 77, 42, 0.08) !important;
+  color: var(--primary, #0f4d2a) !important;
+}
+
+.sort-indicator {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
+
+.sortable-th.active-sort .sort-indicator {
+  opacity: 1;
+  color: var(--primary, #0f4d2a);
+  font-weight: 900;
+}
+
+[data-theme="dark"] .bill-filter-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+[data-theme="dark"] .bill-active-filter-strip {
+  background: rgba(15, 77, 42, 0.28);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+[data-theme="dark"] .bill-filter-chip-tag {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #86efac;
+}
+
+[data-theme="dark"] .bill-clear-all-btn {
+  border-color: #86efac;
+  color: #86efac;
+}
+
+[data-theme="dark"] .bill-clear-all-btn:hover {
+  background: #10b981;
+  color: #ffffff;
+}

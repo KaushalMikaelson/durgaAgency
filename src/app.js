@@ -909,6 +909,7 @@ class TractorOSApp {
     this.expenseDimension = 'category';
     this.expensePeriod = 'all';
     this.expenseFilter = null;
+    this.billFilters = this.getDefaultBillFilters();
     this.init();
   }
 
@@ -1904,7 +1905,540 @@ class TractorOSApp {
   // =========================================================================
   // 5. BILLING & BILLS (MAA DURGA DIESEL TEMPLATE)
   // =========================================================================
+  getDefaultBillFilters() {
+    return {
+      search: '',
+      paymentStatus: 'ALL',
+      dateRange: 'ALL',
+      startDate: '',
+      endDate: '',
+      amountRange: 'ALL',
+      village: 'ALL',
+      sortBy: 'date_desc'
+    };
+  }
+
+  getFilteredBills(allBills = null) {
+    const billsList = allBills || (store.getBills ? store.getBills() : []);
+    const filters = this.billFilters || this.getDefaultBillFilters();
+    const q = (filters.search || '').trim().toLowerCase();
+    const status = filters.paymentStatus || 'ALL';
+    const dateRange = filters.dateRange || 'ALL';
+    const amountRange = filters.amountRange || 'ALL';
+    const village = (filters.village || 'ALL').trim().toLowerCase();
+    const sortBy = filters.sortBy || 'date_desc';
+
+    const todayStr = getLocalIsoDate();
+    const now = new Date();
+    const currentMonthStr = todayStr.slice(0, 7);
+    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+    const sevenDaysAgoDate = new Date(Date.now() - 7 * 86400000);
+    const sevenDaysAgoStr = `${sevenDaysAgoDate.getFullYear()}-${String(sevenDaysAgoDate.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgoDate.getDate()).padStart(2, '0')}`;
+
+    let filtered = billsList.filter(b => {
+      const total = Number(b.totalRupees || 0);
+      let paid = total;
+      if (b.paymentStatus === 'Due') {
+        paid = 0;
+      } else if (b.paymentStatus === 'Partial' && b.paidAmount !== undefined) {
+        paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+      } else if (b.paidAmount !== undefined && b.paidAmount !== null && b.paidAmount !== '') {
+        paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+      }
+      const due = Math.max(0, total - paid);
+
+      // 1. Text Search across bill number, customer, phone, village, vehicle, items
+      if (q) {
+        const billNo = String(b.billNumber || '').toLowerCase();
+        const billNoPadded = `no. ${billNo}`;
+        const billName = (b.billName || '').toLowerCase();
+        const cust = (b.customerName || '').toLowerCase();
+        const phone = (b.phone || '').toLowerCase();
+        const addr = (b.address || '').toLowerCase();
+        const veh = (b.vehicle || '').toLowerCase();
+        const itemsText = (b.items || []).map(it => `${it.description || it.name || ''} ${it.rate || ''} ${it.qty || ''}`).join(' ').toLowerCase();
+
+        const matched = billNo.includes(q) ||
+          billNoPadded.includes(q) ||
+          billName.includes(q) ||
+          cust.includes(q) ||
+          phone.includes(q) ||
+          addr.includes(q) ||
+          veh.includes(q) ||
+          itemsText.includes(q);
+
+        if (!matched) return false;
+      }
+
+      // 2. Payment Status filter
+      if (status === 'Paid') {
+        if (due > 0 || total <= 0) return false;
+      } else if (status === 'Due') {
+        if (paid > 0 || due <= 0) return false;
+      } else if (status === 'Partial') {
+        if (paid <= 0 || due <= 0) return false;
+      } else if (status === 'AnyDue') {
+        if (due <= 0) return false;
+      }
+
+      // 3. Date Range filter
+      if (dateRange !== 'ALL') {
+        const billIso = toIsoDate(b.date);
+        if (dateRange === 'today') {
+          if (billIso !== todayStr) return false;
+        } else if (dateRange === '7days') {
+          if (billIso < sevenDaysAgoStr || billIso > todayStr) return false;
+        } else if (dateRange === 'this_month') {
+          if (!billIso.startsWith(currentMonthStr)) return false;
+        } else if (dateRange === 'last_month') {
+          if (!billIso.startsWith(lastMonthStr)) return false;
+        } else if (dateRange === 'custom') {
+          if (filters.startDate && billIso < filters.startDate) return false;
+          if (filters.endDate && billIso > filters.endDate) return false;
+        }
+      }
+
+      // 4. Amount Range filter
+      if (amountRange !== 'ALL') {
+        if (amountRange === 'under_5k' && total >= 5000) return false;
+        if (amountRange === '5k_20k' && (total < 5000 || total > 20000)) return false;
+        if (amountRange === '20k_50k' && (total < 20000 || total > 50000)) return false;
+        if (amountRange === 'above_50k' && total <= 50000) return false;
+      }
+
+      // 5. Village / Location filter
+      if (village !== 'all') {
+        const bVillage = (b.address || '').trim().toLowerCase();
+        if (bVillage !== village) return false;
+      }
+
+      return true;
+    });
+
+    // 6. Sorting
+    filtered.sort((a, b) => {
+      const totalA = Number(a.totalRupees || 0);
+      const totalB = Number(b.totalRupees || 0);
+      const numA = parseInt(String(a.billNumber || '').replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(String(b.billNumber || '').replace(/\D/g, ''), 10) || 0;
+      const isoA = toIsoDate(a.date);
+      const isoB = toIsoDate(b.date);
+
+      const paidA = (a.paymentStatus === 'Due') ? 0 : (a.paidAmount !== undefined && a.paidAmount !== null ? Math.min(totalA, Number(a.paidAmount) || 0) : totalA);
+      const dueA = Math.max(0, totalA - paidA);
+      const paidB = (b.paymentStatus === 'Due') ? 0 : (b.paidAmount !== undefined && b.paidAmount !== null ? Math.min(totalB, Number(b.paidAmount) || 0) : totalB);
+      const dueB = Math.max(0, totalB - paidB);
+
+      switch (sortBy) {
+        case 'date_asc':
+          return isoA.localeCompare(isoB) || (numA - numB);
+        case 'bill_desc':
+          return (numB - numA) || isoB.localeCompare(isoA);
+        case 'bill_asc':
+          return (numA - numB) || isoA.localeCompare(isoB);
+        case 'amount_desc':
+          return (totalB - totalA) || (numB - numA);
+        case 'amount_asc':
+          return (totalA - totalB) || (numA - numB);
+        case 'due_desc':
+          return (dueB - dueA) || (totalB - totalA);
+        case 'date_desc':
+        default:
+          return isoB.localeCompare(isoA) || (numB - numA);
+      }
+    });
+
+    return filtered;
+  }
+
+  renderBillTableRow(item) {
+    const billKey = item.id || String(item.billNumber);
+    const total = Number(item.totalRupees || 0);
+    let paid = total;
+    if (item.paymentStatus === 'Due') {
+      paid = 0;
+    } else if (item.paymentStatus === 'Partial' && item.paidAmount !== undefined) {
+      paid = Math.min(total, Math.max(0, Number(item.paidAmount) || 0));
+    } else if (item.paidAmount !== undefined && item.paidAmount !== null && item.paidAmount !== '') {
+      paid = Math.min(total, Math.max(0, Number(item.paidAmount) || 0));
+    }
+    const due = Math.max(0, total - paid);
+    let statusBadge = '';
+    if (due <= 0 && total > 0) {
+      statusBadge = `<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;">✓ Paid</span>`;
+    } else if (paid > 0 && due > 0) {
+      statusBadge = `<span style="background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;" title="Paid: ₹${paid.toLocaleString('en-IN')}">⏳ Due: ₹${due.toLocaleString('en-IN')}</span>`;
+    } else if (total > 0) {
+      statusBadge = `<span style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;">⚠️ Due</span>`;
+    } else {
+      statusBadge = `<span style="background:#f1f5f9; color:#475569; border-radius:12px; padding:3px 8px; font-size:11px;">-</span>`;
+    }
+
+    return `
+      <tr>
+        <td>
+          <strong style="color:var(--primary); font-size:14px;">No. ${item.billNumber}</strong>
+          ${item.billName ? `<div style="font-size:11px; font-weight:700; color:#2563eb; margin-top:2px;">📌 ${item.billName}</div>` : ''}
+        </td>
+        <td><span style="font-family:monospace, sans-serif; font-weight:600;">${formatToDMY(item.date)}</span></td>
+        <td>
+          <strong>${item.customerName || 'मेसर्स ग्राहक'}</strong><br>
+          ${item.vehicle ? `<span style="font-size:11.5px; font-weight:700; color:var(--primary);">🚜 ${item.vehicle}</span> • ` : ''}
+          <span style="font-size:11px; color:var(--text-muted);">${item.phone || ''}</span>
+        </td>
+        <td>
+          <span style="font-size:12.5px;">${item.address || 'पटना'}</span>
+        </td>
+        <td style="text-align:right;">
+          <strong style="font-size:14px; color:#1e3a8a; font-family:monospace, sans-serif;">₹${total.toLocaleString('en-IN')}${item.totalPaise ? '.' + String(item.totalPaise).padStart(2, '0') : ''}</strong>
+        </td>
+        <td style="text-align:center;">
+          ${statusBadge}
+        </td>
+        <td style="text-align:right; white-space:nowrap;">
+          <div class="bill-actions-wrap" style="display:inline-flex; gap:6px; align-items:center; justify-content:flex-end;">
+            <button class="quick-action-btn btn-sm btn-outline bill-action-btn edit-bill-btn" data-bill-id="${billKey}" onclick="window.app.editBill('${billKey}')" title="Edit Bill">
+              ${renderIcon('edit')}
+              <span class="btn-label">Edit</span>
+            </button>
+            <button class="quick-action-btn btn-sm btn-primary bill-action-btn print-bill-btn" data-bill-id="${billKey}" onclick="window.app.printBillDirect('${billKey}')" title="Print Bill (प्रिंट करें)">
+              ${renderIcon('print')}
+              <span class="btn-label">Print</span>
+            </button>
+            <button class="quick-action-btn btn-sm btn-outline delete-bill-btn bill-action-btn" data-bill-id="${billKey}" onclick="window.app.deleteBill('${billKey}')" title="Delete Bill" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4);">
+              ${renderIcon('trash')}
+              <span class="btn-label">Delete</span>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  renderBillTableRows(filteredBills, allBillsCount) {
+    if (allBillsCount === 0) {
+      return `
+        <tr>
+          <td colspan="7" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
+            <div style="font-size:36px; margin-bottom:10px;">🧾</div>
+            <div style="font-weight:700; font-size:16px; color:var(--text-secondary);">No bills issued yet</div>
+            <div style="font-size:12.5px; margin-top:4px;">Click "+ Create Bill" to generate a bill in the authentic माँ दुर्गा डीजल template.</div>
+            <div style="margin-top:16px; display:flex; justify-content:center; gap:10px;">
+              <button class="quick-action-btn btn-sm btn-primary" onclick="window.app.openNewBillModal()">
+                🧾 Create First Bill
+              </button>
+              <button class="quick-action-btn btn-sm btn-outline" onclick="window.app.openBillPreviewModal(null, true)">
+                🖨️ View Blank Bill Template
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    if (filteredBills.length === 0) {
+      return `
+        <tr>
+          <td colspan="7" style="text-align:center; padding:48px 20px; color:var(--text-muted);">
+            <div style="font-size:36px; margin-bottom:10px;">🔍</div>
+            <div style="font-weight:700; font-size:16px; color:var(--text-secondary);">No bills found matching your filters (कोई बिल नहीं मिला)</div>
+            <div style="font-size:12.5px; margin-top:6px; color:var(--text-secondary); max-width:440px; margin-left:auto; margin-right:auto;">
+              No bills match the selected parameters. Try loosening your filters, changing search terms, or resetting all filters.
+            </div>
+            <div style="margin-top:16px;">
+              <button class="quick-action-btn btn-sm btn-primary" onclick="window.app.resetBillFilters()">
+                🔄 Clear All Filters (फ़िल्टर रीसेट करें)
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    return filteredBills.map(item => this.renderBillTableRow(item)).join('');
+  }
+
+  renderBillActiveFilterStrip(filteredBills, allBillsCount) {
+    const filters = this.billFilters || this.getDefaultBillFilters();
+    const chips = [];
+
+    if ((filters.search || '').trim()) {
+      chips.push(`
+        <span class="bill-filter-chip-tag">
+          <span>🔍 "${filters.search.trim()}"</span>
+          <button onclick="window.app.clearSingleBillFilter('search')" title="Clear search">✕</button>
+        </span>
+      `);
+    }
+
+    if (filters.paymentStatus && filters.paymentStatus !== 'ALL') {
+      const labels = {
+        Paid: '✓ Fully Paid',
+        Due: '⚠️ Unpaid Due',
+        Partial: '⏳ Partial Due',
+        AnyDue: '🔴 Any Due'
+      };
+      chips.push(`
+        <span class="bill-filter-chip-tag">
+          <span>${labels[filters.paymentStatus] || filters.paymentStatus}</span>
+          <button onclick="window.app.clearSingleBillFilter('paymentStatus')" title="Clear status filter">✕</button>
+        </span>
+      `);
+    }
+
+    if (filters.dateRange && filters.dateRange !== 'ALL') {
+      const dateLabels = {
+        today: '📅 Today',
+        '7days': '📅 Last 7 Days',
+        this_month: '📅 This Month',
+        last_month: '📅 Last Month',
+        custom: `📅 ${filters.startDate || 'Start'} to ${filters.endDate || 'End'}`
+      };
+      chips.push(`
+        <span class="bill-filter-chip-tag">
+          <span>${dateLabels[filters.dateRange] || filters.dateRange}</span>
+          <button onclick="window.app.clearSingleBillFilter('dateRange')" title="Clear date filter">✕</button>
+        </span>
+      `);
+    }
+
+    if (filters.amountRange && filters.amountRange !== 'ALL') {
+      const amtLabels = {
+        under_5k: '💰 < ₹5,000',
+        '5k_20k': '💰 ₹5,000–₹20,000',
+        '20k_50k': '💰 ₹20,000–₹50,000',
+        above_50k: '💰 > ₹50,000'
+      };
+      chips.push(`
+        <span class="bill-filter-chip-tag">
+          <span>${amtLabels[filters.amountRange] || filters.amountRange}</span>
+          <button onclick="window.app.clearSingleBillFilter('amountRange')" title="Clear amount filter">✕</button>
+        </span>
+      `);
+    }
+
+    if (filters.village && filters.village !== 'ALL') {
+      chips.push(`
+        <span class="bill-filter-chip-tag">
+          <span>📍 ${filters.village}</span>
+          <button onclick="window.app.clearSingleBillFilter('village')" title="Clear village filter">✕</button>
+        </span>
+      `);
+    }
+
+    if (filters.sortBy && filters.sortBy !== 'date_desc') {
+      const sortLabels = {
+        date_asc: 'Sort: Oldest First',
+        bill_desc: 'Sort: Bill # High-Low',
+        bill_asc: 'Sort: Bill # Low-High',
+        amount_desc: 'Sort: Highest Amount',
+        amount_asc: 'Sort: Lowest Amount',
+        due_desc: 'Sort: Highest Due'
+      };
+      chips.push(`
+        <span class="bill-filter-chip-tag">
+          <span>↕ ${sortLabels[filters.sortBy] || filters.sortBy}</span>
+          <button onclick="window.app.clearSingleBillFilter('sortBy')" title="Reset sort">✕</button>
+        </span>
+      `);
+    }
+
+    let filteredTotal = 0;
+    let filteredPaid = 0;
+    let filteredDue = 0;
+    filteredBills.forEach(b => {
+      const total = Number(b.totalRupees || 0);
+      filteredTotal += total;
+      let paid = total;
+      if (b.paymentStatus === 'Due') {
+        paid = 0;
+      } else if (b.paymentStatus === 'Partial' && b.paidAmount !== undefined) {
+        paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+      } else if (b.paidAmount !== undefined && b.paidAmount !== null && b.paidAmount !== '') {
+        paid = Math.min(total, Math.max(0, Number(b.paidAmount) || 0));
+      }
+      const due = Math.max(0, total - paid);
+      filteredPaid += paid;
+      filteredDue += due;
+    });
+
+    const hasActiveFilters = chips.length > 0;
+
+    return `
+      <div class="bill-active-filter-strip" style="${hasActiveFilters ? '' : 'background:transparent; border-color:transparent; padding:0; margin-top:8px;'}">
+        <div class="bill-filter-chips-list">
+          <span style="font-weight:700; color:var(--text-secondary); margin-right:4px;">
+            ${hasActiveFilters ? `Showing ${filteredBills.length} of ${allBillsCount} bills:` : `Showing all ${allBillsCount} bills`}
+          </span>
+          ${chips.join('')}
+          ${hasActiveFilters ? `
+            <button class="bill-clear-all-btn" onclick="window.app.resetBillFilters()">
+              ✕ Clear All
+            </button>
+          ` : ''}
+        </div>
+        <div class="bill-stats-pill-group">
+          <span class="bill-stat-chip-pill" title="Sum of filtered bills">
+            Total: <strong>₹${filteredTotal.toLocaleString('en-IN')}</strong>
+          </span>
+          <span class="bill-stat-chip-pill paid" title="Paid amount on filtered bills">
+            Paid: <strong>₹${filteredPaid.toLocaleString('en-IN')}</strong>
+          </span>
+          ${filteredDue > 0 ? `
+            <span class="bill-stat-chip-pill due" title="Pending due on filtered bills">
+              Due: <strong>₹${filteredDue.toLocaleString('en-IN')}</strong>
+            </span>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  clearSingleBillFilter(key) {
+    if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+    if (key === 'search') this.billFilters.search = '';
+    else if (key === 'paymentStatus') this.billFilters.paymentStatus = 'ALL';
+    else if (key === 'dateRange') {
+      this.billFilters.dateRange = 'ALL';
+      this.billFilters.startDate = '';
+      this.billFilters.endDate = '';
+    }
+    else if (key === 'amountRange') this.billFilters.amountRange = 'ALL';
+    else if (key === 'village') this.billFilters.village = 'ALL';
+    else if (key === 'sortBy') this.billFilters.sortBy = 'date_desc';
+
+    this.syncBillFilterControls();
+    this.applyBillFiltersAndRenderTable();
+  }
+
+  resetBillFilters() {
+    this.billFilters = this.getDefaultBillFilters();
+    this.syncBillFilterControls();
+    this.applyBillFiltersAndRenderTable();
+  }
+
+  syncBillFilterControls() {
+    const f = this.billFilters || this.getDefaultBillFilters();
+    const searchInput = document.getElementById('billSearchInput');
+    const statusSelect = document.getElementById('billStatusFilter');
+    const dateRangeSelect = document.getElementById('billDateRangeFilter');
+    const amountSelect = document.getElementById('billAmountFilter');
+    const villageSelect = document.getElementById('billVillageFilter');
+    const sortSelect = document.getElementById('billSortFilter');
+    const startDateInput = document.getElementById('billStartDate');
+    const endDateInput = document.getElementById('billEndDate');
+    const customWrap = document.getElementById('billCustomDateRangeWrap');
+    const clearSearchBtn = document.getElementById('billSearchClearBtn');
+
+    if (searchInput) searchInput.value = f.search || '';
+    if (clearSearchBtn) clearSearchBtn.style.display = f.search ? 'flex' : 'none';
+    if (statusSelect) statusSelect.value = f.paymentStatus || 'ALL';
+    if (dateRangeSelect) dateRangeSelect.value = f.dateRange || 'ALL';
+    if (amountSelect) amountSelect.value = f.amountRange || 'ALL';
+    if (villageSelect) villageSelect.value = f.village || 'ALL';
+    if (sortSelect) sortSelect.value = f.sortBy || 'date_desc';
+    if (startDateInput) startDateInput.value = f.startDate || '';
+    if (endDateInput) endDateInput.value = f.endDate || '';
+    if (customWrap) customWrap.style.display = (f.dateRange === 'custom') ? 'inline-flex' : 'none';
+
+    this.updateSortHeaderStyles();
+  }
+
+  toggleSort(columnKey) {
+    if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+    const cur = this.billFilters.sortBy;
+    if (columnKey === 'bill') {
+      this.billFilters.sortBy = (cur === 'bill_desc') ? 'bill_asc' : 'bill_desc';
+    } else if (columnKey === 'date') {
+      this.billFilters.sortBy = (cur === 'date_desc') ? 'date_asc' : 'date_desc';
+    } else if (columnKey === 'amount') {
+      this.billFilters.sortBy = (cur === 'amount_desc') ? 'amount_asc' : 'amount_desc';
+    } else if (columnKey === 'due') {
+      this.billFilters.sortBy = (cur === 'due_desc') ? 'date_desc' : 'due_desc';
+    }
+    this.syncBillFilterControls();
+    this.applyBillFiltersAndRenderTable();
+  }
+
+  updateSortHeaderStyles() {
+    const cur = this.billFilters?.sortBy || 'date_desc';
+    const map = {
+      sortThBillNo: cur.startsWith('bill'),
+      sortThDate: cur.startsWith('date'),
+      sortThAmount: cur.startsWith('amount'),
+      sortThStatus: cur === 'due_desc'
+    };
+    Object.entries(map).forEach(([id, active]) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.toggle('active-sort', active);
+        const iconEl = el.querySelector('.sort-indicator');
+        if (iconEl) {
+          if (id === 'sortThBillNo') iconEl.textContent = cur === 'bill_asc' ? '▲' : (cur === 'bill_desc' ? '▼' : '↕');
+          if (id === 'sortThDate') iconEl.textContent = cur === 'date_asc' ? '▲' : (cur === 'date_desc' ? '▼' : '↕');
+          if (id === 'sortThAmount') iconEl.textContent = cur === 'amount_asc' ? '▲' : (cur === 'amount_desc' ? '▼' : '↕');
+          if (id === 'sortThStatus') iconEl.textContent = cur === 'due_desc' ? '▼' : '↕';
+        }
+      }
+    });
+  }
+
+  applyBillFiltersAndRenderTable() {
+    const allBills = store.getBills ? store.getBills() : [];
+    const filtered = this.getFilteredBills(allBills);
+
+    const tableBody = document.getElementById('billsTableBody');
+    if (tableBody) {
+      tableBody.innerHTML = this.renderBillTableRows(filtered, allBills.length);
+    }
+
+    const summaryStrip = document.getElementById('billsSummaryStrip');
+    if (summaryStrip) {
+      summaryStrip.innerHTML = this.renderBillActiveFilterStrip(filtered, allBills.length);
+    }
+
+    const headerTitle = document.getElementById('billsPanelHeader');
+    if (headerTitle) {
+      if (filtered.length !== allBills.length) {
+        headerTitle.innerHTML = `All Issued Bills & Estimates <span style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-left:6px;">(${filtered.length} of ${allBills.length} filtered)</span>`;
+      } else {
+        headerTitle.innerHTML = `All Issued Bills & Estimates (${allBills.length})`;
+      }
+    }
+
+    this.bindBillRowEvents();
+  }
+
+  bindBillRowEvents() {
+    document.querySelectorAll('.edit-bill-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.editBill(btn.dataset.billId);
+      };
+    });
+
+    document.querySelectorAll('.print-bill-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const billId = btn.dataset.billId;
+        this.printBillDirect(billId);
+      };
+    });
+
+    document.querySelectorAll('.delete-bill-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.deleteBill(btn.dataset.billId);
+      };
+    });
+  }
+
   renderBillingHTML() {
+    const bills = store.getBills ? store.getBills() : [];
     let totalBilled = 0;
     let totalPaid = 0;
     let totalDue = 0;
@@ -1931,7 +2465,11 @@ class TractorOSApp {
         dueCount++;
       }
     });
-    const nextAutoNo = store.getNextBillNumber ? store.getNextBillNumber() : '87';
+
+    const uniqueVillages = [...new Set(bills.map(b => (b.address || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+    const f = this.billFilters;
+    const filteredBills = this.getFilteredBills(bills);
 
     return `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
@@ -1996,10 +2534,111 @@ class TractorOSApp {
         </div>
       </div>
 
+      <!-- Filter & Search Controls Card -->
+      <div class="bill-filter-card">
+        <div class="bill-filter-grid-primary">
+          <!-- 1. Text Search Input -->
+          <div class="bill-search-wrapper">
+            <span class="bill-search-icon-left">${renderIcon('search')}</span>
+            <input
+              type="text"
+              id="billSearchInput"
+              class="form-input bill-search-input"
+              placeholder="Search Bill #, Customer, Phone, Village, Vehicle, Item..."
+              value="${(f.search || '').replace(/"/g, '&quot;')}"
+            />
+            <button
+              type="button"
+              id="billSearchClearBtn"
+              class="bill-search-clear-btn"
+              style="display:${f.search ? 'flex' : 'none'};"
+              title="Clear search"
+            >✕</button>
+          </div>
+
+          <!-- 2. Payment Status Filter -->
+          <div>
+            <select id="billStatusFilter" class="form-select bill-filter-select-item">
+              <option value="ALL" ${f.paymentStatus === 'ALL' ? 'selected' : ''}>Payment Status: All (सभी स्थिति)</option>
+              <option value="Paid" ${f.paymentStatus === 'Paid' ? 'selected' : ''}>✓ Fully Paid (पूर्ण भुगतान)</option>
+              <option value="Due" ${f.paymentStatus === 'Due' ? 'selected' : ''}>⚠️ Unpaid / Due (बकाया)</option>
+              <option value="Partial" ${f.paymentStatus === 'Partial' ? 'selected' : ''}>⏳ Partial Due (आंशिक बकाया)</option>
+              <option value="AnyDue" ${f.paymentStatus === 'AnyDue' ? 'selected' : ''}>🔴 Any Pending Due (कुल बाकी)</option>
+            </select>
+          </div>
+
+          <!-- 3. Date Range Filter -->
+          <div>
+            <select id="billDateRangeFilter" class="form-select bill-filter-select-item">
+              <option value="ALL" ${f.dateRange === 'ALL' ? 'selected' : ''}>Date: All Time (सभी दिनांक)</option>
+              <option value="today" ${f.dateRange === 'today' ? 'selected' : ''}>📅 Today (आज)</option>
+              <option value="7days" ${f.dateRange === '7days' ? 'selected' : ''}>📅 Last 7 Days (7 दिन)</option>
+              <option value="this_month" ${f.dateRange === 'this_month' ? 'selected' : ''}>📅 This Month (इस महीने)</option>
+              <option value="last_month" ${f.dateRange === 'last_month' ? 'selected' : ''}>📅 Last Month (पिछले महीने)</option>
+              <option value="custom" ${f.dateRange === 'custom' ? 'selected' : ''}>📅 Custom Date Range (कस्टम)...</option>
+            </select>
+          </div>
+
+          <!-- 4. Amount Range Filter -->
+          <div>
+            <select id="billAmountFilter" class="form-select bill-filter-select-item">
+              <option value="ALL" ${f.amountRange === 'ALL' ? 'selected' : ''}>Amount: All Totals (सभी दाम)</option>
+              <option value="under_5k" ${f.amountRange === 'under_5k' ? 'selected' : ''}>Under ₹5,000 (&lt; ₹5K)</option>
+              <option value="5k_20k" ${f.amountRange === '5k_20k' ? 'selected' : ''}>₹5,000 – ₹20,000</option>
+              <option value="20k_50k" ${f.amountRange === '20k_50k' ? 'selected' : ''}>₹20,000 – ₹50,000</option>
+              <option value="above_50k" ${f.amountRange === 'above_50k' ? 'selected' : ''}>Above ₹50,000 (&gt; ₹50K)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Secondary Filter Controls Row: Village, Sort, Custom Dates, Reset -->
+        <div class="bill-filter-grid-secondary">
+          <!-- Village / Area Dropdown -->
+          <div style="flex:1; min-width:180px;">
+            <select id="billVillageFilter" class="form-select bill-filter-select-item">
+              <option value="ALL" ${f.village === 'ALL' ? 'selected' : ''}>Village / Area: All Locations (सभी गाँव)</option>
+              ${uniqueVillages.map(v => `<option value="${v.replace(/"/g, '&quot;')}" ${f.village.toLowerCase() === v.toLowerCase() ? 'selected' : ''}>📍 ${v}</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- Sort By Dropdown -->
+          <div style="flex:1; min-width:180px;">
+            <select id="billSortFilter" class="form-select bill-filter-select-item">
+              <option value="date_desc" ${f.sortBy === 'date_desc' ? 'selected' : ''}>Sort: Date (Newest First)</option>
+              <option value="date_asc" ${f.sortBy === 'date_asc' ? 'selected' : ''}>Sort: Date (Oldest First)</option>
+              <option value="bill_desc" ${f.sortBy === 'bill_desc' ? 'selected' : ''}>Sort: Bill # (High to Low)</option>
+              <option value="bill_asc" ${f.sortBy === 'bill_asc' ? 'selected' : ''}>Sort: Bill # (Low to High)</option>
+              <option value="amount_desc" ${f.sortBy === 'amount_desc' ? 'selected' : ''}>Sort: Amount (High to Low)</option>
+              <option value="amount_asc" ${f.sortBy === 'amount_asc' ? 'selected' : ''}>Sort: Amount (Low to High)</option>
+              <option value="due_desc" ${f.sortBy === 'due_desc' ? 'selected' : ''}>Sort: Pending Due (Highest First)</option>
+            </select>
+          </div>
+
+          <!-- Custom Date Range Pickers (Toggled) -->
+          <div id="billCustomDateRangeWrap" class="bill-custom-dates-wrap" style="display:${f.dateRange === 'custom' ? 'inline-flex' : 'none'};">
+            <span style="font-size:11px; font-weight:700; color:var(--text-secondary);">From:</span>
+            <input type="date" id="billStartDate" class="bill-date-picker-input" value="${f.startDate || ''}" />
+            <span style="font-size:11px; font-weight:700; color:var(--text-secondary);">To:</span>
+            <input type="date" id="billEndDate" class="bill-date-picker-input" value="${f.endDate || ''}" />
+          </div>
+
+          <!-- Reset Filters Button -->
+          <button id="resetBillFiltersBtn" type="button" class="quick-action-btn btn-sm btn-outline" style="height:38px; padding:0 14px; gap:6px;">
+            ${renderIcon('refresh')}
+            <span>Reset Filters</span>
+          </button>
+        </div>
+
+        <!-- Active Filter Chips & Summary Indicator -->
+        <div id="billsSummaryStrip">
+          ${this.renderBillActiveFilterStrip(filteredBills, bills.length)}
+        </div>
+      </div>
+
       <div class="panel-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-color); padding-bottom:12px; flex-wrap:wrap; gap:10px;">
-          <div style="font-size:14px; font-weight:800; color:var(--text-primary);">
-            All Issued Bills & Estimates (${bills.length})
+          <div style="font-size:14px; font-weight:800; color:var(--text-primary);" id="billsPanelHeader">
+            ${filteredBills.length !== bills.length ? `All Issued Bills & Estimates <span style="font-size:12px; font-weight:600; color:var(--text-secondary); margin-left:6px;">(${filteredBills.length} of ${bills.length} filtered)</span>` : `All Issued Bills & Estimates (${bills.length})`}
           </div>
           <div style="display:flex; gap:8px;">
             <button class="quick-action-btn btn-sm btn-primary" onclick="window.app.openNewBillModal()">
@@ -2015,94 +2654,25 @@ class TractorOSApp {
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width:105px;">Bill # (नं०)</th>
-                <th style="width:105px;">Date (दिनांक)</th>
+                <th style="width:105px;" class="sortable-th ${f.sortBy?.startsWith('bill') ? 'active-sort' : ''}" id="sortThBillNo" title="Click to sort by Bill #">
+                  Bill # (नं०) <span class="sort-indicator">${f.sortBy === 'bill_asc' ? '▲' : (f.sortBy === 'bill_desc' ? '▼' : '↕')}</span>
+                </th>
+                <th style="width:115px;" class="sortable-th ${f.sortBy?.startsWith('date') ? 'active-sort' : ''}" id="sortThDate" title="Click to sort by Date">
+                  Date (दिनांक) <span class="sort-indicator">${f.sortBy === 'date_asc' ? '▲' : (f.sortBy === 'date_desc' ? '▼' : '↕')}</span>
+                </th>
                 <th>Customer / M/s (मेसर्स)</th>
                 <th>Village / Address (पता)</th>
-                <th style="text-align:right;">Total Amount (कुल दाम)</th>
-                <th style="text-align:center; width:120px;">Payment Status (भुगतान)</th>
+                <th style="text-align:right;" class="sortable-th ${f.sortBy?.startsWith('amount') ? 'active-sort' : ''}" id="sortThAmount" title="Click to sort by Total Amount">
+                  Total Amount (कुल दाम) <span class="sort-indicator">${f.sortBy === 'amount_asc' ? '▲' : (f.sortBy === 'amount_desc' ? '▼' : '↕')}</span>
+                </th>
+                <th style="text-align:center; width:130px;" class="sortable-th ${f.sortBy === 'due_desc' ? 'active-sort' : ''}" id="sortThStatus" title="Click to sort by Due Amount">
+                  Payment Status <span class="sort-indicator">${f.sortBy === 'due_desc' ? '▼' : '↕'}</span>
+                </th>
                 <th style="text-align:right; width:135px; min-width:135px;">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              ${bills.length === 0 ? `
-                <tr>
-                  <td colspan="7" style="text-align:center; padding:44px 20px; color:var(--text-muted);">
-                    <div style="font-size:36px; margin-bottom:10px;">🧾</div>
-                    <div style="font-weight:700; font-size:16px; color:var(--text-secondary);">No bills issued yet</div>
-                    <div style="font-size:12.5px; margin-top:4px;">Click "+ Create Bill" to generate a bill in the authentic माँ दुर्गा डीजल template.</div>
-                    <div style="margin-top:16px; display:flex; justify-content:center; gap:10px;">
-                      <button class="quick-action-btn btn-sm btn-primary" onclick="window.app.openNewBillModal()">
-                        🧾 Create First Bill
-                      </button>
-                      <button class="quick-action-btn btn-sm btn-outline" onclick="window.app.openBillPreviewModal(null, true)">
-                        🖨️ View Blank Bill Template
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ` : bills.map(item => {
-                const billKey = item.id || String(item.billNumber);
-                const total = Number(item.totalRupees || 0);
-                let paid = total;
-                if (item.paymentStatus === 'Due') {
-                  paid = 0;
-                } else if (item.paymentStatus === 'Partial' && item.paidAmount !== undefined) {
-                  paid = Math.min(total, Math.max(0, Number(item.paidAmount) || 0));
-                } else if (item.paidAmount !== undefined && item.paidAmount !== null && item.paidAmount !== '') {
-                  paid = Math.min(total, Math.max(0, Number(item.paidAmount) || 0));
-                }
-                const due = Math.max(0, total - paid);
-                let statusBadge = '';
-                if (due <= 0 && total > 0) {
-                  statusBadge = `<span style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;">✓ Paid</span>`;
-                } else if (paid > 0 && due > 0) {
-                  statusBadge = `<span style="background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;" title="Paid: ₹${paid.toLocaleString('en-IN')}">⏳ Due: ₹${due.toLocaleString('en-IN')}</span>`;
-                } else if (total > 0) {
-                  statusBadge = `<span style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; border-radius:12px; padding:3px 8px; font-size:11px; font-weight:700; display:inline-block;">⚠️ Due</span>`;
-                } else {
-                  statusBadge = `<span style="background:#f1f5f9; color:#475569; border-radius:12px; padding:3px 8px; font-size:11px;">-</span>`;
-                }
-                return `
-                  <tr>
-                    <td>
-                      <strong style="color:var(--primary); font-size:14px;">No. ${item.billNumber}</strong>
-                      ${item.billName ? `<div style="font-size:11px; font-weight:700; color:#2563eb; margin-top:2px;">📌 ${item.billName}</div>` : ''}
-                    </td>
-                    <td><span style="font-family:monospace, sans-serif; font-weight:600;">${formatToDMY(item.date)}</span></td>
-                    <td>
-                      <strong>${item.customerName || 'मेसर्स ग्राहक'}</strong><br>
-                      ${item.vehicle ? `<span style="font-size:11.5px; font-weight:700; color:var(--primary);">🚜 ${item.vehicle}</span> • ` : ''}
-                      <span style="font-size:11px; color:var(--text-muted);">${item.phone || ''}</span>
-                    </td>
-                    <td>
-                      <span style="font-size:12.5px;">${item.address || 'पटना'}</span>
-                    </td>
-                    <td style="text-align:right;">
-                      <strong style="font-size:14px; color:#1e3a8a; font-family:monospace, sans-serif;">₹${total.toLocaleString('en-IN')}${item.totalPaise ? '.' + String(item.totalPaise).padStart(2, '0') : ''}</strong>
-                    </td>
-                    <td style="text-align:center;">
-                      ${statusBadge}
-                    </td>
-                    <td style="text-align:right; white-space:nowrap;">
-                      <div class="bill-actions-wrap" style="display:inline-flex; gap:6px; align-items:center; justify-content:flex-end;">
-                        <button class="quick-action-btn btn-sm btn-outline bill-action-btn edit-bill-btn" data-bill-id="${billKey}" onclick="window.app.editBill('${billKey}')" title="Edit Bill">
-                          ${renderIcon('edit')}
-                          <span class="btn-label">Edit</span>
-                        </button>
-                        <button class="quick-action-btn btn-sm btn-primary bill-action-btn print-bill-btn" data-bill-id="${billKey}" onclick="window.app.printBillDirect('${billKey}')" title="Print Bill (प्रिंट करें)">
-                          ${renderIcon('print')}
-                          <span class="btn-label">Print</span>
-                        </button>
-                        <button class="quick-action-btn btn-sm btn-outline delete-bill-btn bill-action-btn" data-bill-id="${billKey}" onclick="window.app.deleteBill('${billKey}')" title="Delete Bill" style="color:#ef4444; border-color:rgba(239, 68, 68, 0.4);">
-                          ${renderIcon('trash')}
-                          <span class="btn-label">Delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
+            <tbody id="billsTableBody">
+              ${this.renderBillTableRows(filteredBills, bills.length)}
             </tbody>
           </table>
         </div>
@@ -2177,30 +2747,119 @@ class TractorOSApp {
     const printBlankBtn = document.getElementById('printBlankBillBtn');
     if (printBlankBtn) printBlankBtn.onclick = () => this.openBillPreviewModal(null, true);
 
-    document.querySelectorAll('.edit-bill-btn').forEach(btn => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.editBill(btn.dataset.billId);
+    // 1. Search Input
+    const searchInput = document.getElementById('billSearchInput');
+    const clearSearchBtn = document.getElementById('billSearchClearBtn');
+    if (searchInput) {
+      searchInput.oninput = (e) => {
+        if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+        this.billFilters.search = e.target.value;
+        if (clearSearchBtn) clearSearchBtn.style.display = e.target.value ? 'flex' : 'none';
+        this.applyBillFiltersAndRenderTable();
       };
-    });
+    }
+    if (clearSearchBtn) {
+      clearSearchBtn.onclick = () => {
+        if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+        this.billFilters.search = '';
+        if (searchInput) searchInput.value = '';
+        clearSearchBtn.style.display = 'none';
+        this.applyBillFiltersAndRenderTable();
+        if (searchInput) searchInput.focus();
+      };
+    }
 
-    document.querySelectorAll('.print-bill-btn').forEach(btn => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const billId = btn.dataset.billId;
-        this.printBillDirect(billId);
+    // 2. Payment Status
+    const statusSelect = document.getElementById('billStatusFilter');
+    if (statusSelect) {
+      statusSelect.onchange = (e) => {
+        if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+        this.billFilters.paymentStatus = e.target.value;
+        this.applyBillFiltersAndRenderTable();
       };
-    });
+    }
 
-    document.querySelectorAll('.delete-bill-btn').forEach(btn => {
-      btn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.deleteBill(btn.dataset.billId);
+    // 3. Date Range Preset
+    const dateRangeSelect = document.getElementById('billDateRangeFilter');
+    const customDatesWrap = document.getElementById('billCustomDateRangeWrap');
+    if (dateRangeSelect) {
+      dateRangeSelect.onchange = (e) => {
+        if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+        this.billFilters.dateRange = e.target.value;
+        if (customDatesWrap) {
+          customDatesWrap.style.display = (e.target.value === 'custom') ? 'inline-flex' : 'none';
+        }
+        this.applyBillFiltersAndRenderTable();
       };
-    });
+    }
+
+    // 4. Custom Start / End Date
+    const startDateInput = document.getElementById('billStartDate');
+    const endDateInput = document.getElementById('billEndDate');
+    if (startDateInput) {
+      startDateInput.onchange = (e) => {
+        if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+        this.billFilters.startDate = e.target.value;
+        this.applyBillFiltersAndRenderTable();
+      };
+    }
+    if (endDateInput) {
+      endDateInput.onchange = (e) => {
+        if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+        this.billFilters.endDate = e.target.value;
+        this.applyBillFiltersAndRenderTable();
+      };
+    }
+
+    // 5. Amount Range
+    const amountSelect = document.getElementById('billAmountFilter');
+    if (amountSelect) {
+      amountSelect.onchange = (e) => {
+        if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+        this.billFilters.amountRange = e.target.value;
+        this.applyBillFiltersAndRenderTable();
+      };
+    }
+
+    // 6. Village / Location
+    const villageSelect = document.getElementById('billVillageFilter');
+    if (villageSelect) {
+      villageSelect.onchange = (e) => {
+        if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+        this.billFilters.village = e.target.value;
+        this.applyBillFiltersAndRenderTable();
+      };
+    }
+
+    // 7. Sort
+    const sortSelect = document.getElementById('billSortFilter');
+    if (sortSelect) {
+      sortSelect.onchange = (e) => {
+        if (!this.billFilters) this.billFilters = this.getDefaultBillFilters();
+        this.billFilters.sortBy = e.target.value;
+        this.updateSortHeaderStyles();
+        this.applyBillFiltersAndRenderTable();
+      };
+    }
+
+    // 8. Reset Button
+    const resetBtn = document.getElementById('resetBillFiltersBtn');
+    if (resetBtn) {
+      resetBtn.onclick = () => this.resetBillFilters();
+    }
+
+    // 9. Sortable Column Headers
+    const thBill = document.getElementById('sortThBillNo');
+    if (thBill) thBill.onclick = () => this.toggleSort('bill');
+    const thDate = document.getElementById('sortThDate');
+    if (thDate) thDate.onclick = () => this.toggleSort('date');
+    const thAmt = document.getElementById('sortThAmount');
+    if (thAmt) thAmt.onclick = () => this.toggleSort('amount');
+    const thStat = document.getElementById('sortThStatus');
+    if (thStat) thStat.onclick = () => this.toggleSort('due');
+
+    // 10. Bind Row Action Buttons
+    this.bindBillRowEvents();
   }
 
   // =========================================================================
